@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ODD NOT EVEN · Nexus</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#04040a;--bg1:#080812;--bg2:#0e0e1a;--bg3:#141424;--bg4:#1a1a2e;
+  --border:rgba(120,100,255,0.08);--border2:rgba(120,100,255,0.15);--border3:rgba(120,100,255,0.25);
+  --text:#f0eeff;--muted:#8880aa;--dim:#3a3860;
+  --gold:#f0c040;--gold2:#ffd060;--goldA:rgba(240,192,64,0.1);--goldB:rgba(240,192,64,0.05);
+  --violet:#7c3aed;--violet2:#8b5cf6;--violetA:rgba(139,92,246,0.12);
+  --cyan:#06b6d4;--cyanA:rgba(6,182,212,0.1);
+  --green:#10b981;--greenA:rgba(16,185,129,0.1);
+  --red:#f43f5e;--redA:rgba(244,63,94,0.1);
+  --orange:#f97316;--orangeA:rgba(249,115,22,0.1);
+  --pink:#ec4899;--pinkA:rgba(236,72,153,0.1);
+  --r:12px;--rsm:8px;--rlg:16px;
+  --glow:0 0 20px rgba(139,92,246,0.15);
+  --glow2:0 0 40px rgba(139,92,246,0.08);
+}
+html{scroll-behavior:smooth}
+body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+.mono{font-family:'Space Mono',monospace}
+
+/* GRID LINES BG */
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(120,100,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(120,100,255,0.03) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+
+/* SIDEBAR */
+.sb{
+  position:fixed;left:0;top:0;bottom:0;width:230px;
+  background:rgba(8,8,18,0.95);
+  border-right:1px solid var(--border2);
+  display:flex;flex-direction:column;z-index:200;
+  backdrop-filter:blur(20px);
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+}
+.sb-logo{padding:24px 20px 18px;border-bottom:1px solid var(--border)}
+.sb-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--violetA);border:1px solid var(--border3);
+  border-radius:4px;padding:3px 8px;
+  font-size:8px;letter-spacing:.2em;color:var(--violet2);font-weight:600;text-transform:uppercase;margin-bottom:10px;
+}
+.sb-badge::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--cyan);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1;box-shadow:0 0 6px var(--cyan)}50%{opacity:.3;box-shadow:none}}
+.sb-title{font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.1;background:linear-gradient(135deg,var(--text),var(--violet2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sb-sub{font-size:10px;color:var(--dim);margin-top:3px;font-family:'Space Mono',monospace}
+
+.sb-nav{flex:1;padding:10px 10px;overflow-y:auto}
+.sb-sec{font-size:8px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase;padding:12px 10px 5px;font-weight:700}
+.sb-item{
+  display:flex;align-items:center;gap:9px;padding:9px 10px;
+  border-radius:var(--rsm);cursor:pointer;font-size:12px;font-weight:500;
+  color:var(--muted);transition:all .15s;margin-bottom:1px;
+  border:1px solid transparent;position:relative;
+}
+.sb-item:hover{background:var(--bg3);color:var(--text)}
+.sb-item.active{background:var(--violetA);color:var(--violet2);border-color:var(--border3)}
+.sb-item.active::before{content:'';position:absolute;left:-1px;top:20%;bottom:20%;width:2px;background:var(--violet2);border-radius:1px;box-shadow:0 0 8px var(--violet2)}
+.sb-ico{font-size:13px;width:16px;text-align:center;flex-shrink:0}
+.sb-badge2{margin-left:auto;font-family:'Space Mono',monospace;font-size:9px;color:var(--dim);background:var(--bg3);padding:1px 5px;border-radius:3px}
+
+.sb-foot{padding:14px 16px;border-top:1px solid var(--border)}
+.sb-period{background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:6px 12px;font-size:9px;font-family:'Space Mono',monospace;color:var(--muted);text-align:center}
+
+/* MAIN */
+.main{margin-left:230px;min-height:100vh;position:relative;z-index:1}
+
+/* TOPBAR */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 28px;border-bottom:1px solid var(--border);
+  background:rgba(4,4,10,0.8);position:sticky;top:0;z-index:100;
+  backdrop-filter:blur(24px);
+}
+.tb-title{font-size:18px;font-weight:700;letter-spacing:-.02em}
+.tb-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tb-chip{
+  display:flex;align-items:center;gap:5px;
+  background:var(--bg2);border:1px solid var(--border2);
+  border-radius:20px;padding:5px 11px;
+  font-size:10px;font-family:'Space Mono',monospace;color:var(--muted);
+  cursor:pointer;transition:all .15s;
+}
+.tb-chip:hover{border-color:var(--border3);color:var(--text)}
+.tb-chip.active{border-color:var(--violet2);color:var(--violet2);background:var(--violetA)}
+.dot-live{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
+
+/* FILTER BAR */
+.filters{
+  display:flex;align-items:center;gap:8px;padding:10px 28px;
+  border-bottom:1px solid var(--border);background:rgba(4,4,10,0.6);
+  backdrop-filter:blur(10px);flex-wrap:wrap;
+}
+.filter-label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);font-weight:600;margin-right:4px}
+.f-select{
+  background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rsm);
+  padding:5px 10px;font-size:11px;color:var(--text);font-family:'Space Grotesk',sans-serif;
+  cursor:pointer;outline:none;transition:border-color .15s;
+}
+.f-select:focus,.f-select:hover{border-color:var(--border3)}
+.f-btn{
+  background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rsm);
+  padding:5px 12px;font-size:11px;color:var(--muted);font-family:'Space Grotesk',sans-serif;
+  cursor:pointer;transition:all .15s;font-weight:500;
+}
+.f-btn:hover{border-color:var(--violet2);color:var(--violet2)}
+.f-btn.active{border-color:var(--violet2);color:var(--violet2);background:var(--violetA)}
+.f-reset{
+  margin-left:auto;font-size:10px;color:var(--dim);cursor:pointer;
+  padding:5px 10px;border-radius:var(--rsm);border:1px solid transparent;transition:all .15s;
+}
+.f-reset:hover{border-color:var(--border2);color:var(--muted)}
+
+/* SECTION */
+.sec{display:none;padding:24px 28px;animation:fadeUp .25s ease}
+.sec.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* KPI STRIP */
+.kpis{display:grid;gap:12px;margin-bottom:20px}
+.kpis-5{grid-template-columns:repeat(5,1fr)}
+.kpis-4{grid-template-columns:repeat(4,1fr)}
+.kpis-3{grid-template-columns:repeat(3,1fr)}
+.kpi{
+  background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);
+  padding:16px 16px 14px;position:relative;overflow:hidden;cursor:default;
+  transition:border-color .2s,box-shadow .2s;
+}
+.kpi:hover{border-color:var(--border2);box-shadow:var(--glow2)}
+.kpi-line{position:absolute;top:0;left:0;right:0;height:1.5px}
+.kpi-icon{font-size:18px;margin-bottom:8px;display:block}
+.kpi-lbl{font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:6px}
+.kpi-val{font-size:20px;font-weight:700;letter-spacing:-.02em;font-family:'Space Mono',monospace;line-height:1}
+.kpi-foot{font-size:9px;color:var(--dim);margin-top:6px;display:flex;align-items:center;gap:4px}
+.tag{display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:4px;font-size:8.5px;font-weight:600;font-family:'Space Mono',monospace}
+.tag-up{background:var(--greenA);color:var(--green)}
+.tag-dn{background:var(--redA);color:var(--red)}
+.tag-neu{background:var(--goldA);color:var(--gold)}
+.tag-cy{background:var(--cyanA);color:var(--cyan)}
+.tag-vt{background:var(--violetA);color:var(--violet2)}
+
+/* CARDS */
+.card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);padding:20px;position:relative;transition:border-color .2s}
+.card:hover{border-color:var(--border2)}
+.card-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:8px}
+.card-t{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.card-v{font-family:'Space Mono',monospace;font-size:10px;color:var(--dim)}
+.card-glow{box-shadow:var(--glow2)}
+
+/* GRIDS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+.g21{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px}
+.g12{display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:16px}
+.g13{display:grid;grid-template-columns:1fr 3fr;gap:16px;margin-bottom:16px}
+.span2{grid-column:span 2}
+.mb16{margin-bottom:16px}
+
+/* CHART */
+.ch{position:relative;width:100%}
+
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse;font-size:11.5px}
+.tbl th{font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding:7px 10px;text-align:right;border-bottom:1px solid var(--border);font-weight:600}
+.tbl th:first-child{text-align:left}
+.tbl td{padding:8px 10px;text-align:right;border-bottom:1px solid rgba(120,100,255,0.04);font-family:'Space Mono',monospace;font-size:10.5px;color:var(--muted);transition:background .1s}
+.tbl td:first-child{text-align:left;font-family:'Space Grotesk',sans-serif;font-size:11.5px;color:var(--text)}
+.tbl tr:hover td{background:rgba(120,100,255,0.03)}
+.tbl .total td{background:rgba(120,100,255,0.06);font-weight:600;color:var(--text);border-top:1px solid var(--border2)}
+.tbl .ebitda td{background:var(--goldA);color:var(--gold2);font-weight:700;border-top:2px solid rgba(240,192,64,.3);font-size:12px}
+.tbl .sec-row td{padding:12px 10px 3px;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--cyan);font-family:'Space Grotesk',sans-serif;border:none;background:none}
+.pos{color:var(--green)!important}
+.neg{color:var(--red)!important}
+.dim-t{color:var(--dim)!important}
+
+/* PROGRESS */
+.pb{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.pb-lbl{font-size:11px;color:var(--text);width:140px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pb-track{flex:1;height:4px;background:rgba(120,100,255,0.08);border-radius:2px;overflow:hidden}
+.pb-fill{height:100%;border-radius:2px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.pb-val{font-family:'Space Mono',monospace;font-size:9.5px;color:var(--dim);text-align:right;min-width:55px}
+
+/* RANK */
+.rank{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid rgba(120,100,255,0.04)}
+.rank-n{font-family:'Space Mono',monospace;font-size:9px;color:var(--dim);width:16px}
+.rank-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.rank-name{flex:1;font-size:11.5px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank-rev{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)}
+.rank-tag{font-family:'Space Mono',monospace;font-size:8.5px;padding:2px 5px;border-radius:3px}
+
+/* PARTNER CARD */
+.pcard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rsm);padding:12px;margin-bottom:7px;transition:border-color .15s}
+.pcard:hover{border-color:var(--border2)}
+.pcard-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.pcard-name{font-size:11.5px;font-weight:600;color:var(--text)}
+.ptype{font-size:8px;padding:2px 7px;border-radius:3px;font-family:'Space Mono',monospace;font-weight:600;text-transform:uppercase}
+.pcard-m{display:flex;gap:16px}
+.pm-lbl{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+.pm-val{font-size:12px;font-weight:700;font-family:'Space Mono',monospace;color:var(--text);margin-top:2px}
+
+/* STATE BLOCK */
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.sblk{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rsm);padding:10px 11px}
+.sc{font-family:'Space Mono',monospace;font-size:10px;font-weight:700;color:var(--gold)}
+.sname{font-size:8px;color:var(--dim);margin-top:1px}
+.srev{font-size:13px;font-weight:700;font-family:'Space Mono',monospace;color:var(--text);margin-top:4px}
+.sbar{height:2px;background:rgba(120,100,255,0.08);border-radius:1px;margin-top:7px}
+.sbar-f{height:100%;border-radius:1px;background:linear-gradient(90deg,var(--violet2),var(--cyan))}
+
+/* SIZE CHIP */
+.schips{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+.schip{padding:8px 12px;border-radius:8px;border:1px solid var(--border2);text-align:center;min-width:64px;cursor:default;transition:border-color .15s}
+.schip:hover{border-color:var(--border3)}
+.schip .sn{font-weight:700;font-size:12px;color:var(--text)}
+.schip .sv{font-size:8px;color:var(--muted);margin-top:3px;font-family:'Space Mono',monospace}
+
+/* DISC ROW */
+.drow{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(120,100,255,0.04)}
+.dcode{font-family:'Space Mono',monospace;font-size:10px;font-weight:700;color:var(--cyan);width:110px;flex-shrink:0}
+.dtrack{flex:1;height:3px;background:rgba(120,100,255,0.08);border-radius:2px;overflow:hidden}
+.dfill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--cyan),var(--violet2))}
+.duse{font-size:9px;color:var(--dim);font-family:'Space Mono',monospace;width:24px;text-align:right}
+.dval{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);width:52px;text-align:right}
+
+/* TOGGLE */
+.tgl{display:flex;gap:3px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rsm);padding:3px}
+.tgl-btn{padding:4px 12px;border-radius:5px;border:none;background:none;color:var(--muted);font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:500;cursor:pointer;transition:all .15s}
+.tgl-btn.active{background:var(--bg3);color:var(--text);border:1px solid var(--border2)}
+
+/* LEGEND */
+.leg{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted)}
+.leg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+
+/* SEP */
+.sep{height:1px;background:var(--border);margin:16px 0}
+
+/* PROJECTION CARDS */
+.proj-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:16px;position:relative;overflow:hidden}
+.proj-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--violet2),transparent)}
+.proj-month{font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.proj-val{font-size:22px;font-weight:700;font-family:'Space Mono',monospace;margin:6px 0 4px;background:linear-gradient(135deg,var(--text),var(--violet2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.proj-sub{font-size:9px;color:var(--dim)}
+.proj-conf{display:inline-flex;align-items:center;gap:3px;margin-top:6px;padding:2px 7px;border-radius:3px;font-size:8.5px;font-weight:600;background:var(--violetA);color:var(--violet2);font-family:'Space Mono',monospace}
+
+/* SUGGESTION CARD */
+.sug{background:var(--bg2);border-left:3px solid var(--cyan);border-radius:0 var(--rsm) var(--rsm) 0;padding:12px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px}
+.sug-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.sug-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px}
+.sug-body{font-size:11px;color:var(--muted);line-height:1.5}
+.sug-imp{display:inline-flex;margin-top:5px;padding:2px 7px;border-radius:3px;font-size:8px;font-weight:600;font-family:'Space Mono',monospace}
+.imp-high{background:var(--redA);color:var(--red)}
+.imp-med{background:var(--goldA);color:var(--gold)}
+.imp-low{background:var(--greenA);color:var(--green)}
+.sug.warn{border-color:var(--gold)}
+.sug.danger{border-color:var(--red)}
+.sug.good{border-color:var(--green)}
+
+/* BUDGET ROW */
+.brow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(120,100,255,0.04)}
+.brow-cat{flex:1;font-size:11.5px;color:var(--text)}
+.brow-act{font-family:'Space Mono',monospace;font-size:10.5px;width:75px;text-align:right;color:var(--muted)}
+.brow-bud{font-family:'Space Mono',monospace;font-size:10.5px;width:75px;text-align:right;color:var(--violet2)}
+.brow-var{font-family:'Space Mono',monospace;font-size:10px;width:70px;text-align:right;padding:2px 5px;border-radius:3px}
+.brow-bar{width:80px;height:3px;background:rgba(120,100,255,0.08);border-radius:2px;overflow:hidden;flex-shrink:0}
+.brow-bf{height:100%;border-radius:2px}
+
+/* METRIC GRID */
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mgrid-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rsm);padding:12px}
+.mg-lbl{font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:600}
+.mg-val{font-size:16px;font-weight:700;font-family:'Space Mono',monospace;margin-top:5px}
+.mg-sub{font-size:9px;color:var(--dim);margin-top:3px}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--dim);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:var(--violet2)}
+
+/* SECTION DIVIDER */
+.sdiv{display:flex;align-items:center;gap:10px;margin:20px 0 14px}
+.sdiv-line{flex:1;height:1px;background:var(--border)}
+.sdiv-txt{font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:600;white-space:nowrap;padding:0 4px}
+
+/* GLOW NUMBERS */
+.glow-pos{text-shadow:0 0 20px rgba(16,185,129,0.4)}
+.glow-neg{text-shadow:0 0 20px rgba(244,63,94,0.4)}
+.glow-gold{text-shadow:0 0 20px rgba(240,192,64,0.35)}
+.glow-vt{text-shadow:0 0 20px rgba(139,92,246,0.4)}
+
+/* INSIGHT PILL */
+.insight{
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--bg3);border:1px solid var(--border2);
+  border-radius:20px;padding:5px 12px;font-size:10px;color:var(--muted);
+  margin:4px 4px 4px 0;
+}
+.insight .i-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+
+/* RESPONSIVE */
+@media(max-width:1024px){.kpis-5{grid-template-columns:repeat(3,1fr)}.g3,.g4{grid-template-columns:1fr 1fr}.g21,.g12,.g13{grid-template-columns:1fr}}
+@media(max-width:768px){.sb{transform:translateX(-100%)}.main{margin-left:0}.g2{grid-template-columns:1fr}.kpis-5,.kpis-4{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sb" id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-badge"><span></span>NEXUS COMMAND</div>
+    <div class="sb-title">ODD NOT EVEN</div>
+    <div class="sb-sub">FY 2025–26 · MIS Intelligence</div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-sec">Core Analytics</div>
+    <div class="sb-item active" onclick="goPage(this,'overview')"><span class="sb-ico">⬡</span>Command Overview<span class="sb-badge2">7</span></div>
+    <div class="sb-item" onclick="goPage(this,'pnl')"><span class="sb-ico">◈</span>P&amp;L Deep Dive</div>
+    <div class="sb-sec">Sales Intelligence</div>
+    <div class="sb-item" onclick="goPage(this,'channels')"><span class="sb-ico">⊞</span>Channel Matrix</div>
+    <div class="sb-item" onclick="goPage(this,'shopify')"><span class="sb-ico">◎</span>Shopify B2C</div>
+    <div class="sb-item" onclick="goPage(this,'b2b')"><span class="sb-ico">◫</span>B2B Partners</div>
+    <div class="sb-sec">Market Intelligence</div>
+    <div class="sb-item" onclick="goPage(this,'products')"><span class="sb-ico">◩</span>Product Intel</div>
+    <div class="sb-item" onclick="goPage(this,'geography')"><span class="sb-ico">◐</span>Geo Analytics</div>
+    <div class="sb-sec">Strategy</div>
+    <div class="sb-item" onclick="goPage(this,'projections')"><span class="sb-ico">▲</span>Projections<span class="sb-badge2">Q1</span></div>
+    <div class="sb-item" onclick="goPage(this,'budget')"><span class="sb-ico">◧</span>Budget vs Actual</div>
+    <div class="sb-item" onclick="goPage(this,'suggestions')"><span class="sb-ico">⬟</span>AI Suggestions<span class="sb-badge2">12</span></div>
+  </nav>
+  <div class="sb-foot">
+    <div class="sb-period">⬡ Jan–Mar 2026 · Live</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="tb-title" id="ptitle">Command Overview</div>
+    <div class="tb-right">
+      <div class="tb-chip"><span class="dot-live"></span>YTD: Jan–Mar 2026</div>
+      <div class="tb-chip" id="view-toggle" onclick="toggleCompare()">⊕ Compare Mode</div>
+      <div class="tb-chip">↓ Export</div>
+    </div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="filters" id="filterbar">
+    <span class="filter-label">Filters:</span>
+    <select class="f-select" id="f-month" onchange="applyFilters()">
+      <option value="all">All Months</option>
+      <option value="jan">January 2026</option>
+      <option value="feb">February 2026</option>
+    </select>
+    <select class="f-select" id="f-channel" onchange="applyFilters()">
+      <option value="all">All Channels</option>
+      <option value="b2c">Shopify B2C</option>
+      <option value="b2b">B2B / Events</option>
+      <option value="cdc">CDC Marketplace</option>
+    </select>
+    <select class="f-select" id="f-payment" onchange="applyFilters()">
+      <option value="all">All Payments</option>
+      <option value="cod">COD</option>
+      <option value="online">Prepaid Online</option>
+    </select>
+    <select class="f-select" id="f-state" onchange="applyFilters()">
+      <option value="all">All States</option>
+      <option value="MH">Maharashtra</option>
+      <option value="DL">Delhi</option>
+      <option value="GJ">Gujarat</option>
+      <option value="WB">West Bengal</option>
+      <option value="PB">Punjab</option>
+      <option value="KA">Karnataka</option>
+    </select>
+    <button class="f-btn active" id="fb-new" onclick="toggleFilter(this,'ctype','new')">New Customers</button>
+    <button class="f-btn active" id="fb-repeat" onclick="toggleFilter(this,'ctype','repeat')">Repeat Customers</button>
+    <button class="f-btn active" id="fb-ig" onclick="toggleFilter(this,'src','instagram')">Instagram</button>
+    <button class="f-btn active" id="fb-fb" onclick="toggleFilter(this,'src','facebook')">Facebook</button>
+    <div class="f-reset" onclick="resetFilters()">↺ Reset All</div>
+  </div>
+
+  <!-- ACTIVE FILTER DISPLAY -->
+  <div id="filter-display" style="padding:6px 28px;border-bottom:1px solid var(--border);display:none;gap:6px;flex-wrap:wrap;background:rgba(4,4,10,0.4)">
+    <span style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-top:2px">Active:</span>
+  </div>
+
+  <!-- ====== OVERVIEW ====== -->
+  <div class="sec active" id="sec-overview">
+    <div class="kpis kpis-5" id="kpi-overview">
+      <div class="kpi"><div class="kpi-line" style="background:linear-gradient(90deg,var(--gold),var(--gold2))"></div><span class="kpi-icon">₹</span><div class="kpi-lbl">YTD Gross Sales</div><div class="kpi-val glow-gold" style="color:var(--gold)">₹56.7L</div><div class="kpi-foot"><span class="tag tag-neu">3 months</span>Jan–Mar 2026</div></div>
+      <div class="kpi"><div class="kpi-line" style="background:linear-gradient(90deg,var(--green),var(--cyan))"></div><span class="kpi-icon">↗</span><div class="kpi-lbl">YTD Net Sales</div><div class="kpi-val glow-pos" style="color:var(--green)">₹51.6L</div><div class="kpi-foot"><span class="tag tag-up">Post GST</span></div></div>
+      <div class="kpi"><div class="kpi-line" style="background:linear-gradient(90deg,var(--red),var(--orange))"></div><span class="kpi-icon">⬇</span><div class="kpi-lbl">YTD COGS</div><div class="kpi-val" style="color:var(--red)">₹16.1L</div><div class="kpi-foot"><span class="tag tag-dn">28.5%</span>of gross sales</div></div>
+      <div class="kpi"><div class="kpi-line" style="background:linear-gradient(90deg,var(--violet),var(--violet2))"></div><span class="kpi-icon">◈</span><div class="kpi-lbl">YTD Gross Profit</div><div class="kpi-val glow-vt" style="color:var(--violet2)">₹35.5L</div><div class="kpi-foot"><span class="tag tag-vt">68.8% margin</span></div></div>
+      <div class="kpi"><div class="kpi-line" style="background:linear-gradient(90deg,var(--cyan),var(--green))"></div><span class="kpi-icon">▲</span><div class="kpi-lbl">YTD EBITDA</div><div class="kpi-val glow-pos" style="color:var(--green)">+₹3.8L</div><div class="kpi-foot"><span class="tag tag-up">+7.3%</span>net margin</div></div>
+    </div>
+
+    <!-- MINI INSIGHTS -->
+    <div style="margin-bottom:16px;display:flex;flex-wrap:wrap;gap:6px">
+      <span class="insight"><span class="i-dot" style="background:var(--green)"></span>Feb gross sales 64% higher than Jan — event channel drove surge</span>
+      <span class="insight"><span class="i-dot" style="background:var(--red)"></span>Jan EBITDA was negative due to high commissions (₹4.7L) + photoshoot (₹97.8K)</span>
+      <span class="insight"><span class="i-dot" style="background:var(--gold)"></span>CDC Marketplace = 39% of total YTD revenue — highest dependency risk</span>
+      <span class="insight"><span class="i-dot" style="background:var(--cyan)"></span>100% Low RTO Risk on all Shopify orders — strong payment quality</span>
+      <span class="insight"><span class="i-dot" style="background:var(--violet2)"></span>Shopify B2C growing: +8.8% MoM; AOV improved ₹4,144 → ₹4,923</span>
+    </div>
+
+    <div class="g21">
+      <div class="card">
+        <div class="card-hd">
+          <div><div class="card-t">Revenue Bridge</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Gross · Net · COGS · Gross Profit</div></div>
+          <div class="leg">
+            <span class="leg-item"><span class="leg-dot" style="background:#f0c040"></span>Gross</span>
+            <span class="leg-item"><span class="leg-dot" style="background:#10b981"></span>Net</span>
+            <span class="leg-item"><span class="leg-dot" style="background:#f43f5e"></span>COGS</span>
+            <span class="leg-item"><span class="leg-dot" style="background:#8b5cf6"></span>GP</span>
+          </div>
+        </div>
+        <div class="ch" style="height:250px"><canvas id="c-rev" role="img" aria-label="Monthly revenue bridge Jan vs Feb"></canvas></div>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column;gap:10px">
+        <div class="card-t" style="margin-bottom:0">EBITDA Swing</div>
+        <div style="background:var(--bg2);border-radius:var(--rsm);padding:14px;border:1px solid var(--border)">
+          <div class="kpi-lbl">Jan 2026</div>
+          <div style="font-size:24px;font-weight:700;font-family:'Space Mono',monospace;color:var(--red);margin:4px 0" class="glow-neg">−₹1.35L</div>
+          <div style="font-size:9.5px;color:var(--muted)">−7.1% margin · Commissions + photoshoot heavy</div>
+          <div style="margin-top:9px;height:4px;background:rgba(120,100,255,0.08);border-radius:2px"><div style="width:20%;height:100%;background:var(--red);opacity:.6;border-radius:2px"></div></div>
+        </div>
+        <div style="background:var(--bg2);border-radius:var(--rsm);padding:14px;border:1px solid rgba(16,185,129,.2)">
+          <div class="kpi-lbl">Feb 2026</div>
+          <div style="font-size:24px;font-weight:700;font-family:'Space Mono',monospace;color:var(--green);margin:4px 0" class="glow-pos">+₹5.12L</div>
+          <div style="font-size:9.5px;color:var(--muted)">+15.7% margin · Event channel activated</div>
+          <div style="margin-top:9px;height:4px;background:rgba(120,100,255,0.08);border-radius:2px"><div style="width:82%;height:100%;background:var(--green);opacity:.6;border-radius:2px"></div></div>
+        </div>
+        <div style="background:var(--goldA);border-radius:var(--rsm);padding:14px;border:1px solid rgba(240,192,64,.25)">
+          <div class="kpi-lbl">YTD Combined</div>
+          <div style="font-size:20px;font-weight:700;font-family:'Space Mono',monospace;color:var(--gold2);margin:4px 0">+₹3.77L</div>
+          <div style="font-size:9.5px;color:var(--muted)">FD Interest ₹43,785 · B2B dominant at 85%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="g3">
+      <div class="card">
+        <div class="card-hd"><div class="card-t">Jan Channel Split</div><div class="card-v">₹21.4L</div></div>
+        <div class="ch" style="height:140px"><canvas id="c-janchan" role="img" aria-label="Jan channel donut"></canvas></div>
+        <div style="margin-top:10px">
+          <div class="pb"><div class="pb-lbl">CDC Marketplace</div><div class="pb-track"><div class="pb-fill" style="width:61%;background:#60a5fa"></div></div><div class="pb-val">₹13.1L</div></div>
+          <div class="pb"><div class="pb-lbl">Odd B2C</div><div class="pb-track"><div class="pb-fill" style="width:18%;background:var(--gold)"></div></div><div class="pb-val">₹3.9L</div></div>
+          <div class="pb"><div class="pb-lbl">Others / Events</div><div class="pb-track"><div class="pb-fill" style="width:21%;background:var(--green)"></div></div><div class="pb-val">₹4.4L</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-t">Feb Channel Split</div><div class="card-v">₹35.2L</div></div>
+        <div class="ch" style="height:140px"><canvas id="c-febchan" role="img" aria-label="Feb channel donut"></canvas></div>
+        <div style="margin-top:10px">
+          <div class="pb"><div class="pb-lbl">Team Innovation</div><div class="pb-track"><div class="pb-fill" style="width:33%;background:var(--violet2)"></div></div><div class="pb-val">₹11.6L</div></div>
+          <div class="pb"><div class="pb-lbl">CDC Marketplace</div><div class="pb-track"><div class="pb-fill" style="width:23%;background:#60a5fa"></div></div><div class="pb-val">₹8.1L</div></div>
+          <div class="pb"><div class="pb-lbl">Dubai Arena</div><div class="pb-track"><div class="pb-fill" style="width:12%;background:var(--cyan)"></div></div><div class="pb-val">₹4.3L</div></div>
+          <div class="pb"><div class="pb-lbl">Innovation NL</div><div class="pb-track"><div class="pb-fill" style="width:12%;background:var(--green)"></div></div><div class="pb-val">₹4.2L</div></div>
+          <div class="pb"><div class="pb-lbl">Odd B2C</div><div class="pb-track"><div class="pb-fill" style="width:12%;background:var(--gold)"></div></div><div class="pb-val">₹4.3L</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-t">Traffic Source · Shopify</div><div class="tgl"><button class="tgl-btn active" onclick="switchSrc(this,'jan')">Jan</button><button class="tgl-btn" onclick="switchSrc(this,'feb')">Feb</button></div></div>
+        <div class="ch" style="height:220px"><canvas id="c-src" role="img" aria-label="Traffic source bar chart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Weekly pulse -->
+    <div class="card mb16">
+      <div class="card-hd"><div class="card-t">Weekly Revenue Pulse · Shopify B2C</div><div class="card-v">4 weeks each month</div></div>
+      <div class="ch" style="height:180px"><canvas id="c-weekly" role="img" aria-label="Weekly revenue pulse chart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ====== P&L ====== -->
+  <div class="sec" id="sec-pnl">
+    <div class="kpis kpis-4">
+      <div class="kpi"><div class="kpi-line" style="background:var(--red)"></div><div class="kpi-lbl">Jan EBITDA</div><div class="kpi-val neg glow-neg">−₹1.35L</div><div class="kpi-foot">Margin: −7.1%</div></div>
+      <div class="kpi"><div class="kpi-line" style="background:var(--green)"></div><div class="kpi-lbl">Feb EBITDA</div><div class="kpi-val pos glow-pos">+₹5.12L</div><div class="kpi-foot">Margin: +15.7%</div></div>
+      <div class="kpi"><div class="kpi-line" style="background:var(--violet2)"></div><div class="kpi-lbl">Avg Gross Margin</div><div class="kpi-val glow-vt" style="color:var(--violet2)">68.8%</div><div class="kpi-foot">Jan 72.1% · Feb 66.9%</div></div>
+      <div class="kpi"><div class="kpi-line" style="background:var(--cyan)"></div><div class="kpi-lbl">FD Interest Income</div><div class="kpi-val" style="color:var(--cyan)">₹43,785</div><div class="kpi-foot">Fixed deposit income</div></div>
+    </div>
+    <div class="g21">
+      <div class="card">
+        <div class="card-hd"><div class="card-t">Income Statement</div><div class="card-v">Jan & Feb 2026</div></div>
+        <table class="tbl">
+          <thead><tr><th>Particulars</th><th>Jan 2026</th><th>Feb 2026</th><th>YTD</th></tr></thead>
+          <tbody>
+            <tr class="sec-row"><td colspan="4">Revenue</td></tr>
+            <tr><td>Sales at MRP</td><td>₹28,57,687</td><td>₹27,98,905</td><td>₹56,56,592</td></tr>
+            <tr><td class="dim-t">Less: Website Discount</td><td class="neg">(22,208)</td><td class="neg">(35,179)</td><td class="neg">(57,387)</td></tr>
+            <tr class="total"><td>Gross Sales</td><td>₹21,43,071</td><td>₹35,23,556</td><td>₹56,66,627</td></tr>
+            <tr><td class="dim-t">Less: GST</td><td class="neg">(2,49,377)</td><td class="neg">(2,53,761)</td><td class="neg">(5,03,138)</td></tr>
+            <tr class="total"><td>Net Sales</td><td>₹18,93,694</td><td>₹32,69,795</td><td>₹51,63,490</td></tr>
+            <tr><td class="dim-t">Less: COGS</td><td class="neg">(5,29,721)</td><td class="neg">(10,83,149)</td><td class="neg">(16,12,870)</td></tr>
+            <tr class="total"><td>Gross Profit</td><td class="pos">₹13,63,973</td><td class="pos">₹21,86,646</td><td class="pos">₹35,50,619</td></tr>
+            <tr><td class="dim-t" style="font-size:9px">Gross Margin %</td><td class="pos" style="font-size:9px">72.1%</td><td class="pos" style="font-size:9px">66.9%</td><td class="pos" style="font-size:9px">68.8%</td></tr>
+            <tr><td>FD Interest Income</td><td class="pos">+₹21,893</td><td class="pos">+₹21,892</td><td class="pos">+₹43,785</td></tr>
+            <tr class="sec-row"><td colspan="4">Operating Expenses</td></tr>
+            <tr><td>Commission / Brokerage</td><td class="neg">(4,72,166)</td><td class="neg">(3,49,459)</td><td class="neg">(8,21,625)</td></tr>
+            <tr><td>Other Expenses (incl. reimbursements)</td><td class="neg">(3,64,816)</td><td class="neg">(3,30,525)</td><td class="neg">(6,95,341)</td></tr>
+            <tr><td>Director's Salary</td><td class="neg">(2,00,200)</td><td class="neg">(2,00,200)</td><td class="neg">(4,00,400)</td></tr>
+            <tr><td>Salary Expense</td><td class="neg">(1,47,600)</td><td class="neg">(1,73,800)</td><td class="neg">(3,21,400)</td></tr>
+            <tr><td>KA Professional Charges</td><td class="dim-t">—</td><td class="neg">(4,01,097)</td><td class="neg">(4,01,097)</td></tr>
+            <tr><td>Photoshoot Expenses</td><td class="neg">(97,800)</td><td class="neg">(40,000)</td><td class="neg">(1,37,800)</td></tr>
+            <tr><td>Advertisement</td><td class="neg">(1,41,301)</td><td class="neg">(89,818)</td><td class="neg">(2,31,120)</td></tr>
+            <tr><td>Office Rent</td><td class="neg">(90,000)</td><td class="neg">(90,000)</td><td class="neg">(1,80,000)</td></tr>
+            <tr><td>Payment Gateway</td><td class="neg">(6,792)</td><td class="neg">(21,400)</td><td class="neg">(28,192)</td></tr>
+            <tr class="total"><td>Total Expenses</td><td class="neg">(₹15,20,675)</td><td class="neg">(₹16,96,299)</td><td class="neg">(₹32,16,975)</td></tr>
+            <tr class="ebitda"><td>⬡ EBITDA</td><td class="neg">−₹1,34,809</td><td class="pos">+₹5,12,239</td><td class="pos">+₹3,77,430</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card">
+          <div class="card-hd"><div class="card-t">Jan Expense Mix</div></div>
+          <div class="ch" style="height:160px"><canvas id="c-expjan" role="img" aria-label="Jan expense pie"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><div class="card-t">Feb Expense Mix</div></div>
+          <div class="ch" style="height:160px"><canvas id="c-expfeb" role="img" aria-label="Feb expense pie"></canvas></div>
+        </div>
+      </div>
+    </div>
+    <div class="card mb16">
+      <div class="card-hd"><div class="card-t">Revenue → EBITDA Waterfall · Jan 2026</div></div>
+      <div class="ch" style="height:200px"><canvas id="c-wfall" role="img" aria-label="Jan waterfall chart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><div class="card-t">Other Expenses Breakdown</div><div class="card-v">Sub-components of Other Expenses line</div></div>
+      <table class="tbl">
+        <thead><tr><th>Expense Item</th><th>Jan 2026</th><th>Feb 2026</th><th>Change</th></tr></thead>
+        <tbody>
+          <tr><td>Office Reimbursement / OT Allowance</td><td>₹1,65,902</td><td>₹1,76,458</td><td class="pos">+6.4%</td></tr>
+          <tr><td>Repairing Expense</td><td>₹95,377</td><td class="dim-t">—</td><td class="neg">−100%</td></tr>
+          <tr><td>Office Expenses</td><td>₹43,457</td><td>₹5,867</td><td class="neg">−86.5%</td></tr>
+          <tr><td>Courier Services</td><td>₹38,580</td><td>₹26,200</td><td class="neg">−32.1%</td></tr>
+          <tr><td>Professional Fees</td><td>₹6,500</td><td>₹1,00,000</td><td class="pos">+1,438%</td></tr>
+          <tr><td>Modelling Expenses</td><td>₹15,000</td><td>₹22,000</td><td class="pos">+46.7%</td></tr>
+          <tr class="total"><td>Total Other Expenses</td><td>₹3,64,816</td><td>₹3,30,525</td><td class="pos">−9.4%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ====== CHANNELS ====== -->
+  <div class="sec" id="sec-channels">
+    <div class="kpis kpis-4">
+      <div class="kpi"><div class="kpi-line" style="background:#60a5fa"></div><div class="kpi-lbl">CDC Marketplace</div><div class="kpi-val" style="color:#60a5fa">₹19.7L</div><div class="kpi-foot">Delhi+Mumbai+Hyd</div></div>
+      <div class="kpi"><div class="kpi-line" style="background:var(--violet2)"></div><div class="kpi-lbl">Team Innovation</div><div class="kpi-val" style="color:var(--violet2)">₹11.6L</div><div class="kpi-foot">Feb · 1,340 units</div></div>
+      <div class="kpi"><div class="kpi-line" style="background:var(--gold)"></div><div class="kpi-lbl">Odd Website B2C</div><div class="kpi-val" style="color:var(--gold)">₹8.2L</div><div class="kpi-foot"><span class="tag tag-up">+8.8% MoM</span></div></div>
+      <div class="kpi"><div class="kpi-line" style="background:var(--cyan)"></div><div class="kpi-lbl">Event Channels</div><div class="kpi-val" style="color:var(--cyan)">₹15.7L</div><div class="kpi-foot">Dubai+NL+HappyFest</div></div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-hd"><div class="card-t">Channel Comparison · Gross Sales</div><div class="card-v">Jan vs Feb</div></div>
+        <div class="ch" style="height:280px"><canvas id="c-chan" role="img" aria-label="Channel comparison bar"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-t">Channel Revenue Share</div></div>
+        <div class="ch" style="height:220px"><canvas id="c-chanpie" role="img" aria-label="Channel pie YTD"></canvas></div>
+        <div style="margin-top:12px">
+          <div class="pb"><div class="pb-lbl">CDC (all locations)</div><div class="pb-track"><div class="pb-fill" style="width:100%;background:#60a5fa"></div></div><div class="pb-val">₹19.7L</div></div>
+          <div class="pb"><div class="pb-lbl">Team Innovation</div><div class="pb-track"><div class="pb-fill" style="width:58.8%;background:var(--violet2)"></div></div><div class="pb-val">₹11.6L</div></div>
+          <div class="pb"><div class="pb-lbl">Event Channels</div><div class="pb-track"><div class="pb-fill" style="width:78%;background:var(--cyan)"></div></div><div class="pb-val">₹15.4L</div></div>
+          <div class="pb"><div class="pb-lbl">Odd B2C</div><div class="pb-track"><div class="pb-fill" style="width:41.6%;background:var(--gold)"></div></div><div class="pb-val">₹8.2L</div></div>
+        </div>
+        <div class="sep"></div>
+        <div class="mgrid">
+          <div class="mgrid-item"><div class="mg-lbl">B2B vs B2C</div><div class="mg-val" style="color:var(--violet2)">85% B2B</div><div class="mg-sub">₹48.4L of ₹56.7L</div></div>
+          <div class="mgrid-item"><div class="mg-lbl">Feb vs Jan</div><div class="mg-val pos">+64%</div><div class="mg-sub">₹35.2L vs ₹21.4L</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== SHOPIFY ====== -->
+  <div class="sec" id="sec-shopify">
+    <div class="kpis kpis-4">
+      <div class="kpi"><div class="kpi-line" style="background:var(--gold)"></div><div class="kpi-lbl">Jan Revenue</div><div class="kpi-val" style="color:var(--gold)">₹3.94L</div><div class="kpi-foot">95 orders · AOV ₹4,144</div></div>
+      <div class="kpi"><div class="kpi-line" style="background:var(--green)"></div><div class="kpi-lbl">Feb Revenue</div><div class="kpi-val pos">₹8.57L</div><div class="kpi-foot"><span class="tag tag-up">+117%</span> 87 orders · ₹4,923</div></div>
+      <div class="kpi"><div class="kpi-line" style="background:var(--cyan)"></div><div class="kpi-lbl">Jan Gross Margin</div><div class="kpi-val" style="color:var(--cyan)">75.8%</div><div class="kpi-foot">COGS ₹95,411</div></div>
+      <div class="kpi"><div class="kpi-line" style="background:var(--violet2)"></div><div class="kpi-lbl">Feb Gross Margin</div><div class="kpi-val" style="color:var(--violet2)">87.1%</div><div class="kpi-foot">COGS ₹1,10,507</div></div>
+    </div>
+    <div class="g3">
+      <div class="card">
+        <div class="card-hd"><div class="card-t">Payment Type</div><div class="tgl"><button class="tgl-btn active" onclick="switchPay(this,'jan')">Jan</button><button class="tgl-btn" onclick="switchPay(this,'feb')">Feb</button></div></div>
+        <div class="ch" style="height:160px"><canvas id="c-pay" role="img" aria-label="Payment type donut"></canvas></div>
+        <div id="pay-leg" style="margin-top:10px"></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-t">Customer Mix</div><div class="tgl"><button class="tgl-btn active" onclick="switchCust(this,'jan')">Jan</button><button class="tgl-btn" onclick="switchCust(this,'feb')">Feb</button></div></div>
+        <div class="ch" style="height:160px"><canvas id="c-cust" role="img" aria-label="Customer type donut"></canvas></div>
+        <div id="cust-leg" style="margin-top:10px"></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-t">Discount Codes · Feb</div></div>
+        <div class="drow"><div class="dcode">PREPAID5</div><div class="dtrack"><div class="dfill" style="width:100%"></div></div><div class="duse">31×</div><div class="dval">₹1.47L</div></div>
+        <div class="drow"><div class="dcode">ARTISODD</div><div class="dtrack"><div class="dfill" style="width:42%"></div></div><div class="duse">13×</div><div class="dval">₹43K</div></div>
+        <div class="drow"><div class="dcode">CUSTOM</div><div class="dtrack"><div class="dfill" style="width:29%"></div></div><div class="duse">9×</div><div class="dval">₹43K</div></div>
+        <div class="drow"><div class="dcode">ODD15</div><div class="dtrack"><div class="dfill" style="width:16%"></div></div><div class="duse">5×</div><div class="dval">₹15K</div></div>
+        <div class="drow"><div class="dcode">f&amp;f</div><div class="dtrack"><div class="dfill" style="width:6%"></div></div><div class="duse">2×</div><div class="dval">₹18K</div></div>
+        <div class="drow"><div class="dcode">REPEAT10%</div><div class="dtrack"><div class="dfill" style="width:3%"></div></div><div class="duse">1×</div><div class="dval">₹8.6K</div></div>
+        <div class="drow"><div class="dcode">ROCKAGE40</div><div class="dtrack"><div class="dfill" style="width:3%"></div></div><div class="duse">1×</div><div class="dval">₹8.5K</div></div>
+      </div>
+    </div>
+    <div class="card mb16">
+      <div class="card-hd"><div class="card-t">Size Distribution + Revenue · Jan Shopify</div></div>
+      <div class="schips">
+        <div class="schip" style="background:var(--goldA);border-color:rgba(240,192,64,.25)"><div class="sn">M</div><div class="sv">₹1.24L · 37u</div></div>
+        <div class="schip"><div class="sn">XL</div><div class="sv">₹64K · 26u</div></div>
+        <div class="schip"><div class="sn">XXXL</div><div class="sv">₹56K · 17u</div></div>
+        <div class="schip"><div class="sn">L</div><div class="sv">₹47K · 15u</div></div>
+        <div class="schip"><div class="sn">S</div><div class="sv">₹43K · 14u</div></div>
+        <div class="schip"><div class="sn">XS</div><div class="sv">₹39K · 12u</div></div>
+        <div class="schip"><div class="sn">XXL</div><div class="sv">₹21K · 6u</div></div>
+      </div>
+      <div class="ch" style="height:160px;margin-top:14px"><canvas id="c-size" role="img" aria-label="Size revenue and units dual axis"></canvas></div>
+    </div>
+    <div style="background:var(--greenA);border:1px solid rgba(16,185,129,.25);border-radius:var(--r);padding:13px 18px;display:flex;align-items:center;gap:12px">
+      <div style="font-size:22px">✓</div>
+      <div><div style="font-size:12px;font-weight:600;color:var(--green)">100% Low RTO Risk — All Shopify Orders</div><div style="font-size:10px;color:var(--muted);margin-top:2px">95 Jan + 86 Feb orders all classified Low by Shopflo risk engine. Minimal returns (2 items restocked in Jan).</div></div>
+    </div>
+  </div>
+
+  <!-- ====== B2B ====== -->
+  <div class="sec" id="sec-b2b">
+    <div class="kpis kpis-4">
+      <div class="kpi"><div class="kpi-line" style="background:#60a5fa"></div><div class="kpi-lbl">B2B Gross Sales</div><div class="kpi-val" style="color:#60a5fa">₹48.4L</div><div class="kpi-foot">Jan + Feb</div></div>
+      <div class="kpi"><div class="kpi-line" style="background:var(--violet2)"></div><div class="kpi-lbl">Active Partners</div><div class="kpi-val" style="color:var(--violet2)">11</div><div class="kpi-foot">Across 2 months</div></div>
+      <div class="kpi"><div class="kpi-line" style="background:var(--green)"></div><div class="kpi-lbl">Jan B2B</div><div class="kpi-val pos">₹17.5L</div><div class="kpi-foot">Gross sales</div></div>
+      <div class="kpi"><div class="kpi-line" style="background:var(--gold)"></div><div class="kpi-lbl">Feb B2B</div><div class="kpi-val" style="color:var(--gold)">₹30.9L</div><div class="kpi-foot"><span class="tag tag-up">+77%</span> vs Jan</div></div>
+    </div>
+    <div class="g12">
+      <div class="card"><div class="card-hd"><div class="card-t">Partner Revenue Mix</div></div><div class="ch" style="height:280px"><canvas id="c-b2bpie" role="img" aria-label="B2B partner donut"></canvas></div></div>
+      <div class="card">
+        <div class="card-hd"><div class="card-t">Partner Intelligence</div></div>
+        <div class="pcard"><div class="pcard-hd"><div class="pcard-name">CDC — Delhi</div><span class="ptype" style="background:var(--blueA);color:#60a5fa">B2B RETAIL</span></div><div class="pcard-m"><div class="pm-item"><div class="pm-lbl">Gross</div><div class="pm-val">₹14.6L</div></div><div class="pm-item"><div class="pm-lbl">Invoices</div><div class="pm-val">4</div></div><div class="pm-item"><div class="pm-lbl">Share</div><div class="pm-val">30.1%</div></div></div></div>
+        <div class="pcard"><div class="pcard-hd"><div class="pcard-name">Team Entertainment Innovation</div><span class="ptype" style="background:var(--violetA);color:var(--violet2)">EVENT</span></div><div class="pcard-m"><div class="pm-item"><div class="pm-lbl">Gross</div><div class="pm-val">₹11.6L</div></div><div class="pm-item"><div class="pm-lbl">Units</div><div class="pm-val">1,340</div></div><div class="pm-item"><div class="pm-lbl">Share</div><div class="pm-val">24.0%</div></div></div></div>
+        <div class="pcard"><div class="pcard-hd"><div class="pcard-name">Dubai Arena Operations LLC</div><span class="ptype" style="background:var(--cyanA);color:var(--cyan)">INTERNATIONAL</span></div><div class="pcard-m"><div class="pm-item"><div class="pm-lbl">Gross</div><div class="pm-val">₹4.31L</div></div><div class="pm-item"><div class="pm-lbl">Invoices</div><div class="pm-val">1</div></div><div class="pm-item"><div class="pm-lbl">Share</div><div class="pm-val">8.9%</div></div></div></div>
+        <div class="pcard"><div class="pcard-hd"><div class="pcard-name">Innovation Nightlife (Karan Aujla)</div><span class="ptype" style="background:var(--goldA);color:var(--gold)">CONCERT</span></div><div class="pcard-m"><div class="pm-item"><div class="pm-lbl">Gross</div><div class="pm-val">₹4.16L</div></div><div class="pm-item"><div class="pm-lbl">Invoices</div><div class="pm-val">1</div></div><div class="pm-item"><div class="pm-lbl">Share</div><div class="pm-val">8.6%</div></div></div></div>
+        <div class="pcard"><div class="pcard-hd"><div class="pcard-name">CDC — Mumbai + Hyderabad</div><span class="ptype" style="background:var(--blueA);color:#60a5fa">B2B RETAIL</span></div><div class="pcard-m"><div class="pm-item"><div class="pm-lbl">Gross</div><div class="pm-val">₹6.69L</div></div><div class="pm-item"><div class="pm-lbl">Invoices</div><div class="pm-val">4</div></div><div class="pm-item"><div class="pm-lbl">Share</div><div class="pm-val">13.8%</div></div></div></div>
+        <div class="pcard"><div class="pcard-hd"><div class="pcard-name">HappyFest + Pada91 + Others</div><span class="ptype" style="background:var(--greenA);color:var(--green)">MULTI-EVENT</span></div><div class="pcard-m"><div class="pm-item"><div class="pm-lbl">Gross</div><div class="pm-val">₹6.6L</div></div><div class="pm-item"><div class="pm-lbl">Share</div><div class="pm-val">13.6%</div></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== PRODUCTS ====== -->
+  <div class="sec" id="sec-products">
+    <div class="g2">
+      <div class="card">
+        <div class="card-hd"><div class="card-t">Top Products · Jan Shopify</div><div class="card-v">Revenue + Margin</div></div>
+        <div class="rank" style="border-color:var(--border2);margin-bottom:6px;padding-bottom:6px"><div class="rank-n">#</div><div style="flex:1;font-size:8px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase">Product</div><div style="width:58px;text-align:right;font-size:8px;color:var(--dim)">Rev</div><div style="width:46px;text-align:right;font-size:8px;color:var(--dim)">Margin</div></div>
+        <div class="rank"><div class="rank-n">01</div><div class="rank-dot" style="background:var(--gold)"></div><div class="rank-name">'97' Oversized Jersey</div><div class="rank-rev">₹37,616</div><div class="rank-tag" style="background:var(--greenA);color:var(--green)">78.9%</div></div>
+        <div class="rank"><div class="rank-n">02</div><div class="rank-dot" style="background:#60a5fa"></div><div class="rank-name">11-11 Black Full Sleeve Shirt</div><div class="rank-rev">₹21,095</div><div class="rank-tag" style="background:var(--greenA);color:var(--green)">88.2%</div></div>
+        <div class="rank"><div class="rank-n">03</div><div class="rank-dot" style="background:var(--violet2)"></div><div class="rank-name">Brown Drift Jersey</div><div class="rank-rev">₹21,023</div><div class="rank-tag" style="background:var(--greenA);color:var(--green)">80.8%</div></div>
+        <div class="rank"><div class="rank-n">04</div><div class="rank-dot" style="background:var(--green)"></div><div class="rank-name">Purple Jersey Tshirt</div><div class="rank-rev">₹19,172</div><div class="rank-tag" style="background:var(--greenA);color:var(--green)">79.9%</div></div>
+        <div class="rank"><div class="rank-n">05</div><div class="rank-dot" style="background:var(--orange)"></div><div class="rank-name">'TOO MUCH' Sweatshirt</div><div class="rank-rev">₹17,795</div><div class="rank-tag" style="background:var(--cyanA);color:var(--cyan)">100%</div></div>
+        <div class="rank"><div class="rank-n">06</div><div class="rank-dot" style="background:var(--red)"></div><div class="rank-name">IF YOU LOVE ME JERSEY</div><div class="rank-rev">₹12,797</div><div class="rank-tag" style="background:var(--greenA);color:var(--green)">86.8%</div></div>
+        <div class="rank"><div class="rank-n">07</div><div class="rank-dot" style="background:var(--cyan)"></div><div class="rank-name">777 Red-Beige Jersey</div><div class="rank-rev">₹12,070</div><div class="rank-tag" style="background:var(--cyanA);color:var(--cyan)">100%</div></div>
+        <div class="rank"><div class="rank-n">08</div><div class="rank-dot" style="background:var(--pink)"></div><div class="rank-name">Head In The Clouds T-Shirt</div><div class="rank-rev">₹11,710</div><div class="rank-tag" style="background:var(--cyanA);color:var(--cyan)">100%</div></div>
+        <div class="rank"><div class="rank-n">09</div><div class="rank-dot" style="background:#fbbf24"></div><div class="rank-name">LS Pop Culture Arrow FS</div><div class="rank-rev">₹11,700</div><div class="rank-tag" style="background:var(--cyanA);color:var(--cyan)">100%</div></div>
+        <div class="rank"><div class="rank-n">10</div><div class="rank-dot" style="background:var(--green)"></div><div class="rank-name">'POP CULTURE' ODD Jersey</div><div class="rank-rev">₹10,830</div><div class="rank-tag" style="background:var(--cyanA);color:var(--cyan)">100%</div></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-t">Top Products · Feb Shopify</div><div class="card-v">Revenue + Margin</div></div>
+        <div class="rank" style="border-color:var(--border2);margin-bottom:6px;padding-bottom:6px"><div class="rank-n">#</div><div style="flex:1;font-size:8px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase">Product</div><div style="width:58px;text-align:right;font-size:8px;color:var(--dim)">Rev</div><div style="width:46px;text-align:right;font-size:8px;color:var(--dim)">Margin</div></div>
+        <div class="rank"><div class="rank-n">01</div><div class="rank-dot" style="background:var(--gold)"></div><div class="rank-name">Comet x Odd Scribbled Heart Jersey</div><div class="rank-rev">₹54,245</div><div class="rank-tag" style="background:var(--greenA);color:var(--green)">82.7%</div></div>
+        <div class="rank"><div class="rank-n">02</div><div class="rank-dot" style="background:var(--green)"></div><div class="rank-name">Black Jersey Tshirt</div><div class="rank-rev">₹36,706</div><div class="rank-tag" style="background:var(--cyanA);color:var(--cyan)">100%</div></div>
+        <div class="rank"><div class="rank-n">03</div><div class="rank-dot" style="background:#60a5fa"></div><div class="rank-name">'97' Oversized Jersey</div><div class="rank-rev">₹26,920</div><div class="rank-tag" style="background:var(--greenA);color:var(--green)">87.4%</div></div>
+        <div class="rank"><div class="rank-n">04</div><div class="rank-dot" style="background:var(--violet2)"></div><div class="rank-name">'Make A Wish' Jersey Tshirt</div><div class="rank-rev">₹21,694</div><div class="rank-tag" style="background:var(--greenA);color:var(--green)">84.3%</div></div>
+        <div class="rank"><div class="rank-n">05</div><div class="rank-dot" style="background:var(--orange)"></div><div class="rank-name">IF YOU LOVE ME JERSEY</div><div class="rank-rev">₹20,205</div><div class="rank-tag" style="background:var(--greenA);color:var(--green)">87.5%</div></div>
+        <div class="rank"><div class="rank-n">06</div><div class="rank-dot" style="background:var(--cyan)"></div><div class="rank-name">Ten Jersey</div><div class="rank-rev">₹17,799</div><div class="rank-tag" style="background:var(--greenA);color:var(--green)">79.8%</div></div>
+        <div class="rank"><div class="rank-n">07</div><div class="rank-dot" style="background:var(--red)"></div><div class="rank-name">Racer Full Sleeve Jersey</div><div class="rank-rev">₹17,699</div><div class="rank-tag" style="background:var(--greenA);color:var(--green)">80.9%</div></div>
+        <div class="rank"><div class="rank-n">08</div><div class="rank-dot" style="background:var(--pink)"></div><div class="rank-name">Strangers Tshirt</div><div class="rank-rev">₹15,330</div><div class="rank-tag" style="background:var(--greenA);color:var(--green)">84.4%</div></div>
+        <div class="rank"><div class="rank-n">09</div><div class="rank-dot" style="background:#fbbf24"></div><div class="rank-name">OG Loverboy Jersey</div><div class="rank-rev">₹12,509</div><div class="rank-tag" style="background:var(--cyanA);color:var(--cyan)">100%</div></div>
+        <div class="rank"><div class="rank-n">10</div><div class="rank-dot" style="background:var(--green)"></div><div class="rank-name">Royal Blue Jersey Tshirt</div><div class="rank-rev">₹12,137</div><div class="rank-tag" style="background:var(--greenA);color:var(--green)">86.8%</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hd"><div class="card-t">Category Revenue · Jan vs Feb Shopify</div></div>
+      <div class="ch" style="height:200px"><canvas id="c-cat" role="img" aria-label="Category revenue bar"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ====== GEO ====== -->
+  <div class="sec" id="sec-geography">
+    <div class="kpis kpis-4">
+      <div class="kpi"><div class="kpi-line" style="background:var(--gold)"></div><div class="kpi-lbl">Top State</div><div class="kpi-val" style="color:var(--gold)">MH</div><div class="kpi-foot">Maharashtra · ₹1.29L Jan</div></div>
+      <div class="kpi"><div class="kpi-line" style="background:var(--cyan)"></div><div class="kpi-lbl">States Reached</div><div class="kpi-val" style="color:var(--cyan)">19</div><div class="kpi-foot">Pan-India · Jan</div></div>
+      <div class="kpi"><div class="kpi-line" style="background:var(--violet2)"></div><div class="kpi-lbl">Best AOV State</div><div class="kpi-val" style="color:var(--violet2)">₹5,399</div><div class="kpi-foot">Mizoram · 1 order</div></div>
+      <div class="kpi"><div class="kpi-line" style="background:var(--green)"></div><div class="kpi-lbl">Avg AOV (Jan)</div><div class="kpi-val pos">₹4,144</div><div class="kpi-foot">Across all states</div></div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-hd"><div class="card-t">State Revenue Distribution</div><div class="tgl"><button class="tgl-btn active" onclick="switchGeo(this,'jan')">Jan</button><button class="tgl-btn" onclick="switchGeo(this,'feb')">Feb</button></div></div>
+        <div id="geo-j">
+          <div class="sg">
+            <div class="sblk"><div class="sc">MH</div><div class="sname">Maharashtra</div><div class="srev">₹1.29L</div><div class="sbar"><div class="sbar-f" style="width:100%"></div></div></div>
+            <div class="sblk"><div class="sc">DL</div><div class="sname">Delhi</div><div class="srev">₹39,826</div><div class="sbar"><div class="sbar-f" style="width:30.8%"></div></div></div>
+            <div class="sblk"><div class="sc">GJ</div><div class="sname">Gujarat</div><div class="srev">₹34,906</div><div class="sbar"><div class="sbar-f" style="width:27%"></div></div></div>
+            <div class="sblk"><div class="sc">WB</div><div class="sname">West Bengal</div><div class="srev">₹32,001</div><div class="sbar"><div class="sbar-f" style="width:24.7%"></div></div></div>
+            <div class="sblk"><div class="sc">PB</div><div class="sname">Punjab</div><div class="srev">₹31,075</div><div class="sbar"><div class="sbar-f" style="width:24%"></div></div></div>
+            <div class="sblk"><div class="sc">UP</div><div class="sname">Uttar Pradesh</div><div class="srev">₹18,775</div><div class="sbar"><div class="sbar-f" style="width:14.5%"></div></div></div>
+            <div class="sblk"><div class="sc">JH</div><div class="sname">Jharkhand</div><div class="srev">₹18,596</div><div class="sbar"><div class="sbar-f" style="width:14.4%"></div></div></div>
+            <div class="sblk"><div class="sc">RJ</div><div class="sname">Rajasthan</div><div class="srev">₹16,883</div><div class="sbar"><div class="sbar-f" style="width:13.1%"></div></div></div>
+          </div>
+        </div>
+        <div id="geo-f" style="display:none">
+          <div class="sg">
+            <div class="sblk"><div class="sc">MH</div><div class="sname">Maharashtra</div><div class="srev">₹1.52L</div><div class="sbar"><div class="sbar-f" style="width:100%"></div></div></div>
+            <div class="sblk"><div class="sc">KA</div><div class="sname">Karnataka</div><div class="srev">₹37,083</div><div class="sbar"><div class="sbar-f" style="width:24.4%"></div></div></div>
+            <div class="sblk"><div class="sc">RJ</div><div class="sname">Rajasthan</div><div class="srev">₹27,103</div><div class="sbar"><div class="sbar-f" style="width:17.8%"></div></div></div>
+            <div class="sblk"><div class="sc">DL</div><div class="sname">Delhi</div><div class="srev">₹25,589</div><div class="sbar"><div class="sbar-f" style="width:16.8%"></div></div></div>
+            <div class="sblk"><div class="sc">MP</div><div class="sname">Madhya Pradesh</div><div class="srev">₹23,587</div><div class="sbar"><div class="sbar-f" style="width:15.5%"></div></div></div>
+            <div class="sblk"><div class="sc">TS</div><div class="sname">Telangana</div><div class="srev">₹21,837</div><div class="sbar"><div class="sbar-f" style="width:14.3%"></div></div></div>
+            <div class="sblk"><div class="sc">GJ</div><div class="sname">Gujarat</div><div class="srev">₹19,337</div><div class="sbar"><div class="sbar-f" style="width:12.7%"></div></div></div>
+            <div class="sblk"><div class="sc">HR</div><div class="sname">Haryana</div><div class="srev">₹17,589</div><div class="sbar"><div class="sbar-f" style="width:11.6%"></div></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card"><div class="card-hd"><div class="card-t">AOV by State · Jan</div></div><div class="ch" style="height:340px"><canvas id="c-aov" role="img" aria-label="AOV by state bar chart"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- ====== PROJECTIONS ====== -->
+  <div class="sec" id="sec-projections">
+    <div style="background:var(--violetA);border:1px solid var(--border3);border-radius:var(--r);padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px">
+      <div style="font-size:18px">▲</div>
+      <div><div style="font-size:12px;font-weight:600;color:var(--violet2)">Statistical Projection Model — Based on Jan-Feb Actuals</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Projections use MoM growth rate (64.4% B2B surge, 8.8% B2C), seasonal adjustment, and expense trend. Conservative / Base / Optimistic scenarios shown.</div></div>
+    </div>
+    <div class="kpis kpis-3" style="margin-bottom:20px">
+      <div class="kpi"><div class="kpi-line" style="background:var(--green)"></div><div class="kpi-lbl">Q1 Projected Gross Sales</div><div class="kpi-val glow-vt" style="color:var(--violet2)">₹1.42Cr</div><div class="kpi-foot"><span class="tag tag-vt">Base case</span>Mar included</div></div>
+      <div class="kpi"><div class="kpi-line" style="background:var(--gold)"></div><div class="kpi-lbl">Q1 Projected EBITDA</div><div class="kpi-val glow-gold" style="color:var(--gold)">+₹18.2L</div><div class="kpi-foot"><span class="tag tag-neu">Base case</span>post-correction</div></div>
+      <div class="kpi"><div class="kpi-line" style="background:var(--cyan)"></div><div class="kpi-lbl">Annualised Run Rate</div><div class="kpi-val" style="color:var(--cyan)">₹5.7Cr</div><div class="kpi-foot">If Feb pace maintained</div></div>
+    </div>
+
+    <div class="g3 mb16">
+      <div class="proj-card"><div class="proj-month">March 2026 — Conservative</div><div class="proj-val">₹28.4L</div><div class="proj-sub">Assumes 20% pullback from Feb event-driven peak. B2C +8% MoM.</div><div class="proj-conf">75% confidence</div></div>
+      <div class="proj-card" style="border-color:rgba(240,192,64,.25)"><div class="proj-month">March 2026 — Base Case</div><div class="proj-val">₹34.2L</div><div class="proj-sub">Assumes stable B2B orders, +9% B2C, reduced KA charges, steady CDC.</div><div class="proj-conf">Base scenario</div></div>
+      <div class="proj-card"><div class="proj-month">March 2026 — Optimistic</div><div class="proj-val">₹42.0L</div><div class="proj-sub">New event partner activated + 15% Shopify B2C growth, cost optimised.</div><div class="proj-conf">Upside case</div></div>
+    </div>
+
+    <div class="card mb16">
+      <div class="card-hd"><div class="card-t">6-Month Revenue Projection · All Scenarios</div></div>
+      <div class="ch" style="height:260px"><canvas id="c-proj" role="img" aria-label="6 month revenue projection"></canvas></div>
+    </div>
+
+    <div class="g2">
+      <div class="card">
+        <div class="card-hd"><div class="card-t">Projected Monthly P&L · Base Case</div></div>
+        <table class="tbl">
+          <thead><tr><th>Metric</th><th>Mar '26</th><th>Apr '26</th><th>May '26</th><th>Jun '26</th></tr></thead>
+          <tbody>
+            <tr><td>Gross Sales</td><td>₹34.2L</td><td>₹32.0L</td><td>₹35.8L</td><td>₹38.4L</td></tr>
+            <tr><td>Net Sales</td><td>₹29.8L</td><td>₹27.8L</td><td>₹31.1L</td><td>₹33.4L</td></tr>
+            <tr><td>COGS (est.)</td><td>₹9.7L</td><td>₹9.1L</td><td>₹10.2L</td><td>₹10.9L</td></tr>
+            <tr><td>Gross Profit</td><td class="pos">₹20.1L</td><td class="pos">₹18.7L</td><td class="pos">₹20.9L</td><td class="pos">₹22.5L</td></tr>
+            <tr><td>Total Expenses (est.)</td><td>₹15.5L</td><td>₹14.8L</td><td>₹15.2L</td><td>₹15.8L</td></tr>
+            <tr class="ebitda"><td>EBITDA</td><td class="pos">+₹4.6L</td><td class="pos">+₹3.9L</td><td class="pos">+₹5.7L</td><td class="pos">+₹6.7L</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-t">Key Projection Assumptions</div></div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+          <div style="background:var(--bg2);border-radius:var(--rsm);padding:11px;border:1px solid var(--border)">
+            <div style="font-size:9px;color:var(--cyan);text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:4px">B2C Growth</div>
+            <div style="font-size:13px;font-weight:700;font-family:'Space Mono',monospace;color:var(--text)">+8–10% MoM</div>
+            <div style="font-size:9.5px;color:var(--muted);margin-top:3px">Instagram + Facebook ads driving consistent acquisition. AOV trending upward.</div>
+          </div>
+          <div style="background:var(--bg2);border-radius:var(--rsm);padding:11px;border:1px solid var(--border)">
+            <div style="font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:4px">B2B / Events</div>
+            <div style="font-size:13px;font-weight:700;font-family:'Space Mono',monospace;color:var(--text)">1–2 events/mo</div>
+            <div style="font-size:9.5px;color:var(--muted);margin-top:3px">Concert + corporate event pipeline expected. Each event = ₹4–12L gross contribution.</div>
+          </div>
+          <div style="background:var(--bg2);border-radius:var(--rsm);padding:11px;border:1px solid var(--border)">
+            <div style="font-size:9px;color:var(--violet2);text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:4px">Expenses</div>
+            <div style="font-size:13px;font-weight:700;font-family:'Space Mono',monospace;color:var(--text)">₹14.5–16L/mo</div>
+            <div style="font-size:9.5px;color:var(--muted);margin-top:3px">Fixed: ₹5.7L (salaries+rent). Variable: commissions tied to B2B deals. KA charges are non-recurring.</div>
+          </div>
+          <div style="background:var(--bg2);border-radius:var(--rsm);padding:11px;border:1px solid var(--border)">
+            <div style="font-size:9px;color:var(--green);text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:4px">EBITDA Target</div>
+            <div style="font-size:13px;font-weight:700;font-family:'Space Mono',monospace;color:var(--green)">+10–15% margin</div>
+            <div style="font-size:9.5px;color:var(--muted);margin-top:3px">Achievable if photoshoot expenses normalise and commission structure is renegotiated.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== BUDGET ====== -->
+  <div class="sec" id="sec-budget">
+    <div style="background:var(--goldA);border:1px solid rgba(240,192,64,.25);border-radius:var(--r);padding:13px 18px;margin-bottom:18px;display:flex;align-items:center;gap:10px">
+      <div style="font-size:16px">◧</div>
+      <div style="font-size:11px;color:var(--muted)">Budget targets are <strong style="color:var(--gold)">estimated benchmarks</strong> based on industry standards for a D2C fashion brand at this revenue scale. Adjust in a planning tool with actual targets for precise variance.</div>
+    </div>
+    <div class="kpis kpis-4">
+      <div class="kpi"><div class="kpi-line" style="background:var(--red)"></div><div class="kpi-lbl">Jan Over Budget</div><div class="kpi-val neg">₹2.3L</div><div class="kpi-foot">Photoshoot + repairing</div></div>
+      <div class="kpi"><div class="kpi-line" style="background:var(--green)"></div><div class="kpi-lbl">Feb Under Budget</div><div class="kpi-val pos">₹1.1L</div><div class="kpi-foot">Lower photoshoot costs</div></div>
+      <div class="kpi"><div class="kpi-line" style="background:var(--gold)"></div><div class="kpi-lbl">Commission Overrun</div><div class="kpi-val" style="color:var(--gold)">+₹1.8L</div><div class="kpi-foot">Jan vs target</div></div>
+      <div class="kpi"><div class="kpi-line" style="background:var(--violet2)"></div><div class="kpi-lbl">Ad Spend Efficiency</div><div class="kpi-val" style="color:var(--violet2)">5.6x</div><div class="kpi-foot">Revenue per ₹1 ad spend</div></div>
+    </div>
+
+    <div class="card mb16">
+      <div class="card-hd"><div class="card-t">Budget vs Actual — Expense Line Items</div><div class="card-v">Jan + Feb 2026</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 80px 80px;gap:0;font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding:6px 0;border-bottom:1px solid var(--border)"><span>Category</span><span style="text-align:right">Actual</span><span style="text-align:right">Budget Target</span><span style="text-align:right">Variance</span><span style="text-align:right">Track</span></div>
+      <div class="brow"><div class="brow-cat">Commission / Brokerage</div><div class="brow-act">₹8,21,625</div><div class="brow-bud">₹6,50,000</div><div class="brow-var neg">+₹1.7L</div><div class="brow-bar"><div class="brow-bf" style="width:100%;background:var(--red);opacity:.6"></div></div></div>
+      <div class="brow"><div class="brow-cat">Salary (staff)</div><div class="brow-act">₹3,21,400</div><div class="brow-bud">₹3,00,000</div><div class="brow-var neg">+₹21.4K</div><div class="brow-bar"><div class="brow-bf" style="width:85%;background:var(--orange);opacity:.6"></div></div></div>
+      <div class="brow"><div class="brow-cat">Director's Salary</div><div class="brow-act">₹4,00,400</div><div class="brow-bud">₹4,00,400</div><div class="brow-var" style="color:var(--green)">On target</div><div class="brow-bar"><div class="brow-bf" style="width:80%;background:var(--green);opacity:.6"></div></div></div>
+      <div class="brow"><div class="brow-cat">Advertisement Expense</div><div class="brow-act">₹2,31,120</div><div class="brow-bud">₹2,50,000</div><div class="brow-var pos">−₹18.9K</div><div class="brow-bar"><div class="brow-bf" style="width:73%;background:var(--green);opacity:.6"></div></div></div>
+      <div class="brow"><div class="brow-cat">Office Rent</div><div class="brow-act">₹1,80,000</div><div class="brow-bud">₹1,80,000</div><div class="brow-var" style="color:var(--green)">On target</div><div class="brow-bar"><div class="brow-bf" style="width:75%;background:var(--green);opacity:.6"></div></div></div>
+      <div class="brow"><div class="brow-cat">Photoshoot Expenses</div><div class="brow-act">₹1,37,800</div><div class="brow-bud">₹80,000</div><div class="brow-var neg">+₹57.8K</div><div class="brow-bar"><div class="brow-bf" style="width:100%;background:var(--red);opacity:.6"></div></div></div>
+      <div class="brow"><div class="brow-cat">Other Expenses (all)</div><div class="brow-act">₹6,95,341</div><div class="brow-bud">₹6,00,000</div><div class="brow-var neg">+₹95.3K</div><div class="brow-bar"><div class="brow-bf" style="width:90%;background:var(--orange);opacity:.6"></div></div></div>
+      <div class="brow"><div class="brow-cat">KA Professional Charges</div><div class="brow-act">₹4,01,097</div><div class="brow-bud">Unbudgeted</div><div class="brow-var neg">+₹4.0L</div><div class="brow-bar"><div class="brow-bf" style="width:100%;background:var(--red);opacity:.6"></div></div></div>
+      <div class="brow"><div class="brow-cat">Payment Gateway</div><div class="brow-act">₹28,192</div><div class="brow-bud">₹35,000</div><div class="brow-var pos">−₹6.8K</div><div class="brow-bar"><div class="brow-bf" style="width:60%;background:var(--green);opacity:.6"></div></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-hd"><div class="card-t">Budget vs Actual · Revenue Targets</div></div>
+      <div class="ch" style="height:200px"><canvas id="c-bud" role="img" aria-label="Budget vs actual revenue"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ====== SUGGESTIONS ====== -->
+  <div class="sec" id="sec-suggestions">
+    <div style="background:var(--violetA);border:1px solid var(--border3);border-radius:var(--r);padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px">
+      <div style="font-size:20px">⬟</div>
+      <div><div style="font-size:12px;font-weight:600;color:var(--violet2)">12 AI-Generated Strategic Insights</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Derived from actual financial data patterns, cost structures, and market signals in your MIS.</div></div>
+    </div>
+
+    <div class="sdiv"><div class="sdiv-line"></div><div class="sdiv-txt">🔴 Critical Actions</div><div class="sdiv-line"></div></div>
+    <div class="sug danger"><div class="sug-icon">⚠</div><div><div class="sug-title">Commission Structure is Your #1 Profit Killer</div><div class="sug-body">Commission/Brokerage at ₹8.2L YTD is the single largest controllable expense (25.5% of net sales). Jan alone was ₹4.72L — largely tied to HappyFest deal. Renegotiate to % of gross margin, not gross revenue. Even a 15% reduction saves ₹1.2L/month.</div><span class="sug-imp imp-high">CRITICAL</span></div></div>
+    <div class="sug danger"><div class="sug-icon">⚡</div><div><div class="sug-title">Single-Channel B2B Dependency Risk</div><div class="sug-body">CDC Marketplace alone = 39% of YTD gross revenue. If CDC reduces orders or renegotiates terms, you lose ₹22L+ revenue. Start diversifying — target 2 new B2B retail partners per quarter and cap any single partner at 25% of revenue.</div><span class="sug-imp imp-high">CRITICAL</span></div></div>
+
+    <div class="sdiv"><div class="sdiv-line"></div><div class="sdiv-txt">🟡 High Priority</div><div class="sdiv-line"></div></div>
+    <div class="sug warn"><div class="sug-icon">📸</div><div><div class="sug-title">Photoshoot Expenses Need a Content Calendar</div><div class="sug-body">₹97,800 in Jan vs ₹40,000 in Feb — 145% variance. Batch shoots quarterly instead of monthly. A planned 3-month content calendar could reduce annual photoshoot cost by 30–40% (saving ₹4–6L/year).</div><span class="sug-imp imp-med">HIGH PRIORITY</span></div></div>
+    <div class="sug warn"><div class="sug-icon">🎯</div><div><div class="sug-title">Size M is Consistently Your Hero SKU — Lean In</div><div class="sug-body">Size M drives ₹1.24L (31%) of Jan Shopify revenue in 37 units. Yet XXL (17 units) is the second-highest volume. Ensure M + XXXL are always in stock. Running out of M = direct revenue loss. Increase safety stock by 40%.</div><span class="sug-imp imp-med">HIGH PRIORITY</span></div></div>
+    <div class="sug warn"><div class="sug-icon">🔄</div><div><div class="sug-title">Repeat Customer Revenue is Declining</div><div class="sug-body">Jan: Repeat customers contributed ₹99.9K (25.3%) of B2C. Feb: ₹72.7K (17.1%) — a 27% drop. Activate a loyalty program or WhatsApp re-engagement campaign. Even converting 20% of new buyers into repeat buyers adds ₹40K+/month.</div><span class="sug-imp imp-med">HIGH PRIORITY</span></div></div>
+    <div class="sug warn"><div class="sug-icon">💳</div><div><div class="sug-title">COD Rate Dropping Rapidly — Capitalise on It</div><div class="sug-body">Jan COD = 39.5% of B2C revenue. Feb = 13.5%. This is excellent (COD has higher return risk). Offer an additional 3–5% prepaid discount via PREPAID5 or new codes to further reduce COD to sub-10%. Saves RTO costs and improves cash flow.</div><span class="sug-imp imp-med">HIGH PRIORITY</span></div></div>
+
+    <div class="sdiv"><div class="sdiv-line"></div><div class="sdiv-txt">🟢 Growth Opportunities</div><div class="sdiv-line"></div></div>
+    <div class="sug good"><div class="sug-icon">🗺</div><div><div class="sug-title">Karnataka is Your Fastest Growing B2C State</div><div class="sug-body">KA jumped from ₹2,199 (Jan) to ₹37,083 (Feb) — a 16× surge. This is likely organic word-of-mouth. Allocate targeted Meta/Instagram ads to Bangalore + Mysore. The ₹37K base can be scaled to ₹1.5L+/month within 2 months with ₹15K ad spend.</div><span class="sug-imp imp-low">OPPORTUNITY</span></div></div>
+    <div class="sug good"><div class="sug-icon">🏟</div><div><div class="sug-title">Event Channel is Your Highest Margin Play</div><div class="sug-body">Dubai Arena, Team Innovation, and Innovation Nightlife all had 99–100% gross margins on services (design charges, event management). B2B event revenue with near-zero COGS is your ideal channel. Build a dedicated events sales pipeline — target 3–4 events/month at ₹5–15L each.</div><span class="sug-imp imp-low">OPPORTUNITY</span></div></div>
+    <div class="sug good"><div class="sug-icon">📱</div><div><div class="sug-title">Facebook is 20% of Revenue at Low Acquisition Cost</div><div class="sug-body">Facebook drove ₹78.4K (Jan) and ₹96.2K (Feb) in Shopify revenue — 23 orders and 19 orders respectively. At ₹1.4L total ad spend, the ROI is approximately 5.6× ROAS. Increase Facebook budget by 30% (₹42K/mo more) to capture this efficiently scaling channel.</div><span class="sug-imp imp-low">OPPORTUNITY</span></div></div>
+    <div class="sug good"><div class="sug-icon">⭐</div><div><div class="sug-title">High-Margin Products Need Priority Inventory Allocation</div><div class="sug-body">7 of top 10 Jan products have 85%+ margins (TOO MUCH Sweatshirt, 777 Jersey, Head In The Clouds = 100%). These are likely older inventory with COGS already written off. Allocate photoshoot and ad budget specifically to promote these — selling ₹1 of 100% margin product is better than ₹1.5 of 70% margin product.</div><span class="sug-imp imp-low">OPPORTUNITY</span></div></div>
+    <div class="sug good"><div class="sug-icon">🌏</div><div><div class="sug-title">International B2B Channel (Dubai) Needs Expansion</div><div class="sug-body">Dubai Arena Operations LLC is a single ₹4.31L invoice from February with massive potential. Luxury streetwear in UAE, Singapore, and the UK is growing rapidly. One international deal per month at ₹5–10L adds ₹60–1.2Cr to annual revenue with minimal COGS.</div><span class="sug-imp imp-low">OPPORTUNITY</span></div></div>
+    <div class="sug good"><div class="sug-icon">💰</div><div><div class="sug-title">Activate FD Interest as Working Capital Lever</div><div class="sug-body">FD interest income of ₹43,785 YTD is healthy. Consider growing FD corpus — if EBITDA allows, park ₹30–40L in high-yield FDs (6.5–7%) to generate ₹2–2.5L/year in passive income that partially offsets fixed costs like rent (₹1.8L/year).</div><span class="sug-imp imp-low">OPPORTUNITY</span></div></div>
+  </div>
+
+</main>
+
+<script>
+// ===================== NAVIGATION =====================
+const titles={overview:'Command Overview',pnl:'P&L Deep Dive',channels:'Channel Matrix',shopify:'Shopify B2C',b2b:'B2B Partners',products:'Product Intel',geography:'Geo Analytics',projections:'Projections & Forecasts',budget:'Budget vs Actual',suggestions:'AI Suggestions'};
+function goPage(el,id){
+  document.querySelectorAll('.sb-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('sec-'+id).classList.add('active');
+  document.getElementById('ptitle').textContent=titles[id]||id;
+}
+function toggleCompare(){
+  const el=document.getElementById('view-toggle');
+  el.classList.toggle('active');
+}
+function resetFilters(){
+  document.getElementById('f-month').value='all';
+  document.getElementById('f-channel').value='all';
+  document.getElementById('f-payment').value='all';
+  document.getElementById('f-state').value='all';
+  document.querySelectorAll('.f-btn').forEach(b=>b.classList.add('active'));
+  document.getElementById('filter-display').style.display='none';
+  updateFilterDisplay();
+}
+function toggleFilter(el){el.classList.toggle('active')}
+function applyFilters(){updateFilterDisplay()}
+function updateFilterDisplay(){
+  const m=document.getElementById('f-month').value;
+  const c=document.getElementById('f-channel').value;
+  const p=document.getElementById('f-payment').value;
+  const s=document.getElementById('f-state').value;
+  const active=[];
+  if(m!=='all')active.push(m==='jan'?'January':'February');
+  if(c!=='all')active.push(c);
+  if(p!=='all')active.push(p);
+  if(s!=='all')active.push(s);
+  const fd=document.getElementById('filter-display');
+  if(active.length){
+    fd.style.display='flex';
+    fd.innerHTML='<span style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-top:2px">Active:</span>'+active.map(a=>`<span style="background:var(--violetA);border:1px solid var(--border3);border-radius:20px;padding:3px 9px;font-size:9.5px;color:var(--violet2)">${a}</span>`).join('');
+  }else{fd.style.display='none'}
+}
+function switchGeo(el,m){
+  el.closest('.tgl').querySelectorAll('.tgl-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');
+  document.getElementById('geo-j').style.display=m==='jan'?'block':'none';
+  document.getElementById('geo-f').style.display=m==='feb'?'block':'none';
+}
+
+// ===================== CHART GLOBALS =====================
+const G='rgba(120,100,255,0.04)',M='#8880aa';
+const Cs={gold:'#f0c040',green:'#10b981',red:'#f43f5e',blue:'#60a5fa',violet:'#8b5cf6',cyan:'#06b6d4',orange:'#f97316',pink:'#ec4899'};
+const baseOpt=(extra={})=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' ₹'+Math.round(c.raw).toLocaleString('en-IN')}}},scales:{x:{grid:{color:G},ticks:{color:M,font:{size:9,family:'Space Mono'}}},y:{grid:{color:G},ticks:{color:M,font:{size:9,family:'Space Mono'},callback:v=>'₹'+(v/100000).toFixed(1)+'L'}}},...extra});
+
+// Revenue Bridge
+new Chart('c-rev',{type:'bar',data:{labels:['Jan 2026','Feb 2026'],datasets:[
+  {label:'Gross',data:[2143071,3523556],backgroundColor:'rgba(240,192,64,0.5)',borderColor:Cs.gold,borderWidth:1.5,borderRadius:5},
+  {label:'Net',data:[1893694,3269795],backgroundColor:'rgba(16,185,129,0.35)',borderColor:Cs.green,borderWidth:1.5,borderRadius:5},
+  {label:'COGS',data:[529721,1083149],backgroundColor:'rgba(244,63,94,0.35)',borderColor:Cs.red,borderWidth:1.5,borderRadius:5},
+  {label:'GP',data:[1363973,2186646],backgroundColor:'rgba(139,92,246,0.35)',borderColor:Cs.violet,borderWidth:1.5,borderRadius:5},
+]},options:baseOpt()});
+
+// Traffic source
+const srcData={jan:{labels:['Direct','Facebook','Instagram','Email','WhatsApp'],vals:[273979,78353,31588,7470,2279],cols:['rgba(139,92,246,0.7)','rgba(96,165,250,0.7)','rgba(236,72,153,0.7)','rgba(249,115,22,0.7)','rgba(16,185,129,0.7)']},feb:{labels:['Direct','Facebook','Instagram'],vals:[718013,96170,42348],cols:['rgba(139,92,246,0.7)','rgba(96,165,250,0.7)','rgba(236,72,153,0.7)']}};
+let srcChart;
+function buildSrc(m){if(srcChart)srcChart.destroy();const d=srcData[m];srcChart=new Chart('c-src',{type:'bar',data:{labels:d.labels,datasets:[{data:d.vals,backgroundColor:d.cols,borderWidth:0,borderRadius:5}]},options:baseOpt({scales:{x:{grid:{color:G},ticks:{color:M,font:{size:9}}},y:{grid:{color:G},ticks:{color:M,font:{size:9,family:'Space Mono'},callback:v=>'₹'+(v/1000).toFixed(0)+'K'}}}})});}
+buildSrc('jan');
+function switchSrc(el,m){el.closest('.tgl').querySelectorAll('.tgl-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');buildSrc(m)}
+
+// Jan channel donut
+function donut(id,labels,vals,cols){new Chart(id,{type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:cols,borderColor:'#04040a',borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' ₹'+Math.round(c.raw).toLocaleString('en-IN')}}}}})}
+donut('c-janchan',['CDC','B2C','Others'],[1311568,393666,437838],['rgba(96,165,250,0.8)','rgba(240,192,64,0.8)','rgba(16,185,129,0.8)']);
+donut('c-febchan',['TeamInn','CDC','Dubai','NL','Grails','B2C'],[1160775,813204,430914,415541,274856,428266],['rgba(139,92,246,0.8)','rgba(96,165,250,0.8)','rgba(6,182,212,0.8)','rgba(16,185,129,0.8)','rgba(249,115,22,0.8)','rgba(240,192,64,0.8)']);
+
+// Weekly pulse
+new Chart('c-weekly',{type:'line',data:{labels:['W1','W2','W3','W4'],datasets:[
+  {label:'Jan',data:[123952,69459,105146,95111],borderColor:Cs.gold,backgroundColor:'rgba(240,192,64,0.08)',fill:true,tension:.4,pointBackgroundColor:Cs.gold,pointRadius:4,borderWidth:2},
+  {label:'Feb',data:[116716,88944,114277,108328],borderColor:Cs.violet,backgroundColor:'rgba(139,92,246,0.08)',fill:true,tension:.4,pointBackgroundColor:Cs.violet,pointRadius:4,borderWidth:2}
+]},options:baseOpt({scales:{x:{grid:{color:G},ticks:{color:M,font:{size:10}}},y:{grid:{color:G},ticks:{color:M,font:{size:9,family:'Space Mono'},callback:v=>'₹'+(v/1000).toFixed(0)+'K'}}}})});
+
+// Expense pie
+function epie(id,labels,vals,cols){new Chart(id,{type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:cols,borderColor:'#04040a',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' ₹'+Math.round(c.raw).toLocaleString('en-IN')}}}}})}
+const ec=['rgba(240,192,64,0.8)','rgba(139,92,246,0.8)','rgba(96,165,250,0.8)','rgba(16,185,129,0.8)','rgba(244,63,94,0.8)','rgba(6,182,212,0.8)','rgba(249,115,22,0.8)','rgba(107,104,128,0.6)'];
+epie('c-expjan',['Comm','Other','Dir.Sal','Salary','Ad','Photoshoot','Rent','PG'],[472166,364816,200200,147600,141301,97800,90000,6792],ec);
+epie('c-expfeb',['KA','Comm','Other','Dir.Sal','Salary','Ad','Photo','Rent','PG'],[401097,349459,330525,200200,173800,89818,40000,90000,21400],[...ec]);
+
+// Waterfall
+new Chart('c-wfall',{type:'bar',data:{labels:['Net Sales','GP','FD+','−Gateway','−Salary','−Dir.Sal','−Rent','−Photo','−Ads','−Comm','−Other','EBITDA'],datasets:[{data:[1893694,1363973,21893,-6792,-147600,-200200,-90000,-97800,-141301,-472166,-364816,-134809],backgroundColor:d=>d.raw>0?'rgba(16,185,129,0.65)':'rgba(244,63,94,0.55)',borderColor:d=>d.raw>0?Cs.green:Cs.red,borderWidth:1.5,borderRadius:4}]},options:{...baseOpt(),scales:{x:{grid:{color:G},ticks:{color:M,font:{size:8,family:'Space Mono'},maxRotation:40}},y:{grid:{color:G},ticks:{color:M,font:{size:8,family:'Space Mono'},callback:v=>(v<0?'−':'')+'₹'+(Math.abs(v)/100000).toFixed(1)+'L'}}}}});
+
+// Channel comparison
+new Chart('c-chan',{type:'bar',data:{labels:['Odd B2C','CDC','TeamInn','Events'],datasets:[
+  {label:'Jan',data:[393666,1311568,0,437838],backgroundColor:'rgba(240,192,64,0.55)',borderColor:Cs.gold,borderWidth:1.5,borderRadius:4},
+  {label:'Feb',data:[428266,813204,1160775,1121311],backgroundColor:'rgba(139,92,246,0.5)',borderColor:Cs.violet,borderWidth:1.5,borderRadius:4}
+]},options:baseOpt()});
+donut('c-chanpie',['CDC Delhi','TeamInn','Events','CDC Mum+Hyd','B2C'],[1455539,1160775,1121311,669233,821932],['rgba(96,165,250,0.8)','rgba(139,92,246,0.8)','rgba(6,182,212,0.8)','rgba(96,165,250,0.5)','rgba(240,192,64,0.8)']);
+
+// Payment
+const payD={jan:{l:['COD','Prepaid','Other'],v:[155672,197369,40629],c:['rgba(244,63,94,0.75)','rgba(16,185,129,0.75)','rgba(107,104,128,0.6)'],pct:['39.5%','50.1%','10.3%']},feb:{l:['COD','Prepaid','Other'],v:[115969,201256,539306],c:['rgba(244,63,94,0.75)','rgba(16,185,129,0.75)','rgba(249,115,22,0.75)'],pct:['13.5%','23.5%','63.0%']}};
+let payChart;
+function buildPay(m){if(payChart)payChart.destroy();const d=payD[m];payChart=new Chart('c-pay',{type:'doughnut',data:{labels:d.l,datasets:[{data:d.v,backgroundColor:d.c,borderColor:'#04040a',borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' ₹'+Math.round(c.raw).toLocaleString('en-IN')}}}}});document.getElementById('pay-leg').innerHTML=d.l.map((l,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-size:10px"><div style="display:flex;align-items:center;gap:5px;color:var(--muted)"><div style="width:7px;height:7px;border-radius:2px;background:${d.c[i]};flex-shrink:0"></div>${l}</div><div style="display:flex;gap:8px"><span style="font-family:'Space Mono',monospace;color:var(--text)">₹${Math.round(d.v[i]/1000)}K</span><span style="font-family:'Space Mono',monospace;color:var(--dim)">${d.pct[i]}</span></div></div>`).join('');}
+buildPay('jan');
+function switchPay(el,m){el.closest('.tgl').querySelectorAll('.tgl-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');buildPay(m)}
+
+// Customer mix
+const custD={jan:{l:['New','Repeat','Unknown'],v:[264842,99909,28919],c:['rgba(6,182,212,0.75)','rgba(240,192,64,0.75)','rgba(107,104,128,0.6)'],pct:['67.2%','25.4%','7.3%']},feb:{l:['New','Repeat','Unknown'],v:[244509,72716,539306],c:['rgba(6,182,212,0.75)','rgba(240,192,64,0.75)','rgba(107,104,128,0.6)'],pct:['28.5%','8.5%','63.0%']}};
+let custChart;
+function buildCust(m){if(custChart)custChart.destroy();const d=custD[m];custChart=new Chart('c-cust',{type:'doughnut',data:{labels:d.l,datasets:[{data:d.v,backgroundColor:d.c,borderColor:'#04040a',borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' ₹'+Math.round(c.raw).toLocaleString('en-IN')}}}}});document.getElementById('cust-leg').innerHTML=d.l.map((l,i)=>`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-size:10px"><div style="display:flex;align-items:center;gap:5px;color:var(--muted)"><div style="width:7px;height:7px;border-radius:2px;background:${d.c[i]};flex-shrink:0"></div>${l}</div><div style="display:flex;gap:8px"><span style="font-family:'Space Mono',monospace;color:var(--text)">₹${Math.round(d.v[i]/1000)}K</span><span style="font-family:'Space Mono',monospace;color:var(--dim)">${d.pct[i]}</span></div></div>`).join('');}
+buildCust('jan');
+function switchCust(el,m){el.closest('.tgl').querySelectorAll('.tgl-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');buildCust(m)}
+
+// Size
+new Chart('c-size',{type:'bar',data:{labels:['XS','S','M','L','XL','XXL','XXXL'],datasets:[
+  {label:'Revenue',data:[39021,42697,123768,46780,64013,21367,56018],backgroundColor:'rgba(240,192,64,0.5)',borderColor:Cs.gold,borderWidth:1.5,borderRadius:4,yAxisID:'y'},
+  {label:'Units',data:[12,14,37,15,26,6,17],type:'line',tension:.4,borderColor:Cs.cyan,backgroundColor:'transparent',pointBackgroundColor:Cs.cyan,pointRadius:4,borderWidth:2,yAxisID:'y2'}
+]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.yAxisID==='y'?' ₹'+Math.round(c.raw).toLocaleString('en-IN'):' '+c.raw+' units'}}},scales:{x:{grid:{color:G},ticks:{color:M,font:{size:10}}},y:{grid:{color:G},ticks:{color:M,font:{size:9,family:'Space Mono'},callback:v=>'₹'+Math.round(v/1000)+'K'},position:'left'},y2:{grid:{display:false},ticks:{color:Cs.cyan,font:{size:9,family:'Space Mono'}},position:'right'}}}});
+
+// B2B pie
+donut('c-b2bpie',['CDC Del','TeamInn','Dubai','NL','CDC Mum','CDC Hyd','HappyFest','Circus+'],
+  [1455539,1160775,430914,415541,415098,254135,238500,164000],
+  ['rgba(96,165,250,0.8)','rgba(139,92,246,0.8)','rgba(6,182,212,0.8)','rgba(16,185,129,0.8)','rgba(96,165,250,0.55)','rgba(96,165,250,0.35)','rgba(240,192,64,0.7)','rgba(249,115,22,0.6)']);
+
+// Category
+new Chart('c-cat',{type:'bar',data:{labels:['Jersey','Hoodie/Sweat','Full Sleeve','T-Shirt','Pants'],datasets:[
+  {label:'Jan',data:[124000,28000,32000,89000,8000],backgroundColor:'rgba(240,192,64,0.55)',borderColor:Cs.gold,borderWidth:1.5,borderRadius:4},
+  {label:'Feb',data:[280000,80000,25000,350000,12000],backgroundColor:'rgba(139,92,246,0.5)',borderColor:Cs.violet,borderWidth:1.5,borderRadius:4}
+]},options:baseOpt({scales:{x:{grid:{color:G},ticks:{color:M,font:{size:10}}},y:{grid:{color:G},ticks:{color:M,font:{size:9,family:'Space Mono'},callback:v=>'₹'+Math.round(v/1000)+'K'}}}})});
+
+// AOV chart
+new Chart('c-aov',{type:'bar',data:{labels:['ML','GA','MZ','CG','CH','AP','JH','UP','WB','DL','TS','PB','RJ','MH','TN','GJ'],datasets:[{data:[5399,4299,4199,4266,3569,3635,3719,3755,3200,3319,3113,2825,2814,2878,2092,2327],backgroundColor:d=>{const v=d.raw;return v>4000?'rgba(16,185,129,0.7)':v>3000?'rgba(240,192,64,0.6)':'rgba(107,104,128,0.5)'},borderWidth:0,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' AOV: ₹'+c.raw.toLocaleString('en-IN')}}},scales:{y:{grid:{color:G},ticks:{color:M,font:{size:9,family:'Space Mono'}}},x:{grid:{color:G},ticks:{color:M,font:{size:9,family:'Space Mono'},callback:v=>'₹'+v.toLocaleString('en-IN')}}}}});
+
+// Projections
+new Chart('c-proj',{type:'line',data:{labels:['Jan (Act.)','Feb (Act.)','Mar','Apr','May','Jun'],datasets:[
+  {label:'Optimistic',data:[2143071,3523556,4200000,4600000,5100000,5600000],borderColor:Cs.green,backgroundColor:'rgba(16,185,129,0.05)',fill:true,tension:.4,borderDash:[6,3],borderWidth:1.5,pointRadius:3},
+  {label:'Base',data:[2143071,3523556,3420000,3800000,4200000,4600000],borderColor:Cs.violet,backgroundColor:'rgba(139,92,246,0.08)',fill:true,tension:.4,borderWidth:2,pointRadius:4,pointBackgroundColor:Cs.violet},
+  {label:'Conservative',data:[2143071,3523556,2840000,3200000,3500000,3800000],borderColor:Cs.gold,backgroundColor:'rgba(240,192,64,0.05)',fill:true,tension:.4,borderDash:[3,3],borderWidth:1.5,pointRadius:3},
+]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': ₹'+(c.raw/100000).toFixed(1)+'L'}}},scales:{x:{grid:{color:G},ticks:{color:M,font:{size:9}}},y:{grid:{color:G},ticks:{color:M,font:{size:9,family:'Space Mono'},callback:v=>'₹'+(v/100000).toFixed(0)+'L'}}}}});
+
+// Budget vs Actual
+new Chart('c-bud',{type:'bar',data:{labels:['Jan Gross','Feb Gross','Jan Net','Feb Net','Jan GP','Feb GP'],datasets:[
+  {label:'Actual',data:[2143071,3523556,1893694,3269795,1363973,2186646],backgroundColor:'rgba(240,192,64,0.55)',borderColor:Cs.gold,borderWidth:1.5,borderRadius:4},
+  {label:'Target',data:[2000000,2500000,1750000,2200000,1250000,1600000],backgroundColor:'rgba(139,92,246,0.4)',borderColor:Cs.violet,borderWidth:1.5,borderRadius:4}
+]},options:baseOpt({scales:{x:{grid:{color:G},ticks:{color:M,font:{size:9}}},y:{grid:{color:G},ticks:{color:M,font:{size:9,family:'Space Mono'},callback:v=>'₹'+(v/100000).toFixed(0)+'L'}}}})});
+</script>
+</body>
+</html>

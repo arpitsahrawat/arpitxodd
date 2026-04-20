@@ -347,6 +347,135 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
 .kpi-hint{position:absolute;top:8px;right:10px;font-size:9px;color:var(--dim);opacity:0;transition:opacity .15s;font-family:'DM Mono',monospace}
 .kpi:hover .kpi-hint{opacity:.6}
 
+
+.f-date{background:var(--bg2);border:1px solid var(--b2);border-radius:3px;padding:3px 6px;font-size:10px;color:var(--text);font-family:"DM Mono",monospace;cursor:pointer;outline:none;color-scheme:dark}
+.f-date:hover,.f-date:focus{border-color:var(--b3)}
+.f-date::-webkit-calendar-picker-indicator{filter:invert(.7) opacity(.6)}
+.f-active-count{font-size:9px;color:var(--red);font-family:"DM Mono",monospace;padding:2px 7px;border-radius:10px;background:rgba(212,43,43,.08);border:1px solid rgba(212,43,43,.2);margin-left:4px;display:none}
+.f-active-count.has{display:inline-block}
+.fchips{display:flex;flex-wrap:wrap;gap:5px;padding:7px 20px;border-bottom:1px solid var(--b);min-height:0;background:rgba(255,255,255,.015)}
+.fchips:empty{display:none}
+.fchip{display:inline-flex;align-items:center;gap:5px;background:var(--bg2);border:1px solid var(--b2);border-radius:2px;padding:3px 8px;font-size:9.5px;color:var(--text);font-family:"DM Mono",monospace}
+.fchip-x{cursor:pointer;color:var(--muted);font-size:11px;line-height:1;margin-left:3px}
+.fchip-x:hover{color:var(--red)}
+.fchip-label{color:var(--dim);font-size:8px;text-transform:uppercase;letter-spacing:.08em;margin-right:3px}
+.data-hidden{opacity:.25;pointer-events:none;transition:opacity .2s}
+.f-loading{position:fixed;top:50px;right:20px;background:var(--bg1);border:1px solid var(--b3);border-radius:4px;padding:8px 14px;font-size:10px;color:var(--text);z-index:9999;opacity:0;transition:opacity .2s;font-family:"DM Mono",monospace;pointer-events:none}
+.f-loading.show{opacity:1}
+
+
+/* ─── OPS MODULE ─── */
+.ops-section{background:var(--bg1);border:1px solid var(--b);border-radius:var(--r);padding:16px;margin-bottom:14px;position:relative}
+.ops-hd{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.ops-hd-ic{font-size:16px}
+.ops-hd-t{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text)}
+.ops-hd-sub{font-size:9.5px;color:var(--dim);font-family:"DM Mono",monospace;margin-left:auto}
+
+/* STOCK GRID */
+.stock-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.stock-card{background:var(--bg2);border:1px solid var(--b);border-radius:var(--rsm);padding:12px;position:relative;transition:all .15s;cursor:pointer}
+.stock-card:hover{border-color:var(--b3);transform:translateY(-1px)}
+.stock-card.critical{border-left:3px solid var(--red)}
+.stock-card.low{border-left:3px solid #f0a020}
+.stock-card.healthy{border-left:3px solid var(--grn)}
+.stock-card.overstock{border-left:3px solid #5588FF}
+.sc-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:9px}
+.sc-name{font-size:11.5px;font-weight:600;color:var(--text);line-height:1.3;flex:1;padding-right:8px}
+.sc-sku{font-family:"DM Mono",monospace;font-size:8px;color:var(--dim);margin-top:3px}
+.sc-badge{font-family:"DM Mono",monospace;font-size:7.5px;padding:2px 6px;border-radius:2px;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.sc-badge.critical{background:var(--red2);color:var(--red)}
+.sc-badge.low{background:rgba(240,160,32,.12);color:#f0a020}
+.sc-badge.healthy{background:var(--grn2);color:var(--grn)}
+.sc-badge.overstock{background:rgba(85,136,255,.12);color:#5588FF}
+.sc-body{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.sc-metric{background:var(--bg3);border-radius:3px;padding:6px 8px}
+.sc-metric-l{font-size:7.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.sc-metric-v{font-family:"DM Mono",monospace;font-size:12px;font-weight:700;color:var(--text);margin-top:2px}
+.sc-metric-v.pos{color:var(--grn)}
+.sc-metric-v.neg{color:var(--red)}
+.sc-bar{margin-top:8px;height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;position:relative}
+.sc-bar-f{height:100%;border-radius:2px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.sc-bar-mark{position:absolute;top:-2px;bottom:-2px;width:1px;background:var(--dim);opacity:.5}
+.sc-foot{display:flex;justify-content:space-between;align-items:center;margin-top:9px;font-size:9px;color:var(--muted);font-family:"DM Mono",monospace}
+.sc-days{display:flex;align-items:center;gap:4px}
+.sc-pulse{width:5px;height:5px;border-radius:50%;background:var(--grn);animation:pulse-dot 2s infinite}
+.sc-pulse.critical{background:var(--red)}
+.sc-pulse.low{background:#f0a020}
+
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* REORDER TABLE */
+.reorder-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.reorder-tbl thead th{background:var(--bg2);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding:9px 10px;text-align:left;border-bottom:1px solid var(--b2);font-weight:700;position:sticky;top:0;z-index:1}
+.reorder-tbl tbody td{padding:10px;border-bottom:1px solid rgba(255,255,255,.035);font-size:10.5px;color:var(--text);vertical-align:middle}
+.reorder-tbl tbody tr{transition:background .1s;cursor:pointer}
+.reorder-tbl tbody tr:hover{background:rgba(255,255,255,.025)}
+.reorder-tbl .num{text-align:right;font-family:"DM Mono",monospace;font-size:10px}
+.reorder-tbl .prio{display:inline-flex;align-items:center;gap:4px;font-family:"DM Mono",monospace;font-size:8.5px;padding:2px 6px;border-radius:2px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.reorder-tbl .prio.p1{background:var(--red2);color:var(--red)}
+.reorder-tbl .prio.p2{background:rgba(240,160,32,.12);color:#f0a020}
+.reorder-tbl .prio.p3{background:var(--grn2);color:var(--grn)}
+.reorder-tbl .prio.p4{background:var(--bg3);color:var(--muted)}
+.reorder-check{width:14px;height:14px;border:1.5px solid var(--b3);border-radius:3px;cursor:pointer;display:inline-block;vertical-align:middle;transition:all .1s;background:var(--bg2)}
+.reorder-check.ch{background:var(--red);border-color:var(--red);position:relative}
+.reorder-check.ch::after{content:"&#x2713;";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;font-size:10px;font-weight:700}
+
+/* DEMAND FORECAST */
+.demand-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:10px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.03);align-items:center;transition:background .1s}
+.demand-row:hover{background:rgba(255,255,255,.02)}
+.demand-row.header{background:var(--bg2);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:700;border-radius:var(--rsm) var(--rsm) 0 0}
+.demand-name{font-size:11px;color:var(--text);font-weight:500}
+.demand-num{font-family:"DM Mono",monospace;font-size:10.5px;color:var(--text);text-align:right}
+.demand-trend{display:flex;align-items:center;gap:4px;font-family:"DM Mono",monospace;font-size:10px}
+.demand-trend.up{color:var(--grn)}
+.demand-trend.down{color:var(--red)}
+
+/* LOGISTICS HEAT */
+.logistics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.log-card{background:var(--bg2);border:1px solid var(--b);border-radius:var(--rsm);padding:13px;transition:border-color .12s}
+.log-card:hover{border-color:var(--b3)}
+.log-c-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.log-c-t{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);font-weight:600}
+.log-c-v{font-family:"Bebas Neue",sans-serif;font-size:22px;letter-spacing:.04em;color:var(--text);line-height:1}
+.log-c-sub{font-size:9px;color:var(--muted);margin-top:3px}
+.log-c-bar{height:3px;background:var(--bg3);border-radius:2px;margin-top:8px;overflow:hidden}
+.log-c-bar-f{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--cream) 0%,var(--red) 100%)}
+
+/* SUPPLIER CARDS */
+.sup-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.sup-card{background:var(--bg2);border:1px solid var(--b);border-radius:var(--rsm);padding:13px;cursor:pointer;transition:all .12s}
+.sup-card:hover{border-color:var(--b3);transform:translateY(-1px)}
+.sup-hd{display:flex;justify-content:space-between;margin-bottom:9px}
+.sup-name{font-size:12px;font-weight:600;color:var(--text)}
+.sup-loc{font-size:8.5px;color:var(--dim);margin-top:2px;font-family:"DM Mono",monospace}
+.sup-rating{font-family:"DM Mono",monospace;font-size:10px;color:var(--cream)}
+.sup-body{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:8px}
+.sup-m{background:var(--bg3);border-radius:3px;padding:6px 7px}
+.sup-m-l{font-size:7.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+.sup-m-v{font-family:"DM Mono",monospace;font-size:10px;font-weight:700;color:var(--text);margin-top:2px}
+
+/* STOCK LOCATION MAP */
+.loc-map{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px}
+.loc-box{background:var(--bg2);border:1px solid var(--b);border-radius:var(--rsm);padding:10px;text-align:center;cursor:pointer;transition:all .12s}
+.loc-box:hover{border-color:var(--b3)}
+.loc-box.active{background:rgba(212,43,43,.06);border-color:var(--red)}
+.loc-city{font-family:"Bebas Neue",sans-serif;font-size:15px;letter-spacing:.04em;color:var(--text)}
+.loc-units{font-family:"DM Mono",monospace;font-size:11px;color:var(--muted);margin-top:3px}
+.loc-fillbar{height:2px;background:var(--bg3);border-radius:1px;margin-top:6px;overflow:hidden}
+.loc-fillbar-f{height:100%;background:var(--grn);border-radius:1px}
+
+/* ACTION BUTTONS */
+.ops-actions{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.ops-btn{background:var(--bg2);border:1px solid var(--b2);border-radius:3px;padding:6px 12px;color:var(--text);font-size:10px;font-weight:500;cursor:pointer;transition:all .12s;font-family:"Inter",sans-serif;display:inline-flex;align-items:center;gap:5px}
+.ops-btn:hover{border-color:var(--b3);background:var(--bg3)}
+.ops-btn.primary{background:var(--red);border-color:var(--red);color:#fff}
+.ops-btn.primary:hover{opacity:.88}
+
+/* SEGMENTED CONTROL */
+.seg{display:inline-flex;background:var(--bg2);border:1px solid var(--b);border-radius:3px;padding:2px}
+.seg-b{padding:4px 11px;border-radius:2px;border:none;background:none;color:var(--dim);font-family:"Inter",sans-serif;font-size:10.5px;font-weight:500;cursor:pointer;transition:all .12s}
+.seg-b.active{background:var(--bg3);color:var(--text);border:1px solid var(--b2)}
+
 /* RESPONSIVE */
 @media(max-width:1100px){.k5{grid-template-columns:repeat(3,1fr)}.g3,.g4{grid-template-columns:1fr 1fr}.g21,.g12{grid-template-columns:1fr}}
 @media(max-width:768px){.sb{transform:translateX(-100%)}.main{margin-left:0}.g2{grid-template-columns:1fr}.k5,.k4{grid-template-columns:1fr 1fr}}
@@ -432,6 +561,8 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
     <div class="sb-item" onclick="go(this,'projections')"><span class="sb-ico">&#x25B2;</span>Projections</div>
     <div class="sb-item" onclick="go(this,'budget')"><span class="sb-ico">&#x25E7;</span>Budget vs Actual</div>
     <div class="sb-item" onclick="go(this,'suggestions')"><span class="sb-ico">&#x2B1F;</span>AI Insights<span class="sb-bdg hot">12</span></div>
+    <div class="sb-sec">Operations</div>
+    <div class="sb-item" onclick="go(this,'ops')"><span class="sb-ico">&#x2699;</span>Ops &amp; Replenishment<span class="sb-bdg hot">PRO</span></div>
     <div class="sb-sec">Data</div>
     <div class="sb-item" onclick="go(this,'drive')"><span class="sb-ico">&#x2601;</span>Drive Hub</div>
     <div class="sb-item" onclick="openUp()"><span class="sb-ico">&#x2191;</span>Upload Files<span class="sb-bdg hot">NEW</span></div>
@@ -455,18 +586,103 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
   </div>
   <div class="fbar">
     <span class="f-lbl">Filter</span><div class="f-div"></div>
-    <select class="f-sel" id="fMonth"><option value="all">All Months</option><option value="jan">January 2026</option><option value="feb">February 2026</option></select>
-    <select class="f-sel" id="fChan"><option value="all">All Channels</option><option value="b2c">Shopify B2C</option><option value="b2b">B2B Events</option><option value="cdc">CDC</option></select>
-    <select class="f-sel" id="fState"><option value="all">All States</option><option value="MH">Maharashtra</option><option value="DL">Delhi</option><option value="GJ">Gujarat</option><option value="WB">West Bengal</option><option value="KA">Karnataka</option></select>
+
+    <select class="f-sel" id="fMonth" onchange="applyFilters()">
+      <option value="all">All Months (YTD)</option>
+      <option value="jan">January 2026</option>
+      <option value="feb">February 2026</option>
+    </select>
+
+    <select class="f-sel" id="fChan" onchange="applyFilters()">
+      <option value="all">All Channels</option>
+      <option value="b2c">Shopify B2C</option>
+      <option value="b2b">B2B / Events</option>
+      <option value="cdc">CDC Marketplace</option>
+      <option value="events">Events Only</option>
+      <option value="international">International</option>
+    </select>
+
+    <select class="f-sel" id="fState" onchange="applyFilters()">
+      <option value="all">All States</option>
+      <option value="MH">Maharashtra</option>
+      <option value="DL">Delhi</option>
+      <option value="GJ">Gujarat</option>
+      <option value="WB">West Bengal</option>
+      <option value="PB">Punjab</option>
+      <option value="KA">Karnataka</option>
+      <option value="UP">Uttar Pradesh</option>
+      <option value="RJ">Rajasthan</option>
+      <option value="TS">Telangana</option>
+      <option value="HR">Haryana</option>
+      <option value="MP">Madhya Pradesh</option>
+      <option value="TN">Tamil Nadu</option>
+    </select>
+
+    <select class="f-sel" id="fCat" onchange="applyFilters()">
+      <option value="all">All Categories</option>
+      <option value="jersey">Jerseys</option>
+      <option value="tshirt">T-Shirts</option>
+      <option value="hoodie">Hoodies / Sweatshirts</option>
+      <option value="fullsleeve">Full Sleeve</option>
+      <option value="pants">Pants / Shorts</option>
+    </select>
+
+    <select class="f-sel" id="fSize" onchange="applyFilters()">
+      <option value="all">All Sizes</option>
+      <option value="XS">XS</option><option value="S">S</option><option value="M">M (Hero)</option>
+      <option value="L">L</option><option value="XL">XL</option><option value="XXL">XXL</option><option value="XXXL">XXXL</option>
+    </select>
+
+    <select class="f-sel" id="fMargin" onchange="applyFilters()">
+      <option value="all">All Margins</option>
+      <option value="100">100% (Written-off)</option>
+      <option value="high">High (&gt; 85%)</option>
+      <option value="mid">Mid (70&ndash;85%)</option>
+      <option value="low">Low (&lt; 70%)</option>
+    </select>
+
+    <select class="f-sel" id="fAOV" onchange="applyFilters()">
+      <option value="all">All AOV</option>
+      <option value="premium">Premium (&gt; &#8377;5K)</option>
+      <option value="standard">Standard (&#8377;3&ndash;5K)</option>
+      <option value="entry">Entry (&lt; &#8377;3K)</option>
+    </select>
+
     <div class="f-div"></div>
-    <button class="ftag on" onclick="this.classList.toggle('on')">New Cust</button>
-    <button class="ftag on" onclick="this.classList.toggle('on')">Repeat</button>
-    <button class="ftag on" onclick="this.classList.toggle('on')">COD</button>
-    <button class="ftag on" onclick="this.classList.toggle('on')">Prepaid</button>
-    <button class="ftag on" onclick="this.classList.toggle('on')">Facebook</button>
-    <button class="ftag on" onclick="this.classList.toggle('on')">Instagram</button>
+    <span class="f-lbl">Customer</span>
+    <button class="ftag on" data-f="new" onclick="toggleF(this)">New</button>
+    <button class="ftag on" data-f="repeat" onclick="toggleF(this)">Repeat</button>
+
+    <div class="f-div"></div>
+    <span class="f-lbl">Payment</span>
+    <button class="ftag on" data-f="cod" onclick="toggleF(this)">COD</button>
+    <button class="ftag on" data-f="prepaid" onclick="toggleF(this)">Prepaid</button>
+
+    <div class="f-div"></div>
+    <span class="f-lbl">Source</span>
+    <button class="ftag on" data-f="direct" onclick="toggleF(this)">Direct</button>
+    <button class="ftag on" data-f="facebook" onclick="toggleF(this)">Facebook</button>
+    <button class="ftag on" data-f="instagram" onclick="toggleF(this)">Instagram</button>
+
+    <div class="f-div"></div>
+    <button class="ftag" id="fHighMargin" onclick="togglePreset(this,'highmargin')">&#9889; High-Margin Only</button>
+    <button class="ftag" id="fLowStock" onclick="togglePreset(this,'lowstock')">&#x26A0; Low Stock</button>
+    <button class="ftag" id="fTopSellers" onclick="togglePreset(this,'topsellers')">&#11088; Top Sellers</button>
+    <button class="ftag" id="fLowRTO" onclick="togglePreset(this,'lowrto')">&#x2713; Low RTO</button>
+
+    <div class="f-div"></div>
+    <span class="f-lbl" style="color:var(--text);font-weight:600">Date Range</span>
+    <input type="date" class="f-date" id="fDateFrom" onchange="applyFilters()" value="2026-01-01">
+    <span style="color:var(--muted);font-size:10px">&rarr;</span>
+    <input type="date" class="f-date" id="fDateTo" onchange="applyFilters()" value="2026-02-28">
+
+    <div class="f-div"></div>
     <span class="f-rst" onclick="resetF()">&#x21BA; Reset</span>
+    <span class="f-active-count" id="fActiveCount"></span>
   </div>
+
+  <!-- Active filter chips row -->
+  <div class="fchips" id="fchips"></div>
 
   <!-- OVERVIEW -->
   <div class="sec active" id="sec-overview">
@@ -849,6 +1065,405 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
     <div class="sug good" onclick="drill('sug-fd')"><div class="sug-ico">&#128176;</div><div><div class="sug-title">Grow FD Corpus &mdash; Nearly Covers Rent</div><div class="sug-body">&#8377;43,785 YTD. Park &#8377;30&ndash;40L in FDs at 6.5&ndash;7% &rarr; &#8377;2&ndash;2.5L/year passive income.</div><span class="sug-imp imp-l">OPPORTUNITY &middot; Click for FD plan</span></div></div>
   </div>
 
+
+  <!-- OPS & REPLENISHMENT -->
+  <div class="sec" id="sec-ops">
+    <div class="sec-hd">
+      <div class="sec-hd-title">OPS &amp; REPLENISHMENT</div>
+      <div class="sec-hd-line"></div>
+      <div class="sec-hd-sub">Inventory &middot; Demand Forecast &middot; Logistics &middot; Suppliers</div>
+    </div>
+
+    <!-- TOP LEVEL KPIS -->
+    <div class="k5">
+      <div class="kpi" onclick="drill('ops-stock-health')"><div class="kpi-bar" style="background:var(--red)"></div><div class="kpi-lbl">Critical Stockouts</div><div class="kpi-val neg">4</div><div class="kpi-foot"><span class="tag t-dn">SKUs at risk</span>next 7 days</div><span class="kpi-hint">&rarr;</span></div>
+      <div class="kpi" onclick="drill('ops-reorder')"><div class="kpi-bar" style="background:#f0a020"></div><div class="kpi-lbl">Reorder Needed</div><div class="kpi-val" style="color:#f0a020">12</div><div class="kpi-foot"><span class="tag t-neu">SKUs</span>within 14d</div><span class="kpi-hint">&rarr;</span></div>
+      <div class="kpi" onclick="drill('ops-inventory-value')"><div class="kpi-bar" style="background:var(--cream)"></div><div class="kpi-lbl">Inventory Value</div><div class="kpi-val">&#8377;8.2L</div><div class="kpi-foot">At cost &middot; 2,840 units</div><span class="kpi-hint">&rarr;</span></div>
+      <div class="kpi" onclick="drill('ops-stockdays')"><div class="kpi-bar" style="background:var(--grn)"></div><div class="kpi-lbl">Days of Stock</div><div class="kpi-val">34</div><div class="kpi-foot"><span class="tag t-up">Healthy</span>At current velocity</div><span class="kpi-hint">&rarr;</span></div>
+      <div class="kpi" onclick="drill('ops-dead-stock')"><div class="kpi-bar" style="background:#5588FF"></div><div class="kpi-lbl">Dead Stock</div><div class="kpi-val" style="color:#5588FF">&#8377;1.4L</div><div class="kpi-foot">17 SKUs &gt; 90d</div><span class="kpi-hint">&rarr;</span></div>
+    </div>
+
+    <!-- STOCK STATUS GRID -->
+    <div class="ops-section">
+      <div class="ops-hd">
+        <div class="ops-hd-ic">&#x1F4E6;</div>
+        <div class="ops-hd-t">Stock Status &middot; Top 8 SKUs</div>
+        <div class="ops-hd-sub">Live stock levels &middot; Demand-matched</div>
+        <div class="seg" style="margin-left:10px">
+          <button class="seg-b active" onclick="swStock(this,'all')">All</button>
+          <button class="seg-b" onclick="swStock(this,'critical')">Critical</button>
+          <button class="seg-b" onclick="swStock(this,'low')">Low</button>
+          <button class="seg-b" onclick="swStock(this,'healthy')">Healthy</button>
+        </div>
+      </div>
+
+      <div class="stock-grid" id="stockGrid">
+        <div class="stock-card critical" data-status="critical" onclick="drill('ops-sku-97')">
+          <div class="sc-hd">
+            <div><div class="sc-name">&apos;97 Oversized Jersey &middot; M</div><div class="sc-sku">ODD-97-JSY-M</div></div>
+            <span class="sc-badge critical">CRITICAL</span>
+          </div>
+          <div class="sc-body">
+            <div class="sc-metric"><div class="sc-metric-l">On Hand</div><div class="sc-metric-v neg">4</div></div>
+            <div class="sc-metric"><div class="sc-metric-l">Avg Daily</div><div class="sc-metric-v">1.2</div></div>
+          </div>
+          <div class="sc-bar"><div class="sc-bar-f" style="width:10%;background:var(--red)"></div><div class="sc-bar-mark" style="left:30%"></div></div>
+          <div class="sc-foot"><span>Reorder: 40 units</span><span class="sc-days"><span class="sc-pulse critical"></span>3 days left</span></div>
+        </div>
+
+        <div class="stock-card critical" data-status="critical" onclick="drill('ops-sku-comet')">
+          <div class="sc-hd">
+            <div><div class="sc-name">Comet Heart Jersey &middot; M</div><div class="sc-sku">ODD-CMT-JSY-M</div></div>
+            <span class="sc-badge critical">CRITICAL</span>
+          </div>
+          <div class="sc-body">
+            <div class="sc-metric"><div class="sc-metric-l">On Hand</div><div class="sc-metric-v neg">2</div></div>
+            <div class="sc-metric"><div class="sc-metric-l">Avg Daily</div><div class="sc-metric-v">1.8</div></div>
+          </div>
+          <div class="sc-bar"><div class="sc-bar-f" style="width:5%;background:var(--red)"></div><div class="sc-bar-mark" style="left:30%"></div></div>
+          <div class="sc-foot"><span>Reorder: 50 units</span><span class="sc-days"><span class="sc-pulse critical"></span>1 day left</span></div>
+        </div>
+
+        <div class="stock-card critical" data-status="critical" onclick="drill('ops-sku-black')">
+          <div class="sc-hd">
+            <div><div class="sc-name">Black Jersey T-Shirt &middot; M</div><div class="sc-sku">ODD-BLK-TSH-M</div></div>
+            <span class="sc-badge critical">OUT</span>
+          </div>
+          <div class="sc-body">
+            <div class="sc-metric"><div class="sc-metric-l">On Hand</div><div class="sc-metric-v neg">0</div></div>
+            <div class="sc-metric"><div class="sc-metric-l">Avg Daily</div><div class="sc-metric-v">1.5</div></div>
+          </div>
+          <div class="sc-bar"><div class="sc-bar-f" style="width:0%;background:var(--red)"></div><div class="sc-bar-mark" style="left:30%"></div></div>
+          <div class="sc-foot"><span>Reorder: 60 units</span><span class="sc-days"><span class="sc-pulse critical"></span>OUT of stock</span></div>
+        </div>
+
+        <div class="stock-card critical" data-status="critical" onclick="drill('ops-sku-if-love-me')">
+          <div class="sc-hd">
+            <div><div class="sc-name">IF YOU LOVE ME Jersey &middot; XL</div><div class="sc-sku">ODD-IYLM-JSY-XL</div></div>
+            <span class="sc-badge critical">CRITICAL</span>
+          </div>
+          <div class="sc-body">
+            <div class="sc-metric"><div class="sc-metric-l">On Hand</div><div class="sc-metric-v neg">3</div></div>
+            <div class="sc-metric"><div class="sc-metric-l">Avg Daily</div><div class="sc-metric-v">0.9</div></div>
+          </div>
+          <div class="sc-bar"><div class="sc-bar-f" style="width:8%;background:var(--red)"></div><div class="sc-bar-mark" style="left:30%"></div></div>
+          <div class="sc-foot"><span>Reorder: 30 units</span><span class="sc-days"><span class="sc-pulse critical"></span>4 days left</span></div>
+        </div>
+
+        <div class="stock-card low" data-status="low" onclick="drill('ops-sku-make-wish')">
+          <div class="sc-hd">
+            <div><div class="sc-name">Make A Wish T-Shirt &middot; M</div><div class="sc-sku">ODD-MAW-TSH-M</div></div>
+            <span class="sc-badge low">LOW</span>
+          </div>
+          <div class="sc-body">
+            <div class="sc-metric"><div class="sc-metric-l">On Hand</div><div class="sc-metric-v">12</div></div>
+            <div class="sc-metric"><div class="sc-metric-l">Avg Daily</div><div class="sc-metric-v">0.8</div></div>
+          </div>
+          <div class="sc-bar"><div class="sc-bar-f" style="width:35%;background:#f0a020"></div><div class="sc-bar-mark" style="left:30%"></div></div>
+          <div class="sc-foot"><span>Reorder: 25 units</span><span class="sc-days"><span class="sc-pulse low"></span>15 days</span></div>
+        </div>
+
+        <div class="stock-card low" data-status="low" onclick="drill('ops-sku-racer')">
+          <div class="sc-hd">
+            <div><div class="sc-name">Racer Full Sleeve Jersey &middot; L</div><div class="sc-sku">ODD-RCR-FSL-L</div></div>
+            <span class="sc-badge low">LOW</span>
+          </div>
+          <div class="sc-body">
+            <div class="sc-metric"><div class="sc-metric-l">On Hand</div><div class="sc-metric-v">18</div></div>
+            <div class="sc-metric"><div class="sc-metric-l">Avg Daily</div><div class="sc-metric-v">0.6</div></div>
+          </div>
+          <div class="sc-bar"><div class="sc-bar-f" style="width:45%;background:#f0a020"></div><div class="sc-bar-mark" style="left:30%"></div></div>
+          <div class="sc-foot"><span>Reorder: 20 units</span><span class="sc-days"><span class="sc-pulse low"></span>30 days</span></div>
+        </div>
+
+        <div class="stock-card healthy" data-status="healthy" onclick="drill('ops-sku-ten')">
+          <div class="sc-hd">
+            <div><div class="sc-name">Ten Jersey &middot; S/M/L/XL</div><div class="sc-sku">ODD-TEN-JSY</div></div>
+            <span class="sc-badge healthy">HEALTHY</span>
+          </div>
+          <div class="sc-body">
+            <div class="sc-metric"><div class="sc-metric-l">On Hand</div><div class="sc-metric-v pos">42</div></div>
+            <div class="sc-metric"><div class="sc-metric-l">Avg Daily</div><div class="sc-metric-v">0.5</div></div>
+          </div>
+          <div class="sc-bar"><div class="sc-bar-f" style="width:82%;background:var(--grn)"></div><div class="sc-bar-mark" style="left:30%"></div></div>
+          <div class="sc-foot"><span>No reorder</span><span class="sc-days"><span class="sc-pulse"></span>84 days</span></div>
+        </div>
+
+        <div class="stock-card overstock" data-status="overstock" onclick="drill('ops-sku-pop')">
+          <div class="sc-hd">
+            <div><div class="sc-name">POP CULTURE ODD Jersey</div><div class="sc-sku">ODD-POP-JSY</div></div>
+            <span class="sc-badge overstock">OVERSTOCK</span>
+          </div>
+          <div class="sc-body">
+            <div class="sc-metric"><div class="sc-metric-l">On Hand</div><div class="sc-metric-v" style="color:#5588FF">95</div></div>
+            <div class="sc-metric"><div class="sc-metric-l">Avg Daily</div><div class="sc-metric-v">0.3</div></div>
+          </div>
+          <div class="sc-bar"><div class="sc-bar-f" style="width:100%;background:#5588FF"></div><div class="sc-bar-mark" style="left:30%"></div></div>
+          <div class="sc-foot"><span>Run promo</span><span class="sc-days"><span class="sc-pulse" style="background:#5588FF"></span>316 days</span></div>
+        </div>
+      </div>
+
+      <div class="ops-actions">
+        <button class="ops-btn primary" onclick="drill('ops-reorder')">&#x1F4CB; Generate PO for 16 SKUs</button>
+        <button class="ops-btn" onclick="drill('ops-stockout-plan')">&#x26A0; View Stockout Plan</button>
+        <button class="ops-btn" onclick="doCSV()">&#x2193; Export Stock CSV</button>
+      </div>
+    </div>
+
+    <!-- REORDER QUEUE -->
+    <div class="ops-section">
+      <div class="ops-hd">
+        <div class="ops-hd-ic">&#x1F504;</div>
+        <div class="ops-hd-t">Reorder Queue &middot; Prioritized</div>
+        <div class="ops-hd-sub">Est. PO value: &#8377;6.4L</div>
+      </div>
+      <table class="reorder-tbl">
+        <thead>
+          <tr>
+            <th style="width:30px"></th>
+            <th>SKU</th>
+            <th>Priority</th>
+            <th class="num">On Hand</th>
+            <th class="num">Safety</th>
+            <th class="num">Reorder Qty</th>
+            <th class="num">Unit Cost</th>
+            <th class="num">Est. Value</th>
+            <th class="num">Days Left</th>
+            <th>Supplier</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr onclick="drill('ops-reorder-comet')"><td><span class="reorder-check ch" onclick="event.stopPropagation();this.classList.toggle('ch')"></span></td><td>Comet Heart Jersey &middot; M</td><td><span class="prio p1">P1 &middot; Critical</span></td><td class="num neg">2</td><td class="num">25</td><td class="num">50</td><td class="num">&#8377;930</td><td class="num">&#8377;46,500</td><td class="num neg">1d</td><td>Karol Bagh Textiles</td></tr>
+          <tr onclick="drill('ops-reorder-black')"><td><span class="reorder-check ch" onclick="event.stopPropagation();this.classList.toggle('ch')"></span></td><td>Black Jersey T-Shirt &middot; M</td><td><span class="prio p1">P1 &middot; Out</span></td><td class="num neg">0</td><td class="num">30</td><td class="num">60</td><td class="num">&#8377;420</td><td class="num">&#8377;25,200</td><td class="num neg">OUT</td><td>CC Apparels</td></tr>
+          <tr onclick="drill('ops-reorder-97')"><td><span class="reorder-check ch" onclick="event.stopPropagation();this.classList.toggle('ch')"></span></td><td>&apos;97 Oversized Jersey &middot; M</td><td><span class="prio p1">P1 &middot; Critical</span></td><td class="num neg">4</td><td class="num">20</td><td class="num">40</td><td class="num">&#8377;1,050</td><td class="num">&#8377;42,000</td><td class="num neg">3d</td><td>Karol Bagh Textiles</td></tr>
+          <tr onclick="drill('ops-reorder-iylm')"><td><span class="reorder-check ch" onclick="event.stopPropagation();this.classList.toggle('ch')"></span></td><td>IF YOU LOVE ME Jersey &middot; XL</td><td><span class="prio p1">P1 &middot; Critical</span></td><td class="num neg">3</td><td class="num">15</td><td class="num">30</td><td class="num">&#8377;420</td><td class="num">&#8377;12,600</td><td class="num neg">4d</td><td>Karol Bagh Textiles</td></tr>
+          <tr onclick="drill('ops-reorder-maw')"><td><span class="reorder-check" onclick="event.stopPropagation();this.classList.toggle('ch')"></span></td><td>Make A Wish T-Shirt &middot; M</td><td><span class="prio p2">P2 &middot; Low</span></td><td class="num">12</td><td class="num">18</td><td class="num">25</td><td class="num">&#8377;510</td><td class="num">&#8377;12,750</td><td class="num">15d</td><td>CC Apparels</td></tr>
+          <tr onclick="drill('ops-reorder-racer')"><td><span class="reorder-check" onclick="event.stopPropagation();this.classList.toggle('ch')"></span></td><td>Racer Full Sleeve Jersey &middot; L</td><td><span class="prio p2">P2 &middot; Low</span></td><td class="num">18</td><td class="num">22</td><td class="num">20</td><td class="num">&#8377;1,120</td><td class="num">&#8377;22,400</td><td class="num">30d</td><td>Mill Road Mfg</td></tr>
+          <tr onclick="drill('ops-reorder-strangers')"><td><span class="reorder-check" onclick="event.stopPropagation();this.classList.toggle('ch')"></span></td><td>Strangers T-Shirt &middot; S/M</td><td><span class="prio p2">P2 &middot; Low</span></td><td class="num">20</td><td class="num">25</td><td class="num">30</td><td class="num">&#8377;640</td><td class="num">&#8377;19,200</td><td class="num">28d</td><td>CC Apparels</td></tr>
+          <tr onclick="drill('ops-reorder-purple')"><td><span class="reorder-check" onclick="event.stopPropagation();this.classList.toggle('ch')"></span></td><td>Purple Jersey T-Shirt &middot; All</td><td><span class="prio p3">P3 &middot; Plan</span></td><td class="num">30</td><td class="num">25</td><td class="num">40</td><td class="num">&#8377;760</td><td class="num">&#8377;30,400</td><td class="num">45d</td><td>Karol Bagh Textiles</td></tr>
+          <tr onclick="drill('ops-reorder-brown')"><td><span class="reorder-check" onclick="event.stopPropagation();this.classList.toggle('ch')"></span></td><td>Brown Drift Jersey &middot; L/XL</td><td><span class="prio p3">P3 &middot; Plan</span></td><td class="num">28</td><td class="num">20</td><td class="num">35</td><td class="num">&#8377;810</td><td class="num">&#8377;28,350</td><td class="num">58d</td><td>Mill Road Mfg</td></tr>
+          <tr onclick="drill('ops-reorder-11-11')"><td><span class="reorder-check" onclick="event.stopPropagation();this.classList.toggle('ch')"></span></td><td>11-11 Black Full Sleeve &middot; M/L</td><td><span class="prio p3">P3 &middot; Plan</span></td><td class="num">22</td><td class="num">18</td><td class="num">25</td><td class="num">&#8377;520</td><td class="num">&#8377;13,000</td><td class="num">52d</td><td>CC Apparels</td></tr>
+        </tbody>
+      </table>
+      <div class="ops-actions">
+        <button class="ops-btn primary">&#x1F4E7; Send POs to Suppliers</button>
+        <button class="ops-btn">&#x1F4CB; Download PO Sheet</button>
+        <button class="ops-btn" onclick="drill('ops-forecast')">&#x1F4C8; View Demand Forecast</button>
+      </div>
+    </div>
+
+    <!-- DEMAND FORECAST -->
+    <div class="ops-section">
+      <div class="ops-hd">
+        <div class="ops-hd-ic">&#x1F52E;</div>
+        <div class="ops-hd-t">Demand Forecast &middot; Next 30 Days</div>
+        <div class="ops-hd-sub">Statistical model &middot; Based on Jan&ndash;Feb velocity</div>
+      </div>
+
+      <div class="g2">
+        <div>
+          <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:8px">Top 8 SKUs &middot; Projected Units</div>
+          <div class="demand-row header">
+            <div>SKU</div>
+            <div style="text-align:right">Feb Actual</div>
+            <div style="text-align:right">Mar Forecast</div>
+            <div style="text-align:right">Trend</div>
+            <div style="text-align:right">Confidence</div>
+          </div>
+          <div class="demand-row" onclick="drill('ops-sku-97')"><div class="demand-name">&apos;97 Oversized Jersey</div><div class="demand-num">22</div><div class="demand-num">28</div><div class="demand-trend up">&uarr; 27%</div><div class="demand-num">92%</div></div>
+          <div class="demand-row" onclick="drill('ops-sku-comet')"><div class="demand-name">Comet Heart Jersey</div><div class="demand-num">11</div><div class="demand-num">18</div><div class="demand-trend up">&uarr; 64%</div><div class="demand-num">85%</div></div>
+          <div class="demand-row" onclick="drill('ops-sku-black')"><div class="demand-name">Black Jersey T-Shirt</div><div class="demand-num">10</div><div class="demand-num">14</div><div class="demand-trend up">&uarr; 40%</div><div class="demand-num">88%</div></div>
+          <div class="demand-row" onclick="drill('ops-sku-if-love-me')"><div class="demand-name">IF YOU LOVE ME Jersey</div><div class="demand-num">10</div><div class="demand-num">12</div><div class="demand-trend up">&uarr; 20%</div><div class="demand-num">90%</div></div>
+          <div class="demand-row" onclick="drill('ops-sku-make-wish')"><div class="demand-name">Make A Wish T-Shirt</div><div class="demand-num">6</div><div class="demand-num">9</div><div class="demand-trend up">&uarr; 50%</div><div class="demand-num">78%</div></div>
+          <div class="demand-row" onclick="drill('ops-sku-ten')"><div class="demand-name">Ten Jersey</div><div class="demand-num">4</div><div class="demand-num">5</div><div class="demand-trend up">&uarr; 25%</div><div class="demand-num">72%</div></div>
+          <div class="demand-row" onclick="drill('ops-sku-racer')"><div class="demand-name">Racer Full Sleeve</div><div class="demand-num">4</div><div class="demand-num">6</div><div class="demand-trend up">&uarr; 50%</div><div class="demand-num">75%</div></div>
+          <div class="demand-row" onclick="drill('ops-sku-pop')"><div class="demand-name">POP CULTURE Jersey</div><div class="demand-num">3</div><div class="demand-num">2</div><div class="demand-trend down">&darr; 33%</div><div class="demand-num">68%</div></div>
+        </div>
+
+        <div>
+          <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:8px">Size-Wise Demand &middot; Next 30 Days</div>
+          <div class="ch" style="height:230px"><canvas id="c-ops-size"></canvas></div>
+
+          <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:8px;margin-top:14px">Category Velocity &middot; Daily Units</div>
+          <div style="background:var(--bg2);border-radius:var(--rsm);padding:10px;display:flex;flex-direction:column;gap:7px">
+            <div class="pb"><div class="pb-l" style="width:90px">Jersey</div><div class="pb-tr"><div class="pb-f" style="width:100%;background:var(--cream)"></div></div><div class="pb-v">3.8/day</div></div>
+            <div class="pb"><div class="pb-l" style="width:90px">T-Shirt</div><div class="pb-tr"><div class="pb-f" style="width:75%;background:var(--dim)"></div></div><div class="pb-v">2.9/day</div></div>
+            <div class="pb"><div class="pb-l" style="width:90px">Full Sleeve</div><div class="pb-tr"><div class="pb-f" style="width:42%;background:var(--muted)"></div></div><div class="pb-v">1.6/day</div></div>
+            <div class="pb"><div class="pb-l" style="width:90px">Hoodie</div><div class="pb-tr"><div class="pb-f" style="width:28%;background:var(--muted)"></div></div><div class="pb-v">1.1/day</div></div>
+            <div class="pb"><div class="pb-l" style="width:90px">Pants</div><div class="pb-tr"><div class="pb-f" style="width:10%;background:var(--dim)"></div></div><div class="pb-v">0.4/day</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOGISTICS PERFORMANCE -->
+    <div class="ops-section">
+      <div class="ops-hd">
+        <div class="ops-hd-ic">&#x1F69A;</div>
+        <div class="ops-hd-t">Logistics Performance</div>
+        <div class="ops-hd-sub">Shiprocket &middot; Feb 2026</div>
+      </div>
+
+      <div class="logistics-grid">
+        <div class="log-card" onclick="drill('ops-delivery-sla')">
+          <div class="log-c-hd"><div class="log-c-t">Delivery SLA</div><span class="tag t-up">94.2%</span></div>
+          <div class="log-c-v">3.2 days</div>
+          <div class="log-c-sub">Avg dispatch to delivery</div>
+          <div class="log-c-bar"><div class="log-c-bar-f" style="width:94%"></div></div>
+        </div>
+        <div class="log-card" onclick="drill('ops-rto')">
+          <div class="log-c-hd"><div class="log-c-t">RTO Rate</div><span class="tag t-up">1.1%</span></div>
+          <div class="log-c-v">2 / 181</div>
+          <div class="log-c-sub">Jan+Feb orders &middot; 100% Low Risk</div>
+          <div class="log-c-bar"><div class="log-c-bar-f" style="width:1%"></div></div>
+        </div>
+        <div class="log-card" onclick="drill('ops-ship-cost')">
+          <div class="log-c-hd"><div class="log-c-t">Avg Shipping</div><span class="tag t-dn">&#8377;124</span></div>
+          <div class="log-c-v">&#8377;64,780</div>
+          <div class="log-c-sub">YTD shipping cost</div>
+          <div class="log-c-bar"><div class="log-c-bar-f" style="width:68%"></div></div>
+        </div>
+        <div class="log-card" onclick="drill('ops-courier-mix')">
+          <div class="log-c-hd"><div class="log-c-t">Courier Mix</div><span class="tag t-neu">3</span></div>
+          <div class="log-c-v">SR 62%</div>
+          <div class="log-c-sub">Shiprocket &middot; Delhivery &middot; BlueDart</div>
+          <div class="log-c-bar"><div class="log-c-bar-f" style="width:62%"></div></div>
+        </div>
+        <div class="log-card" onclick="drill('ops-cod-cost')">
+          <div class="log-c-hd"><div class="log-c-t">COD Handling</div><span class="tag t-dn">&#8377;38/ord</span></div>
+          <div class="log-c-v">&#8377;4,612</div>
+          <div class="log-c-sub">COD charge total &middot; Falling</div>
+          <div class="log-c-bar"><div class="log-c-bar-f" style="width:23%"></div></div>
+        </div>
+        <div class="log-card" onclick="drill('ops-zone-mix')">
+          <div class="log-c-hd"><div class="log-c-t">Zone Distribution</div><span class="tag t-neu">Z-A</span></div>
+          <div class="log-c-v">58% / 42%</div>
+          <div class="log-c-sub">Zone A+B &middot; Zone C+D+E</div>
+          <div class="log-c-bar"><div class="log-c-bar-f" style="width:58%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STOCK LOCATIONS -->
+    <div class="ops-section">
+      <div class="ops-hd">
+        <div class="ops-hd-ic">&#x1F5FA;</div>
+        <div class="ops-hd-t">Stock Locations</div>
+        <div class="ops-hd-sub">Multi-location inventory &middot; Single warehouse currently</div>
+      </div>
+      <div class="loc-map">
+        <div class="loc-box active" onclick="drill('ops-loc-delhi')">
+          <div class="loc-city">DELHI</div>
+          <div class="loc-units">2,840 units</div>
+          <div class="loc-fillbar"><div class="loc-fillbar-f" style="width:72%"></div></div>
+          <div style="font-size:8px;color:var(--dim);margin-top:4px;font-family:'DM Mono',monospace">PRIMARY &middot; &#8377;8.2L</div>
+        </div>
+        <div class="loc-box" onclick="drill('ops-loc-mumbai')">
+          <div class="loc-city" style="color:var(--muted)">MUM</div>
+          <div class="loc-units">&mdash;</div>
+          <div class="loc-fillbar"><div class="loc-fillbar-f" style="width:0%"></div></div>
+          <div style="font-size:8px;color:var(--dim);margin-top:4px;font-family:'DM Mono',monospace">PLANNED Q2</div>
+        </div>
+        <div class="loc-box" onclick="drill('ops-loc-bangalore')">
+          <div class="loc-city" style="color:var(--muted)">BLR</div>
+          <div class="loc-units">&mdash;</div>
+          <div class="loc-fillbar"><div class="loc-fillbar-f" style="width:0%"></div></div>
+          <div style="font-size:8px;color:var(--dim);margin-top:4px;font-family:'DM Mono',monospace">CANDIDATE</div>
+        </div>
+        <div class="loc-box" onclick="drill('ops-loc-dubai')">
+          <div class="loc-city" style="color:var(--muted)">DXB</div>
+          <div class="loc-units">&mdash;</div>
+          <div class="loc-fillbar"><div class="loc-fillbar-f" style="width:0%"></div></div>
+          <div style="font-size:8px;color:var(--dim);margin-top:4px;font-family:'DM Mono',monospace">INTL &middot; 2027</div>
+        </div>
+        <div class="loc-box" onclick="drill('ops-warehouse-ops')">
+          <div class="loc-city" style="color:var(--muted)">3PL</div>
+          <div class="loc-units">Evaluate</div>
+          <div class="loc-fillbar"><div class="loc-fillbar-f" style="width:0%"></div></div>
+          <div style="font-size:8px;color:var(--dim);margin-top:4px;font-family:'DM Mono',monospace">Shiprocket Fulfill?</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUPPLIERS -->
+    <div class="ops-section">
+      <div class="ops-hd">
+        <div class="ops-hd-ic">&#x1F3ED;</div>
+        <div class="ops-hd-t">Supplier Intelligence</div>
+        <div class="ops-hd-sub">3 active &middot; Lead times &middot; Quality scores</div>
+      </div>
+      <div class="sup-grid">
+        <div class="sup-card" onclick="drill('ops-supplier-karol')">
+          <div class="sup-hd">
+            <div><div class="sup-name">Karol Bagh Textiles</div><div class="sup-loc">Delhi &middot; Primary</div></div>
+            <div class="sup-rating">&#9733; 4.6</div>
+          </div>
+          <div class="sup-body">
+            <div class="sup-m"><div class="sup-m-l">Lead Time</div><div class="sup-m-v">12d</div></div>
+            <div class="sup-m"><div class="sup-m-l">Defect Rate</div><div class="sup-m-v" style="color:var(--grn)">1.2%</div></div>
+            <div class="sup-m"><div class="sup-m-l">YTD Spend</div><div class="sup-m-v">&#8377;4.8L</div></div>
+          </div>
+          <div style="margin-top:9px;padding-top:9px;border-top:1px solid var(--b);font-size:9px;color:var(--muted)">6 active SKUs &middot; Jersey specialist &middot; Reliable</div>
+        </div>
+
+        <div class="sup-card" onclick="drill('ops-supplier-cc')">
+          <div class="sup-hd">
+            <div><div class="sup-name">CC Apparels</div><div class="sup-loc">Ludhiana &middot; Secondary</div></div>
+            <div class="sup-rating">&#9733; 4.2</div>
+          </div>
+          <div class="sup-body">
+            <div class="sup-m"><div class="sup-m-l">Lead Time</div><div class="sup-m-v">15d</div></div>
+            <div class="sup-m"><div class="sup-m-l">Defect Rate</div><div class="sup-m-v" style="color:#f0a020">2.8%</div></div>
+            <div class="sup-m"><div class="sup-m-l">YTD Spend</div><div class="sup-m-v">&#8377;3.1L</div></div>
+          </div>
+          <div style="margin-top:9px;padding-top:9px;border-top:1px solid var(--b);font-size:9px;color:var(--muted)">4 active SKUs &middot; T-shirt/Hoodie &middot; Renegotiate QC</div>
+        </div>
+
+        <div class="sup-card" onclick="drill('ops-supplier-mill')">
+          <div class="sup-hd">
+            <div><div class="sup-name">Mill Road Mfg</div><div class="sup-loc">Noida &middot; Tertiary</div></div>
+            <div class="sup-rating">&#9733; 4.8</div>
+          </div>
+          <div class="sup-body">
+            <div class="sup-m"><div class="sup-m-l">Lead Time</div><div class="sup-m-v" style="color:var(--grn)">8d</div></div>
+            <div class="sup-m"><div class="sup-m-l">Defect Rate</div><div class="sup-m-v" style="color:var(--grn)">0.8%</div></div>
+            <div class="sup-m"><div class="sup-m-l">YTD Spend</div><div class="sup-m-v">&#8377;1.2L</div></div>
+          </div>
+          <div style="margin-top:9px;padding-top:9px;border-top:1px solid var(--b);font-size:9px;color:var(--muted)">2 active SKUs &middot; Full-sleeve &middot; Scale up candidate</div>
+        </div>
+
+        <div class="sup-card" onclick="openUp()" style="border-style:dashed;opacity:.7">
+          <div class="sup-hd">
+            <div><div class="sup-name" style="color:var(--dim)">+ Add New Supplier</div><div class="sup-loc">Upload contact sheet</div></div>
+            <div class="sup-rating" style="color:var(--dim)">&plus;</div>
+          </div>
+          <div style="margin-top:14px;font-size:9px;color:var(--muted)">Diversify supply chain. 3 suppliers = single-region risk. Target: 5+ across Delhi, Tirupur, Ludhiana.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OPS ALERTS / INSIGHTS -->
+    <div class="ops-section">
+      <div class="ops-hd">
+        <div class="ops-hd-ic">&#x1F6A8;</div>
+        <div class="ops-hd-t">Ops Alerts &amp; Actions</div>
+        <div class="ops-hd-sub">5 open items &middot; 2 critical</div>
+      </div>
+
+      <div class="sug danger" onclick="drill('ops-alert-stockout')"><div class="sug-ic">&#x26A0;</div><div><div class="sug-t">4 SKUs will stock out within 7 days</div><div class="sug-b">Comet Heart M (1d), Black Jersey T-Shirt M (OUT), &apos;97 Jersey M (3d), IF YOU LOVE ME XL (4d). Lost revenue risk: &#8377;2.8L if not reordered today.</div><span class="sug-imp imp-h">CRITICAL &middot; Reorder TODAY</span></div></div>
+
+      <div class="sug danger" onclick="drill('ops-alert-size-m')"><div class="sug-ic">&#x1F3AF;</div><div><div class="sug-t">Size M = 31% of revenue but 40% of stockout risk</div><div class="sug-b">3 of 4 critical SKUs are size M. Your safety stock for M is under-sized vs demand velocity. Raise M safety stock 40%.</div><span class="sug-imp imp-h">CRITICAL &middot; Update safety stock</span></div></div>
+
+      <div class="sug warn" onclick="drill('ops-alert-overstock')"><div class="sug-ic">&#x1F4E6;</div><div><div class="sug-t">&#8377;1.4L locked in slow-moving SKUs</div><div class="sug-b">17 SKUs have &gt;90 days of stock. POP CULTURE Jersey alone has 316 days. Run 20% promo to clear &#8377;80K+ in 30 days.</div><span class="sug-imp imp-m">HIGH &middot; Plan clearance</span></div></div>
+
+      <div class="sug warn" onclick="drill('ops-alert-supplier')"><div class="sug-ic">&#x1F3ED;</div><div><div class="sug-t">Supplier concentration risk &mdash; Karol Bagh 54% of spend</div><div class="sug-b">If Karol Bagh delays, 6 SKUs pause production. Trial Mill Road (8d lead time vs 12d) for 2 more SKUs this quarter.</div><span class="sug-imp imp-m">HIGH &middot; Diversify</span></div></div>
+
+      <div class="sug good" onclick="drill('ops-alert-rto')"><div class="sug-ic">&#x2713;</div><div><div class="sug-t">RTO at 1.1% &mdash; well below industry avg 18%</div><div class="sug-b">Shopflo Low Risk filter + high prepaid share working. Keep COD disabled above &#8377;5K to maintain.</div><span class="sug-imp imp-l">OK &middot; Maintain</span></div></div>
+
+    </div>
+
+  </div>
+
   <!-- DRIVE HUB -->
   <div class="sec" id="sec-drive">
     <div class="sec-hd"><div class="sec-hd-title">DRIVE HUB</div><div class="sec-hd-line"></div><div class="sec-hd-sub">Google Drive Data Pipeline &middot; Auto-sync</div></div>
@@ -893,7 +1508,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
 
 <script>
 // ── NAV ──
-const pgNames={overview:'COMMAND OVERVIEW',pnl:'P&L STATEMENT',channels:'CHANNEL MATRIX',shopify:'SHOPIFY B2C',b2b:'B2B PARTNERS',products:'PRODUCT INTEL',geography:'GEO ANALYTICS',projections:'PROJECTIONS',budget:'BUDGET VS ACTUAL',suggestions:'AI INSIGHTS',drive:'DRIVE HUB'};
+const pgNames={overview:'COMMAND OVERVIEW',pnl:'P&L STATEMENT',channels:'CHANNEL MATRIX',shopify:'SHOPIFY B2C',b2b:'B2B PARTNERS',products:'PRODUCT INTEL',geography:'GEO ANALYTICS',projections:'PROJECTIONS',budget:'BUDGET VS ACTUAL',suggestions:'AI INSIGHTS',ops:'OPS & REPLENISHMENT',drive:'DRIVE HUB'};
 function go(el,id){
   document.querySelectorAll('.sb-item').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
@@ -901,11 +1516,223 @@ function go(el,id){
   document.getElementById('sec-'+id).classList.add('active');
   document.getElementById('ptitle').textContent=pgNames[id]||id.toUpperCase();
 }
+// ═══ ADVANCED FILTER ENGINE ═══
+const FILTER_STATE = {
+  month:'all', chan:'all', state:'all', cat:'all', size:'all', margin:'all', aov:'all',
+  customer:{new:true,repeat:true},
+  payment:{cod:true,prepaid:true},
+  source:{direct:true,facebook:true,instagram:true},
+  presets:{highmargin:false,lowstock:false,topsellers:false,lowrto:false},
+  dateFrom:'2026-01-01', dateTo:'2026-02-28'
+};
+
 function resetF(){
   document.getElementById('fMonth').value='all';
   document.getElementById('fChan').value='all';
   document.getElementById('fState').value='all';
-  document.querySelectorAll('.ftag').forEach(b=>b.classList.add('on'));
+  document.getElementById('fCat').value='all';
+  document.getElementById('fSize').value='all';
+  document.getElementById('fMargin').value='all';
+  document.getElementById('fAOV').value='all';
+  document.getElementById('fDateFrom').value='2026-01-01';
+  document.getElementById('fDateTo').value='2026-02-28';
+  document.querySelectorAll('.ftag[data-f]').forEach(b=>b.classList.add('on'));
+  document.querySelectorAll('.ftag[id^="f"]:not([data-f])').forEach(b=>b.classList.remove('on'));
+  Object.assign(FILTER_STATE,{month:'all',chan:'all',state:'all',cat:'all',size:'all',margin:'all',aov:'all',
+    customer:{new:true,repeat:true},payment:{cod:true,prepaid:true},source:{direct:true,facebook:true,instagram:true},
+    presets:{highmargin:false,lowstock:false,topsellers:false,lowrto:false},dateFrom:'2026-01-01',dateTo:'2026-02-28'});
+  applyFilters();
+  toast('&#x21BA; All filters reset');
+}
+
+function toggleF(el){
+  el.classList.toggle('on');
+  const key = el.dataset.f;
+  const group = ['new','repeat'].includes(key)?'customer':['cod','prepaid'].includes(key)?'payment':'source';
+  FILTER_STATE[group][key] = el.classList.contains('on');
+  applyFilters();
+}
+
+function togglePreset(el,key){
+  el.classList.toggle('on');
+  FILTER_STATE.presets[key] = el.classList.contains('on');
+  applyFilters();
+}
+
+function applyFilters(){
+  // Read values
+  FILTER_STATE.month = document.getElementById('fMonth').value;
+  FILTER_STATE.chan = document.getElementById('fChan').value;
+  FILTER_STATE.state = document.getElementById('fState').value;
+  FILTER_STATE.cat = document.getElementById('fCat').value;
+  FILTER_STATE.size = document.getElementById('fSize').value;
+  FILTER_STATE.margin = document.getElementById('fMargin').value;
+  FILTER_STATE.aov = document.getElementById('fAOV').value;
+  FILTER_STATE.dateFrom = document.getElementById('fDateFrom').value;
+  FILTER_STATE.dateTo = document.getElementById('fDateTo').value;
+
+  // Show loading toast
+  showLoading();
+
+  // 1. Update active chip display
+  updateActiveChips();
+
+  // 2. Re-render KPIs based on month filter
+  updateKPIsByMonth();
+
+  // 3. Update chart data (the hard part — re-render charts that are month-filterable)
+  refilterCharts();
+
+  // 4. Fade non-matching elements
+  applyElementFiltering();
+
+  // 5. Show count of active filters
+  updateFilterCount();
+
+  setTimeout(hideLoading, 400);
+}
+
+function showLoading(){
+  let l = document.getElementById('__floading');
+  if(!l){l=document.createElement('div');l.id='__floading';l.className='f-loading';l.innerHTML='&#x25D4; Applying filters...';document.body.appendChild(l);}
+  l.classList.add('show');
+}
+function hideLoading(){const l=document.getElementById('__floading');if(l)l.classList.remove('show');}
+
+function updateActiveChips(){
+  const chips = document.getElementById('fchips');
+  if(!chips) return;
+  const active = [];
+  if(FILTER_STATE.month !== 'all') active.push({label:'Month', value:FILTER_STATE.month==='jan'?'January 2026':'February 2026', field:'fMonth'});
+  if(FILTER_STATE.chan !== 'all') active.push({label:'Channel', value:FILTER_STATE.chan, field:'fChan'});
+  if(FILTER_STATE.state !== 'all') active.push({label:'State', value:FILTER_STATE.state, field:'fState'});
+  if(FILTER_STATE.cat !== 'all') active.push({label:'Category', value:FILTER_STATE.cat, field:'fCat'});
+  if(FILTER_STATE.size !== 'all') active.push({label:'Size', value:FILTER_STATE.size, field:'fSize'});
+  if(FILTER_STATE.margin !== 'all') active.push({label:'Margin', value:FILTER_STATE.margin, field:'fMargin'});
+  if(FILTER_STATE.aov !== 'all') active.push({label:'AOV', value:FILTER_STATE.aov, field:'fAOV'});
+  Object.entries(FILTER_STATE.customer).forEach(([k,v])=>{if(!v)active.push({label:'Exclude', value:k+' customers', tagF:k})});
+  Object.entries(FILTER_STATE.payment).forEach(([k,v])=>{if(!v)active.push({label:'Exclude', value:k, tagF:k})});
+  Object.entries(FILTER_STATE.source).forEach(([k,v])=>{if(!v)active.push({label:'Exclude', value:k, tagF:k})});
+  Object.entries(FILTER_STATE.presets).forEach(([k,v])=>{if(v)active.push({label:'Preset', value:k.replace(/([A-Z])/g,' $1'), preset:k})});
+
+  chips.innerHTML = active.map(f=>{
+    const clr = f.field ? `onclick="document.getElementById('${f.field}').value='all';applyFilters()"`
+                : f.tagF ? `onclick="const b=document.querySelector('[data-f=\'${f.tagF}\']');b.classList.add('on');FILTER_STATE.customer['${f.tagF}']=FILTER_STATE.payment['${f.tagF}']=FILTER_STATE.source['${f.tagF}']=true;applyFilters()"`
+                : f.preset ? `onclick="const b=document.getElementById('f${f.preset.charAt(0).toUpperCase()+f.preset.slice(1)}');if(b){b.classList.remove('on');FILTER_STATE.presets['${f.preset}']=false};applyFilters()"` : '';
+    return `<span class="fchip"><span class="fchip-label">${f.label}</span>${f.value}<span class="fchip-x" ${clr}>&times;</span></span>`;
+  }).join('');
+}
+
+function updateFilterCount(){
+  const cnt = document.getElementById('fActiveCount');
+  if(!cnt) return;
+  let count = 0;
+  if(FILTER_STATE.month !== 'all') count++;
+  if(FILTER_STATE.chan !== 'all') count++;
+  if(FILTER_STATE.state !== 'all') count++;
+  if(FILTER_STATE.cat !== 'all') count++;
+  if(FILTER_STATE.size !== 'all') count++;
+  if(FILTER_STATE.margin !== 'all') count++;
+  if(FILTER_STATE.aov !== 'all') count++;
+  ['customer','payment','source'].forEach(g=>Object.values(FILTER_STATE[g]).forEach(v=>{if(!v)count++}));
+  Object.values(FILTER_STATE.presets).forEach(v=>{if(v)count++});
+  if(count > 0){
+    cnt.classList.add('has');
+    cnt.textContent = count + ' active';
+  } else {
+    cnt.classList.remove('has');
+  }
+}
+
+// Data sets for month-level KPIs
+const KPI_DATA = {
+  all:{gross:'&#8377;56.7L', net:'&#8377;51.6L', cogs:'&#8377;16.1L', gp:'&#8377;35.5L', ebitda:'+&#8377;3.8L', ebitdaClass:'pos'},
+  jan:{gross:'&#8377;21.4L', net:'&#8377;18.9L', cogs:'&#8377;5.3L', gp:'&#8377;13.6L', ebitda:'&minus;&#8377;1.35L', ebitdaClass:'neg'},
+  feb:{gross:'&#8377;35.2L', net:'&#8377;32.7L', cogs:'&#8377;10.8L', gp:'&#8377;21.9L', ebitda:'+&#8377;5.12L', ebitdaClass:'pos'}
+};
+
+function updateKPIsByMonth(){
+  const m = FILTER_STATE.month;
+  const data = KPI_DATA[m] || KPI_DATA.all;
+  // Find the 5 KPIs on the overview page
+  const overviewKpis = document.querySelectorAll('#sec-overview .k5 .kpi-val');
+  if(overviewKpis.length >= 5){
+    overviewKpis[0].innerHTML = data.gross;
+    overviewKpis[1].innerHTML = data.net;
+    overviewKpis[1].className = 'kpi-val pos';
+    overviewKpis[2].innerHTML = data.cogs;
+    overviewKpis[2].className = 'kpi-val neg';
+    overviewKpis[3].innerHTML = data.gp;
+    overviewKpis[4].innerHTML = data.ebitda;
+    overviewKpis[4].className = 'kpi-val '+data.ebitdaClass;
+  }
+}
+
+function refilterCharts(){
+  // If month filter is set, re-render the main revenue bridge to show only that month
+  if(typeof window.rebuildRevenueChart === 'function'){
+    window.rebuildRevenueChart(FILTER_STATE.month);
+  }
+}
+
+function applyElementFiltering(){
+  // State: hide state blocks that don't match filter
+  if(FILTER_STATE.state !== 'all'){
+    document.querySelectorAll('.sblk').forEach(b=>{
+      const code = b.querySelector('.sc');
+      if(!code) return;
+      const match = code.textContent.trim() === FILTER_STATE.state;
+      b.classList.toggle('data-hidden', !match);
+    });
+  } else {
+    document.querySelectorAll('.sblk').forEach(b=>b.classList.remove('data-hidden'));
+  }
+
+  // Size: highlight selected size in size chips
+  if(FILTER_STATE.size !== 'all'){
+    document.querySelectorAll('.schip').forEach(c=>{
+      const top = c.querySelector('.schip-top');
+      if(!top) return;
+      const match = top.textContent.trim().toUpperCase() === FILTER_STATE.size;
+      c.classList.toggle('data-hidden', !match);
+    });
+  } else {
+    document.querySelectorAll('.schip').forEach(c=>c.classList.remove('data-hidden'));
+  }
+
+  // Margin preset: filter SKU rows by margin %
+  if(FILTER_STATE.margin !== 'all' || FILTER_STATE.presets.highmargin){
+    document.querySelectorAll('.rank').forEach(r=>{
+      const mtag = r.querySelector('.rtag');
+      if(!mtag) return;
+      const pct = parseFloat(mtag.textContent) || 0;
+      let show = true;
+      if(FILTER_STATE.margin==='100') show = pct >= 99;
+      else if(FILTER_STATE.margin==='high') show = pct > 85 && pct < 99;
+      else if(FILTER_STATE.margin==='mid') show = pct >= 70 && pct <= 85;
+      else if(FILTER_STATE.margin==='low') show = pct < 70;
+      if(FILTER_STATE.presets.highmargin && pct < 85) show = false;
+      r.classList.toggle('data-hidden', !show);
+    });
+  } else {
+    document.querySelectorAll('.rank').forEach(r=>r.classList.remove('data-hidden'));
+  }
+
+  // Partner filter by channel
+  if(FILTER_STATE.chan !== 'all' && FILTER_STATE.chan !== 'b2c'){
+    document.querySelectorAll('.pcard').forEach(c=>{
+      const type = c.querySelector('.ptyp');
+      if(!type) return;
+      const t = type.textContent.trim().toLowerCase();
+      let show = true;
+      if(FILTER_STATE.chan==='cdc') show = t.includes('retail');
+      else if(FILTER_STATE.chan==='events') show = t.includes('event') || t.includes('concert');
+      else if(FILTER_STATE.chan==='international') show = t.includes('intl');
+      c.classList.toggle('data-hidden', !show);
+    });
+  } else {
+    document.querySelectorAll('.pcard').forEach(c=>c.classList.remove('data-hidden'));
+  }
 }
 function swGeo(el,m){
   el.closest('.tgl').querySelectorAll('.tb').forEach(b=>b.classList.remove('active'));
@@ -1240,6 +2067,120 @@ function openUp(){
 } // override below
 
 const DRILLS={
+  'ops-stock-health':{t:'STOCK HEALTH · CRITICAL ITEMS',h:`
+    <div class="m-kpis">
+      <div class="m-kpi"><div class="m-kpi-l">Critical</div><div class="m-kpi-v neg">4</div><div class="m-kpi-sub">Stock out in 7 days</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Low</div><div class="m-kpi-v" style="color:#f0a020">8</div><div class="m-kpi-sub">15-30 days</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Healthy</div><div class="m-kpi-v pos">21</div><div class="m-kpi-sub">30+ days</div></div>
+    </div>
+    <div class="m-lbl">Lost revenue if not reordered TODAY</div>
+    <table class="m-tbl"><tr><th>SKU</th><th>Daily Demand</th><th>Days Left</th><th>Rev at Risk</th></tr>
+    <tr><td>Black Jersey T-Shirt · M</td><td>1.5</td><td class="neg">OUT</td><td class="neg">&#8377;1,35,000</td></tr>
+    <tr><td>Comet Heart Jersey · M</td><td>1.8</td><td class="neg">1d</td><td class="neg">&#8377;92,400</td></tr>
+    <tr><td>&apos;97 Oversized Jersey · M</td><td>1.2</td><td class="neg">3d</td><td class="neg">&#8377;38,500</td></tr>
+    <tr><td>IF YOU LOVE ME · XL</td><td>0.9</td><td class="neg">4d</td><td class="neg">&#8377;18,900</td></tr>
+    <tr class="tot"><td>Total Exposure</td><td></td><td></td><td class="neg">&#8377;2,84,800</td></tr>
+    </table>
+    <div class="m-note">&#x1F6A8; Issue POs today to prevent &#8377;2.85L in lost sales over next 30 days.</div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="m-btn" onclick="closeDrill()">&#x1F4CB; Generate PO Sheet</button><button class="m-btn g" onclick="closeDrill()">&#x1F4E7; Email Suppliers</button></div>`},
+
+  'ops-reorder':{t:'REORDER QUEUE · PRIORITIZED PO',h:`
+    <div class="m-kpis">
+      <div class="m-kpi"><div class="m-kpi-l">SKUs</div><div class="m-kpi-v">16</div><div class="m-kpi-sub">Needs reorder</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">PO Value</div><div class="m-kpi-v">&#8377;6.4L</div><div class="m-kpi-sub">At supplier cost</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Est Revenue</div><div class="m-kpi-v pos">&#8377;32L</div><div class="m-kpi-sub">5x multiplier</div></div>
+    </div>
+    <div class="m-note">&#x1F4A1; At 80% avg margin, this &#8377;6.4L PO unlocks &#8377;32L revenue. ROI: 500% within 45 days.</div>
+    <div class="m-lbl" style="margin-top:14px">Priority split</div>
+    <table class="m-tbl"><tr><th>Priority</th><th>SKUs</th><th>Action Window</th><th>PO Value</th></tr>
+    <tr><td><strong>P1 · Critical</strong></td><td class="neg">4</td><td class="neg">Order today</td><td>&#8377;1,26,300</td></tr>
+    <tr><td>P2 · Low</td><td style="color:#f0a020">3</td><td>Within 7 days</td><td>&#8377;54,350</td></tr>
+    <tr><td>P3 · Plan</td><td class="pos">9</td><td>Within 30 days</td><td>&#8377;4,58,950</td></tr>
+    </table>`},
+
+  'ops-inventory-value':{t:'INVENTORY VALUE BREAKDOWN',h:`
+    <div class="m-kpis">
+      <div class="m-kpi"><div class="m-kpi-l">At Cost</div><div class="m-kpi-v">&#8377;8.2L</div><div class="m-kpi-sub">2,840 units</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">At MRP</div><div class="m-kpi-v">&#8377;42L</div><div class="m-kpi-sub">5.1x multiplier</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Slow-moving</div><div class="m-kpi-v neg">&#8377;1.4L</div><div class="m-kpi-sub">17 SKUs &gt; 90d</div></div>
+    </div>
+    <table class="m-tbl"><tr><th>Category</th><th>Units</th><th>Cost Value</th><th>Sell-through</th></tr>
+    <tr><td>Jerseys</td><td>1,240</td><td>&#8377;3.8L</td><td class="pos">Fast</td></tr>
+    <tr><td>T-Shirts</td><td>890</td><td>&#8377;2.1L</td><td class="pos">Fast</td></tr>
+    <tr><td>Full Sleeve</td><td>420</td><td>&#8377;1.4L</td><td>Medium</td></tr>
+    <tr><td>Hoodies</td><td>210</td><td>&#8377;0.6L</td><td>Medium</td></tr>
+    <tr><td>Pants/Shorts</td><td>80</td><td>&#8377;0.3L</td><td style="color:#f0a020">Slow</td></tr>
+    </table>`},
+
+  'ops-stockdays':{t:'DAYS OF STOCK · HEALTH',h:`
+    <div class="m-kpis">
+      <div class="m-kpi"><div class="m-kpi-l">Avg</div><div class="m-kpi-v pos">34 days</div><div class="m-kpi-sub">Weighted by velocity</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Target</div><div class="m-kpi-v">30-45</div><div class="m-kpi-sub">Industry standard</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Variance</div><div class="m-kpi-v neg">0-316</div><div class="m-kpi-sub">Needs rebalancing</div></div>
+    </div>
+    <div class="m-note">&#x1F4A1; Blended health is good but hides huge SKU variance. Some SKUs out of stock while POP CULTURE has 316 days. Rebalance next production run.</div>`},
+
+  'ops-dead-stock':{t:'DEAD STOCK ANALYSIS',h:`
+    <div class="m-kpis">
+      <div class="m-kpi"><div class="m-kpi-l">Dead Stock</div><div class="m-kpi-v neg">&#8377;1.4L</div><div class="m-kpi-sub">17 SKUs · 90+ days</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Warehouse %</div><div class="m-kpi-v">17%</div><div class="m-kpi-sub">Of inventory value</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Recovery @ 40% off</div><div class="m-kpi-v pos">&#8377;90K</div><div class="m-kpi-sub">Via promo</div></div>
+    </div>
+    <table class="m-tbl"><tr><th>SKU</th><th>Days Stale</th><th>Units</th><th>Value</th><th>Action</th></tr>
+    <tr><td>POP CULTURE Jersey</td><td class="neg">316d</td><td>95</td><td>&#8377;38,500</td><td>40% sale</td></tr>
+    <tr><td>Head In Clouds T-Shirt</td><td class="neg">124d</td><td>48</td><td>&#8377;14,400</td><td>25% sale</td></tr>
+    <tr><td>TOO MUCH Sweatshirt</td><td class="neg">98d</td><td>32</td><td>&#8377;28,800</td><td>Bundle</td></tr>
+    <tr><td>15 other SKUs</td><td>90-150d</td><td>195</td><td>&#8377;58,300</td><td>Clearance</td></tr>
+    </table>
+    <div class="m-note">Run 30-day clearance campaign targeted at repeat customers. Unlock &#8377;90K-1.2L cash + free warehouse space.</div>`},
+
+  'ops-forecast':{t:'30-DAY DEMAND FORECAST',h:`
+    <div class="m-kpis">
+      <div class="m-kpi"><div class="m-kpi-l">Projected Units</div><div class="m-kpi-v">115</div><div class="m-kpi-sub">Shopify B2C only</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Forecast Accuracy</div><div class="m-kpi-v pos">82%</div><div class="m-kpi-sub">Based on Jan→Feb</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Uplift vs Feb</div><div class="m-kpi-v pos">+32%</div><div class="m-kpi-sub">If ads +30%</div></div>
+    </div>
+    <div class="m-note">Model uses: Feb velocity × seasonality × ad-spend factor. Confidence ranges 68-92% per SKU. Update weekly as new data arrives.</div>`},
+
+  'ops-delivery-sla':{t:'DELIVERY SLA PERFORMANCE',h:`
+    <div class="m-kpis">
+      <div class="m-kpi"><div class="m-kpi-l">SLA %</div><div class="m-kpi-v pos">94.2%</div><div class="m-kpi-sub">On-time</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Avg Days</div><div class="m-kpi-v">3.2</div><div class="m-kpi-sub">Dispatch → Deliver</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Delayed</div><div class="m-kpi-v" style="color:#f0a020">11</div><div class="m-kpi-sub">Of 181 orders</div></div>
+    </div>
+    <div class="m-note">&#x1F4CA; SLA above 90% is excellent. Delayed orders cluster in Zone E (NE India). Consider Shiprocket FBS for remote zones.</div>`},
+
+  'ops-rto':{t:'RTO RISK ANALYSIS',h:`
+    <div class="m-kpis">
+      <div class="m-kpi"><div class="m-kpi-l">RTO Rate</div><div class="m-kpi-v pos">1.1%</div><div class="m-kpi-sub">2 of 181 orders</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Industry Avg</div><div class="m-kpi-v">18%</div><div class="m-kpi-sub">D2C fashion</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Cost Saved</div><div class="m-kpi-v pos">&#8377;42K</div><div class="m-kpi-sub">vs industry avg</div></div>
+    </div>
+    <div class="m-note">&#x1F31F; Exceptional RTO. Shopflo Low Risk verification + prepaid incentives working. Maintain COD cap at &#8377;5K orders.</div>`},
+
+  'ops-supplier-karol':{t:'KAROL BAGH TEXTILES · PROFILE',h:`
+    <div class="m-kpis">
+      <div class="m-kpi"><div class="m-kpi-l">Rating</div><div class="m-kpi-v">4.6/5</div><div class="m-kpi-sub">Delivery + QC</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Lead Time</div><div class="m-kpi-v">12 days</div><div class="m-kpi-sub">Avg order</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">YTD Spend</div><div class="m-kpi-v">&#8377;4.8L</div><div class="m-kpi-sub">54% of PO total</div></div>
+    </div>
+    <div class="m-lbl">Active SKUs</div>
+    <table class="m-tbl"><tr><th>SKU</th><th>Monthly Qty</th><th>Unit Cost</th><th>Status</th></tr>
+    <tr><td>&apos;97 Oversized Jersey</td><td>45</td><td>&#8377;1,050</td><td class="pos">Stable</td></tr>
+    <tr><td>Comet Heart Jersey</td><td>35</td><td>&#8377;930</td><td class="pos">Stable</td></tr>
+    <tr><td>IF YOU LOVE ME Jersey</td><td>25</td><td>&#8377;420</td><td class="pos">Stable</td></tr>
+    <tr><td>Brown Drift + 3 more</td><td>80</td><td>&#8377;500-1100</td><td class="pos">Stable</td></tr>
+    </table>
+    <div class="m-note">&#x26A0; 54% supplier concentration risk. If they delay 2+ weeks, 6 SKUs pause. Mitigate by trialing backup supplier for 2 top-sellers.</div>`},
+
+  'ops-loc-delhi':{t:'DELHI WAREHOUSE · PRIMARY',h:`
+    <div class="m-kpis">
+      <div class="m-kpi"><div class="m-kpi-l">Units</div><div class="m-kpi-v">2,840</div><div class="m-kpi-sub">All SKUs</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Value @ Cost</div><div class="m-kpi-v">&#8377;8.2L</div><div class="m-kpi-sub">Jan 2026 close</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Utilization</div><div class="m-kpi-v" style="color:#f0a020">72%</div><div class="m-kpi-sub">Of capacity</div></div>
+    </div>
+    <div class="m-note">Delhi warehouse is primary fulfillment hub. Zone A/B covered same-day. Zone E takes 5-7 days. Consider Mumbai 3PL for western/southern India when volume doubles.</div>`}
+,
   'gross-sales':{t:'GROSS SALES ANALYSIS',h:`
     <div class="m-kpis">
       <div class="m-kpi"><div class="m-kpi-l">Jan</div><div class="m-kpi-v">&#8377;21,43,071</div><div class="m-kpi-sub">5 channels</div></div>
@@ -1999,6 +2940,52 @@ function initCharts(){
     {data:[2000000,2500000,1750000,2200000,1250000,1600000],backgroundColor:'rgba(100,100,100,0.3)',borderColor:'rgba(100,100,100,0.65)',borderWidth:1.5,borderRadius:4,label:'Target'},
   ]);
 }
+
+// ═══ OPS MODULE JS ═══
+window.swStock = function(el, filter){
+  el.closest('.seg').querySelectorAll('.seg-b').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('#stockGrid .stock-card').forEach(c=>{
+    const s = c.dataset.status;
+    c.style.display = (filter === 'all' || s === filter) ? '' : 'none';
+  });
+  if(typeof toast === 'function' && filter !== 'all') toast('Showing ' + filter + ' stock only');
+};
+
+// Build size demand chart on ops load
+window.buildOpsSizeChart = function(){
+  const canvas = document.getElementById('c-ops-size');
+  if(!canvas || canvas.chartBuilt) return;
+  canvas.chartBuilt = true;
+  if(typeof Chart === 'undefined') return;
+  new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: ['XS','S','M','L','XL','XXL','XXXL'],
+      datasets: [
+        {label:'Feb Actual', data:[15,18,48,19,34,8,22], backgroundColor:'rgba(232,224,208,0.35)', borderColor:'rgba(232,224,208,0.75)', borderWidth:1.5, borderRadius:3},
+        {label:'Mar Forecast', data:[19,22,62,24,42,10,27], backgroundColor:'rgba(212,43,43,0.35)', borderColor:'rgba(212,43,43,0.75)', borderWidth:1.5, borderRadius:3}
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {legend:{display:false}, tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+c.raw+' units'}}},
+      scales: {
+        x: {grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#555', font:{size:9}}},
+        y: {grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#555', font:{size:9, family:'DM Mono'}, callback:v=>v+'u'}}
+      }
+    }
+  });
+};
+
+// Hook ops chart build to navigation
+const __origGo = window.go;
+window.go = function(el, id){
+  __origGo(el, id);
+  if(id === 'ops') setTimeout(buildOpsSizeChart, 150);
+};
+
 </script>
 </body>
 </html>

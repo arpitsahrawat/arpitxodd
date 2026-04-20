@@ -63,16 +63,16 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
 .live{width:5px;height:5px;border-radius:50%;background:#4CAF50;box-shadow:0 0 4px #4CAF50;animation:pulse 2s infinite}
 
 /* FILTER BAR */
-.fbar{display:flex;align-items:center;gap:6px;padding:7px 24px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.6);flex-wrap:wrap}
-.f-lbl{font-size:7.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:600;flex-shrink:0}
-.f-div{width:1px;height:14px;background:var(--b2);flex-shrink:0}
-.f-sel{background:var(--bg2);border:1px solid var(--b2);border-radius:3px;padding:4px 8px;font-size:10px;color:var(--text);font-family:"Inter",sans-serif;cursor:pointer;outline:none;-webkit-appearance:none}
-.f-sel:hover{border-color:var(--b3)}
-.ftag{background:var(--bg2);border:1px solid var(--b2);border-radius:3px;padding:4px 9px;font-size:10px;color:var(--dim);cursor:pointer;font-family:"Inter",sans-serif;font-weight:500;transition:all .12s}
-.ftag.on{border-color:var(--b3);color:var(--text);background:var(--bg3)}
-.ftag:hover{border-color:var(--b3);color:var(--text)}
-.f-rst{margin-left:auto;font-size:9px;color:var(--dim);cursor:pointer;padding:4px 8px;border:1px solid transparent;border-radius:3px;font-family:"DM Mono",monospace}
-.f-rst:hover{border-color:var(--b2);color:var(--muted)}
+
+
+
+
+
+
+
+
+
+
 
 /* SECTIONS */
 .sec{display:none;padding:20px 24px 60px;animation:fadeUp .2s ease}
@@ -348,21 +348,211 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
 .kpi:hover .kpi-hint{opacity:.6}
 
 
-.f-date{background:var(--bg2);border:1px solid var(--b2);border-radius:3px;padding:3px 6px;font-size:10px;color:var(--text);font-family:"DM Mono",monospace;cursor:pointer;outline:none;color-scheme:dark}
-.f-date:hover,.f-date:focus{border-color:var(--b3)}
-.f-date::-webkit-calendar-picker-indicator{filter:invert(.7) opacity(.6)}
-.f-active-count{font-size:9px;color:var(--red);font-family:"DM Mono",monospace;padding:2px 7px;border-radius:10px;background:rgba(212,43,43,.08);border:1px solid rgba(212,43,43,.2);margin-left:4px;display:none}
-.f-active-count.has{display:inline-block}
-.fchips{display:flex;flex-wrap:wrap;gap:5px;padding:7px 20px;border-bottom:1px solid var(--b);min-height:0;background:rgba(255,255,255,.015)}
-.fchips:empty{display:none}
-.fchip{display:inline-flex;align-items:center;gap:5px;background:var(--bg2);border:1px solid var(--b2);border-radius:2px;padding:3px 8px;font-size:9.5px;color:var(--text);font-family:"DM Mono",monospace}
-.fchip-x{cursor:pointer;color:var(--muted);font-size:11px;line-height:1;margin-left:3px}
-.fchip-x:hover{color:var(--red)}
-.fchip-label{color:var(--dim);font-size:8px;text-transform:uppercase;letter-spacing:.08em;margin-right:3px}
-.data-hidden{opacity:.25;pointer-events:none;transition:opacity .2s}
-.f-loading{position:fixed;top:50px;right:20px;background:var(--bg1);border:1px solid var(--b3);border-radius:4px;padding:8px 14px;font-size:10px;color:var(--text);z-index:9999;opacity:0;transition:opacity .2s;font-family:"DM Mono",monospace;pointer-events:none}
-.f-loading.show{opacity:1}
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ═══ FILTER BAR — UNIFIED DROPDOWN SYSTEM ═══ */
+.fbar{
+  background:rgba(0,0,0,.55);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--b);
+  padding:0;
+  position:sticky;top:58px;z-index:180;
+  transition:all .2s
+}
+.f-host{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 24px;flex-wrap:wrap;
+  min-height:46px
+}
+.f-label-top{
+  font-size:8px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--dim);font-weight:700;flex-shrink:0
+}
+.f-divider{
+  width:1px;height:18px;background:var(--b2);flex-shrink:0
+}
+.f-dropdowns{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1;min-height:28px
+}
+.f-dropdowns:empty::after{
+  content:"No filters available for this view";
+  font-size:9.5px;color:var(--dim);font-style:italic;
+  font-family:"DM Mono",monospace
+}
+.f-actions{
+  display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0
+}
+.f-saved-btn,.f-reset-btn{
+  background:transparent;border:1px solid var(--b2);border-radius:3px;
+  padding:4px 9px;color:var(--muted);font-size:10px;cursor:pointer;
+  transition:all .12s;font-family:"Inter",sans-serif
+}
+.f-saved-btn:hover,.f-reset-btn:hover{border-color:var(--b3);color:var(--text)}
+.f-saved-btn{font-size:12px;padding:3px 9px}
+.f-reset-btn{font-family:"DM Mono",monospace;font-size:9.5px}
+
+/* Individual dropdown pill */
+.fdd{position:relative;flex-shrink:0}
+.fdd-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--bg2);border:1px solid var(--b2);border-radius:3px;
+  padding:5px 10px 5px 11px;
+  color:var(--text);font-size:10.5px;font-family:"Inter",sans-serif;
+  cursor:pointer;transition:all .12s;
+  white-space:nowrap;user-select:none;font-weight:500
+}
+.fdd-btn:hover{border-color:var(--b3);background:var(--bg3)}
+.fdd-btn.has-value{border-color:rgba(212,43,43,.35);background:rgba(212,43,43,.05)}
+.fdd-btn.has-value .fdd-icon{color:var(--red)}
+.fdd-btn.open{border-color:var(--b3);background:var(--bg3)}
+.fdd-icon{font-size:10px;color:var(--dim);transition:color .12s}
+.fdd-label{color:var(--dim);font-size:9px;letter-spacing:.08em;text-transform:uppercase;font-weight:700}
+.fdd-value{color:var(--text);font-weight:500}
+.fdd-btn.has-value .fdd-value{color:var(--red)}
+.fdd-chevron{font-size:8px;color:var(--dim);margin-left:2px;transition:transform .15s}
+.fdd-btn.open .fdd-chevron{transform:rotate(180deg)}
+.fdd-count{
+  background:var(--red);color:#fff;border-radius:9px;
+  font-size:8.5px;padding:1px 5px;font-family:"DM Mono",monospace;
+  font-weight:700;min-width:14px;text-align:center;line-height:1.2
+}
+
+/* Dropdown panel */
+.fdd-panel{
+  position:absolute;top:calc(100% + 5px);left:0;
+  background:var(--bg1);border:1px solid var(--b3);border-radius:5px;
+  min-width:200px;max-width:280px;
+  box-shadow:0 8px 24px rgba(0,0,0,.5);
+  z-index:500;padding:6px;
+  max-height:320px;overflow-y:auto;
+  display:none;
+  animation:fddFadeIn .14s ease
+}
+@keyframes fddFadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.fdd.open .fdd-panel{display:block}
+.fdd-search{
+  background:var(--bg2);border:1px solid var(--b);border-radius:3px;
+  padding:5px 8px;color:var(--text);font-size:10.5px;
+  width:100%;outline:none;margin-bottom:4px;
+  font-family:"Inter",sans-serif
+}
+.fdd-search:focus{border-color:var(--b3)}
+.fdd-opt{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 9px;border-radius:3px;cursor:pointer;
+  font-size:10.5px;color:var(--text);
+  transition:background .1s;user-select:none
+}
+.fdd-opt:hover{background:var(--bg2)}
+.fdd-opt.selected{background:rgba(212,43,43,.1)}
+.fdd-opt.selected .fdd-check{background:var(--red);border-color:var(--red)}
+.fdd-opt.selected .fdd-check::after{content:"";position:absolute;left:3px;top:0px;width:3px;height:7px;border:solid #fff;border-width:0 1.5px 1.5px 0;transform:rotate(45deg)}
+.fdd-check{
+  width:13px;height:13px;border:1.5px solid var(--b3);border-radius:2px;
+  position:relative;flex-shrink:0;transition:all .1s
+}
+.fdd-radio{
+  width:13px;height:13px;border:1.5px solid var(--b3);border-radius:50%;
+  position:relative;flex-shrink:0;transition:all .1s
+}
+.fdd-opt.selected .fdd-radio{border-color:var(--red)}
+.fdd-opt.selected .fdd-radio::after{content:"";position:absolute;inset:2px;background:var(--red);border-radius:50%}
+.fdd-opt-txt{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fdd-opt-hint{font-size:9px;color:var(--dim);font-family:"DM Mono",monospace}
+.fdd-divider{height:1px;background:var(--b);margin:4px 0}
+.fdd-header{font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);font-weight:700;padding:4px 9px 2px}
+.fdd-clear{
+  padding:5px 9px;font-size:9.5px;color:var(--dim);cursor:pointer;
+  font-family:"DM Mono",monospace;border-top:1px solid var(--b);margin-top:4px
+}
+.fdd-clear:hover{color:var(--red)}
+
+/* Date input in dropdown */
+.fdd-date-row{display:flex;gap:4px;align-items:center;padding:5px 9px}
+.fdd-date-input{
+  background:var(--bg2);border:1px solid var(--b);border-radius:3px;
+  padding:4px 6px;color:var(--text);font-size:10px;flex:1;outline:none;
+  font-family:"DM Mono",monospace;color-scheme:dark
+}
+.fdd-date-input::-webkit-calendar-picker-indicator{filter:invert(.7) opacity(.6)}
+
+/* Saved views */
+.f-saved-pop{
+  position:absolute;top:50px;right:24px;z-index:500;
+  background:var(--bg1);border:1px solid var(--b3);border-radius:5px;
+  padding:8px;min-width:240px;max-width:320px;
+  box-shadow:0 8px 24px rgba(0,0,0,.5)
+}
+.f-saved-hd{
+  font-size:8px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);
+  font-weight:700;padding:3px 6px 6px
+}
+.f-saved-list{display:flex;flex-direction:column;gap:2px;max-height:200px;overflow-y:auto}
+.f-saved-item{
+  display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:3px;
+  cursor:pointer;font-size:10.5px;color:var(--text);transition:background .1s
+}
+.f-saved-item:hover{background:var(--bg2)}
+.f-saved-item-x{color:var(--dim);font-size:14px;margin-left:auto;padding:0 4px}
+.f-saved-item-x:hover{color:var(--red)}
+.f-saved-empty{font-size:9.5px;color:var(--dim);padding:6px 8px;font-style:italic}
+.f-saved-save{
+  width:100%;margin-top:6px;background:var(--bg2);border:1px solid var(--b2);
+  border-radius:3px;padding:6px;color:var(--text);font-size:10px;cursor:pointer;
+  transition:all .12s;font-family:"Inter",sans-serif
+}
+.f-saved-save:hover{border-color:var(--red);color:var(--red)}
+
+/* Chip style refinement */
+.fchips{
+  display:flex;flex-wrap:wrap;gap:5px;
+  padding:7px 24px;border-bottom:1px solid var(--b);
+  min-height:0;background:rgba(212,43,43,.02);
+  transition:all .2s
+}
+.fchips:empty{display:none}
+.fchip{
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--bg2);border:1px solid var(--b2);border-radius:2px;
+  padding:3px 4px 3px 8px;font-size:9.5px;color:var(--text);
+  font-family:"DM Mono",monospace;animation:chipIn .15s ease
+}
+@keyframes chipIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+.fchip-x{
+  cursor:pointer;color:var(--dim);font-size:12px;line-height:1;
+  padding:0 4px;border-radius:2px;transition:all .1s
+}
+.fchip-x:hover{color:var(--red);background:rgba(212,43,43,.1)}
+.fchip-label{
+  color:var(--dim);font-size:7.5px;text-transform:uppercase;
+  letter-spacing:.08em;margin-right:3px;font-weight:700
+}
+.fchip-clear-all{
+  background:rgba(212,43,43,.1);border:1px solid rgba(212,43,43,.3);
+  color:var(--red);padding:3px 9px;border-radius:2px;cursor:pointer;
+  font-size:9px;font-family:"DM Mono",monospace;margin-left:6px;
+  transition:all .1s
+}
+.fchip-clear-all:hover{background:var(--red);color:#fff}
+
+.data-hidden{opacity:.2;pointer-events:none;transition:opacity .25s;filter:grayscale(.5)}
+.f-loading{position:fixed;top:120px;right:20px;background:var(--bg1);border:1px solid var(--b3);border-radius:4px;padding:7px 13px;font-size:10px;color:var(--text);z-index:9999;opacity:0;transition:opacity .2s;font-family:"DM Mono",monospace;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.5)}
+.f-loading.show{opacity:1}
 
 /* ─── OPS MODULE ─── */
 .ops-section{background:var(--bg1);border:1px solid var(--b);border-radius:var(--r);padding:16px;margin-bottom:14px;position:relative}
@@ -584,104 +774,25 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
       <button class="btn" onclick="doSync()">&#x21BA; Sync Drive</button>
     </div>
   </div>
-  <div class="fbar">
-    <span class="f-lbl">Filter</span><div class="f-div"></div>
-
-    <select class="f-sel" id="fMonth" onchange="applyFilters()">
-      <option value="all">All Months (YTD)</option>
-      <option value="jan">January 2026</option>
-      <option value="feb">February 2026</option>
-    </select>
-
-    <select class="f-sel" id="fChan" onchange="applyFilters()">
-      <option value="all">All Channels</option>
-      <option value="b2c">Shopify B2C</option>
-      <option value="b2b">B2B / Events</option>
-      <option value="cdc">CDC Marketplace</option>
-      <option value="events">Events Only</option>
-      <option value="international">International</option>
-    </select>
-
-    <select class="f-sel" id="fState" onchange="applyFilters()">
-      <option value="all">All States</option>
-      <option value="MH">Maharashtra</option>
-      <option value="DL">Delhi</option>
-      <option value="GJ">Gujarat</option>
-      <option value="WB">West Bengal</option>
-      <option value="PB">Punjab</option>
-      <option value="KA">Karnataka</option>
-      <option value="UP">Uttar Pradesh</option>
-      <option value="RJ">Rajasthan</option>
-      <option value="TS">Telangana</option>
-      <option value="HR">Haryana</option>
-      <option value="MP">Madhya Pradesh</option>
-      <option value="TN">Tamil Nadu</option>
-    </select>
-
-    <select class="f-sel" id="fCat" onchange="applyFilters()">
-      <option value="all">All Categories</option>
-      <option value="jersey">Jerseys</option>
-      <option value="tshirt">T-Shirts</option>
-      <option value="hoodie">Hoodies / Sweatshirts</option>
-      <option value="fullsleeve">Full Sleeve</option>
-      <option value="pants">Pants / Shorts</option>
-    </select>
-
-    <select class="f-sel" id="fSize" onchange="applyFilters()">
-      <option value="all">All Sizes</option>
-      <option value="XS">XS</option><option value="S">S</option><option value="M">M (Hero)</option>
-      <option value="L">L</option><option value="XL">XL</option><option value="XXL">XXL</option><option value="XXXL">XXXL</option>
-    </select>
-
-    <select class="f-sel" id="fMargin" onchange="applyFilters()">
-      <option value="all">All Margins</option>
-      <option value="100">100% (Written-off)</option>
-      <option value="high">High (&gt; 85%)</option>
-      <option value="mid">Mid (70&ndash;85%)</option>
-      <option value="low">Low (&lt; 70%)</option>
-    </select>
-
-    <select class="f-sel" id="fAOV" onchange="applyFilters()">
-      <option value="all">All AOV</option>
-      <option value="premium">Premium (&gt; &#8377;5K)</option>
-      <option value="standard">Standard (&#8377;3&ndash;5K)</option>
-      <option value="entry">Entry (&lt; &#8377;3K)</option>
-    </select>
-
-    <div class="f-div"></div>
-    <span class="f-lbl">Customer</span>
-    <button class="ftag on" data-f="new" onclick="toggleF(this)">New</button>
-    <button class="ftag on" data-f="repeat" onclick="toggleF(this)">Repeat</button>
-
-    <div class="f-div"></div>
-    <span class="f-lbl">Payment</span>
-    <button class="ftag on" data-f="cod" onclick="toggleF(this)">COD</button>
-    <button class="ftag on" data-f="prepaid" onclick="toggleF(this)">Prepaid</button>
-
-    <div class="f-div"></div>
-    <span class="f-lbl">Source</span>
-    <button class="ftag on" data-f="direct" onclick="toggleF(this)">Direct</button>
-    <button class="ftag on" data-f="facebook" onclick="toggleF(this)">Facebook</button>
-    <button class="ftag on" data-f="instagram" onclick="toggleF(this)">Instagram</button>
-
-    <div class="f-div"></div>
-    <button class="ftag" id="fHighMargin" onclick="togglePreset(this,'highmargin')">&#9889; High-Margin Only</button>
-    <button class="ftag" id="fLowStock" onclick="togglePreset(this,'lowstock')">&#x26A0; Low Stock</button>
-    <button class="ftag" id="fTopSellers" onclick="togglePreset(this,'topsellers')">&#11088; Top Sellers</button>
-    <button class="ftag" id="fLowRTO" onclick="togglePreset(this,'lowrto')">&#x2713; Low RTO</button>
-
-    <div class="f-div"></div>
-    <span class="f-lbl" style="color:var(--text);font-weight:600">Date Range</span>
-    <input type="date" class="f-date" id="fDateFrom" onchange="applyFilters()" value="2026-01-01">
-    <span style="color:var(--muted);font-size:10px">&rarr;</span>
-    <input type="date" class="f-date" id="fDateTo" onchange="applyFilters()" value="2026-02-28">
-
-    <div class="f-div"></div>
-    <span class="f-rst" onclick="resetF()">&#x21BA; Reset</span>
-    <span class="f-active-count" id="fActiveCount"></span>
+  <div class="fbar" id="fbar">
+    <!-- Dynamic filter host — populated based on active section -->
+    <div class="f-host">
+      <span class="f-label-top">Filters</span>
+      <span class="f-divider"></span>
+      <div class="f-dropdowns" id="fDropdowns"></div>
+      <div class="f-actions">
+        <button class="f-saved-btn" id="fSavedBtn" onclick="toggleSavedViews(event)" title="Saved views">&#x2605;</button>
+        <button class="f-reset-btn" onclick="resetF()" title="Reset all filters">&#x21BA; Reset</button>
+      </div>
+    </div>
+    <!-- Saved Views popover -->
+    <div class="f-saved-pop" id="fSavedPop" style="display:none">
+      <div class="f-saved-hd">Saved Views</div>
+      <div class="f-saved-list" id="fSavedList"></div>
+      <button class="f-saved-save" onclick="saveCurrentView()">&#x2605; Save current filters as view</button>
+    </div>
   </div>
-
-  <!-- Active filter chips row -->
+  <!-- Active filter chips row (only shows when filters are applied) -->
   <div class="fchips" id="fchips"></div>
 
   <!-- OVERVIEW -->
@@ -1516,135 +1627,677 @@ function go(el,id){
   document.getElementById('sec-'+id).classList.add('active');
   document.getElementById('ptitle').textContent=pgNames[id]||id.toUpperCase();
 }
-// ═══ ADVANCED FILTER ENGINE ═══
-const FILTER_STATE = {
-  month:'all', chan:'all', state:'all', cat:'all', size:'all', margin:'all', aov:'all',
-  customer:{new:true,repeat:true},
-  payment:{cod:true,prepaid:true},
-  source:{direct:true,facebook:true,instagram:true},
-  presets:{highmargin:false,lowstock:false,topsellers:false,lowrto:false},
-  dateFrom:'2026-01-01', dateTo:'2026-02-28'
+// ═══ CONTEXT-AWARE DYNAMIC FILTER ENGINE ═══
+
+// Filter definitions: what each filter does + which pages it applies to
+const FILTER_DEFS = {
+  month: {
+    label: 'Month',
+    type: 'radio',  // single select
+    default: 'all',
+    options: [
+      {v:'all', t:'All Months (YTD)'},
+      {v:'jan', t:'January 2026'},
+      {v:'feb', t:'February 2026'}
+    ]
+  },
+  channel: {
+    label: 'Channel',
+    type: 'checkbox',  // multi-select
+    default: [],
+    options: [
+      {v:'b2c', t:'Shopify B2C', hint:'Direct'},
+      {v:'cdc', t:'CDC Marketplace', hint:'Retail'},
+      {v:'events', t:'Events', hint:'Concerts/Fests'},
+      {v:'international', t:'International', hint:'Dubai+'}
+    ]
+  },
+  state: {
+    label: 'State',
+    type: 'radio',
+    default: 'all',
+    searchable: true,
+    options: [
+      {v:'all', t:'All States'},
+      {v:'MH', t:'Maharashtra', hint:'MH · Top'},
+      {v:'KA', t:'Karnataka', hint:'KA · Growing'},
+      {v:'DL', t:'Delhi', hint:'DL'},
+      {v:'GJ', t:'Gujarat', hint:'GJ'},
+      {v:'WB', t:'West Bengal', hint:'WB'},
+      {v:'PB', t:'Punjab', hint:'PB'},
+      {v:'UP', t:'Uttar Pradesh', hint:'UP'},
+      {v:'RJ', t:'Rajasthan', hint:'RJ'},
+      {v:'TS', t:'Telangana', hint:'TS'},
+      {v:'HR', t:'Haryana', hint:'HR'},
+      {v:'MP', t:'Madhya Pradesh', hint:'MP'},
+      {v:'TN', t:'Tamil Nadu', hint:'TN'}
+    ]
+  },
+  category: {
+    label: 'Category',
+    type: 'checkbox',
+    default: [],
+    options: [
+      {v:'jersey', t:'Jerseys', hint:'&#8377;4.0L'},
+      {v:'tshirt', t:'T-Shirts', hint:'&#8377;4.4L'},
+      {v:'fullsleeve', t:'Full Sleeve', hint:'&#8377;0.6L'},
+      {v:'hoodie', t:'Hoodies', hint:'&#8377;1.1L'},
+      {v:'pants', t:'Pants', hint:'&#8377;0.2L'}
+    ]
+  },
+  size: {
+    label: 'Size',
+    type: 'checkbox',
+    default: [],
+    options: [
+      {v:'XS', t:'XS'},
+      {v:'S', t:'S'},
+      {v:'M', t:'M', hint:'Hero · 31%'},
+      {v:'L', t:'L'},
+      {v:'XL', t:'XL'},
+      {v:'XXL', t:'XXL'},
+      {v:'XXXL', t:'XXXL'}
+    ]
+  },
+  margin: {
+    label: 'Margin',
+    type: 'radio',
+    default: 'all',
+    options: [
+      {v:'all', t:'All Margins'},
+      {v:'100', t:'100% (Written-off)', hint:'7 SKUs'},
+      {v:'high', t:'High (>85%)', hint:'11 SKUs'},
+      {v:'mid', t:'Mid (70-85%)', hint:'3 SKUs'},
+      {v:'low', t:'Low (<70%)', hint:'0 SKUs'}
+    ]
+  },
+  aov: {
+    label: 'AOV',
+    type: 'radio',
+    default: 'all',
+    options: [
+      {v:'all', t:'All AOV'},
+      {v:'premium', t:'Premium (>&#8377;5K)'},
+      {v:'standard', t:'Standard (&#8377;3-5K)'},
+      {v:'entry', t:'Entry (<&#8377;3K)'}
+    ]
+  },
+  customer: {
+    label: 'Customer',
+    type: 'checkbox',
+    default: ['new','repeat'],
+    options: [
+      {v:'new', t:'New Customers', hint:'67%'},
+      {v:'repeat', t:'Repeat', hint:'21%'},
+      {v:'unknown', t:'Unknown', hint:'12%'}
+    ]
+  },
+  payment: {
+    label: 'Payment',
+    type: 'checkbox',
+    default: ['cod','prepaid'],
+    options: [
+      {v:'cod', t:'Cash on Delivery', hint:'13.5% Feb'},
+      {v:'prepaid', t:'Prepaid', hint:'23.5%'},
+      {v:'other', t:'Other', hint:'63%'}
+    ]
+  },
+  source: {
+    label: 'Source',
+    type: 'checkbox',
+    default: ['direct','facebook','instagram'],
+    options: [
+      {v:'direct', t:'Direct', hint:'70%+'},
+      {v:'facebook', t:'Facebook', hint:'ROAS 5.6x'},
+      {v:'instagram', t:'Instagram'},
+      {v:'email', t:'Email'},
+      {v:'whatsapp', t:'WhatsApp'}
+    ]
+  },
+  partnerType: {
+    label: 'Partner Type',
+    type: 'checkbox',
+    default: [],
+    options: [
+      {v:'retail', t:'Retail (CDC)'},
+      {v:'event', t:'Events'},
+      {v:'concert', t:'Concerts'},
+      {v:'international', t:'International'},
+      {v:'multi', t:'Multi-purpose'}
+    ]
+  },
+  expenseType: {
+    label: 'Expense Type',
+    type: 'checkbox',
+    default: [],
+    options: [
+      {v:'fixed', t:'Fixed', hint:'Rent, Salary'},
+      {v:'variable', t:'Variable', hint:'Commission'},
+      {v:'oneoff', t:'One-off', hint:'KA, Photoshoot'}
+    ]
+  },
+  priority: {
+    label: 'Priority',
+    type: 'checkbox',
+    default: [],
+    options: [
+      {v:'critical', t:'Critical', hint:'P1'},
+      {v:'high', t:'High', hint:'P2'},
+      {v:'medium', t:'Medium', hint:'P3'},
+      {v:'low', t:'Low', hint:'P4'}
+    ]
+  },
+  stockStatus: {
+    label: 'Stock Status',
+    type: 'checkbox',
+    default: [],
+    options: [
+      {v:'critical', t:'Critical', hint:'<7 days'},
+      {v:'low', t:'Low', hint:'7-30 days'},
+      {v:'healthy', t:'Healthy', hint:'30-60 days'},
+      {v:'overstock', t:'Overstock', hint:'>90 days'}
+    ]
+  },
+  supplier: {
+    label: 'Supplier',
+    type: 'checkbox',
+    default: [],
+    options: [
+      {v:'karol', t:'Karol Bagh Textiles', hint:'54%'},
+      {v:'cc', t:'CC Apparels', hint:'33%'},
+      {v:'mill', t:'Mill Road Mfg', hint:'13%'}
+    ]
+  },
+  leadTime: {
+    label: 'Lead Time',
+    type: 'radio',
+    default: 'all',
+    options: [
+      {v:'all', t:'Any Lead Time'},
+      {v:'fast', t:'Fast (<10d)', hint:'Mill Road'},
+      {v:'medium', t:'Medium (10-15d)', hint:'Karol, CC'},
+      {v:'slow', t:'Slow (>15d)'}
+    ]
+  },
+  confidence: {
+    label: 'Confidence',
+    type: 'radio',
+    default: 'all',
+    options: [
+      {v:'all', t:'All Confidence'},
+      {v:'high', t:'High (>85%)'},
+      {v:'medium', t:'Medium (70-85%)'},
+      {v:'low', t:'Low (<70%)'}
+    ]
+  },
+  scenario: {
+    label: 'Scenario',
+    type: 'radio',
+    default: 'all',
+    options: [
+      {v:'all', t:'All Scenarios'},
+      {v:'conservative', t:'Conservative'},
+      {v:'base', t:'Base Case'},
+      {v:'optimistic', t:'Optimistic'}
+    ]
+  },
+  dateRange: {
+    label: 'Date',
+    type: 'daterange',
+    default: {from:'2026-01-01', to:'2026-02-28'}
+  }
 };
 
+// ═══ SECTION → RELEVANT FILTERS MAP ═══
+// Each section shows ONLY the filters that make sense for that data
+const SECTION_FILTERS = {
+  overview:    ['month', 'channel', 'dateRange'],
+  pnl:         ['month', 'expenseType'],
+  channels:    ['month', 'channel'],
+  shopify:     ['month', 'state', 'size', 'customer', 'payment', 'source', 'aov', 'dateRange'],
+  b2b:         ['month', 'partnerType'],
+  products:    ['month', 'category', 'size', 'margin'],
+  geography:   ['month', 'state', 'aov'],
+  projections: ['scenario', 'confidence'],
+  budget:      ['month', 'expenseType'],
+  suggestions: ['priority'],
+  ops:         ['stockStatus', 'category', 'size', 'supplier', 'priority', 'leadTime'],
+  drive:       []  // no filters
+};
+
+// ═══ FILTER STATE ═══
+const FILTER_STATE = {
+  month: 'all',
+  channel: [],
+  state: 'all',
+  category: [],
+  size: [],
+  margin: 'all',
+  aov: 'all',
+  customer: ['new','repeat'],
+  payment: ['cod','prepaid'],
+  source: ['direct','facebook','instagram'],
+  partnerType: [],
+  expenseType: [],
+  priority: [],
+  stockStatus: [],
+  supplier: [],
+  leadTime: 'all',
+  confidence: 'all',
+  scenario: 'all',
+  dateRange: {from:'2026-01-01', to:'2026-02-28'}
+};
+
+let CURRENT_SECTION = 'overview';
+
+// ═══ RENDER FILTERS FOR CURRENT SECTION ═══
+function renderFiltersForSection(sectionId){
+  CURRENT_SECTION = sectionId;
+  const relevant = SECTION_FILTERS[sectionId] || [];
+  const host = document.getElementById('fDropdowns');
+  if(!host) return;
+
+  if(relevant.length === 0){
+    host.innerHTML = '';
+    updateChips();
+    return;
+  }
+
+  host.innerHTML = relevant.map(key => buildDropdownHTML(key)).join('');
+  updateChips();
+  updateFilterButtonStates();
+}
+
+function buildDropdownHTML(key){
+  const def = FILTER_DEFS[key];
+  if(!def) return '';
+
+  const state = FILTER_STATE[key];
+  const {isActive, displayValue, count} = getDropdownDisplay(key, def, state);
+
+  return `
+    <div class="fdd" data-key="${key}" ${def.type === 'daterange' ? '' : ''}>
+      <button class="fdd-btn ${isActive ? 'has-value' : ''}" onclick="toggleDropdown('${key}', event)" aria-expanded="false">
+        <span class="fdd-label">${def.label}</span>
+        <span class="fdd-value">${displayValue}</span>
+        ${count > 0 ? `<span class="fdd-count">${count}</span>` : ''}
+        <span class="fdd-chevron">&#x25BC;</span>
+      </button>
+      <div class="fdd-panel">
+        ${buildDropdownPanel(key, def, state)}
+      </div>
+    </div>
+  `;
+}
+
+function getDropdownDisplay(key, def, state){
+  if(def.type === 'daterange'){
+    const isDefault = state.from === '2026-01-01' && state.to === '2026-02-28';
+    return {
+      isActive: !isDefault,
+      displayValue: isDefault ? 'Jan – Feb' : `${fmtDate(state.from)} – ${fmtDate(state.to)}`,
+      count: 0
+    };
+  }
+  if(def.type === 'radio'){
+    const isActive = state !== def.default;
+    const opt = def.options.find(o => o.v === state);
+    return {
+      isActive,
+      displayValue: opt ? opt.t : 'All',
+      count: 0
+    };
+  }
+  if(def.type === 'checkbox'){
+    const defaultSet = (def.default || []).join(',');
+    const currentSet = (state || []).slice().sort().join(',');
+    const defaultSorted = (def.default || []).slice().sort().join(',');
+    const isDefault = currentSet === defaultSorted;
+    const n = (state || []).length;
+    if(!isDefault && n > 0){
+      return {
+        isActive: true,
+        displayValue: n === 1 ? def.options.find(o => o.v === state[0])?.t || '1 selected' : `${n} selected`,
+        count: n
+      };
+    } else if(!isDefault && n === 0){
+      return {isActive: true, displayValue: 'None', count: 0};
+    }
+    return {isActive: false, displayValue: 'All', count: 0};
+  }
+  return {isActive: false, displayValue: 'All', count: 0};
+}
+
+function buildDropdownPanel(key, def, state){
+  if(def.type === 'daterange'){
+    return `
+      <div class="fdd-header">From – To</div>
+      <div class="fdd-date-row">
+        <input type="date" class="fdd-date-input" value="${state.from}" onchange="setDate('${key}','from',this.value)">
+        <span style="color:var(--dim)">&rarr;</span>
+        <input type="date" class="fdd-date-input" value="${state.to}" onchange="setDate('${key}','to',this.value)">
+      </div>
+      <div class="fdd-clear" onclick="resetFilter('${key}')">&#x21BA; Reset to Jan–Feb</div>
+    `;
+  }
+
+  let html = '';
+  if(def.searchable){
+    html += `<input type="text" class="fdd-search" placeholder="Search..." oninput="searchDropdown('${key}',this.value)" onclick="event.stopPropagation()">`;
+  }
+
+  html += def.options.map(opt => {
+    const selected = def.type === 'radio' ? state === opt.v : (state || []).includes(opt.v);
+    const control = def.type === 'radio' ? '<span class="fdd-radio"></span>' : '<span class="fdd-check"></span>';
+    return `
+      <div class="fdd-opt ${selected ? 'selected' : ''}" data-v="${opt.v}" onclick="pickOption('${key}','${opt.v}')">
+        ${control}
+        <span class="fdd-opt-txt">${opt.t}</span>
+        ${opt.hint ? `<span class="fdd-opt-hint">${opt.hint}</span>` : ''}
+      </div>
+    `;
+  }).join('');
+
+  if(def.type === 'checkbox'){
+    html += `<div class="fdd-clear" onclick="resetFilter('${key}')">&#x21BA; Reset</div>`;
+  }
+
+  return html;
+}
+
+function fmtDate(d){
+  if(!d) return '';
+  const parts = d.split('-');
+  const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${parts[2]} ${m[parseInt(parts[1])-1]}`;
+}
+
+// ═══ INTERACTIONS ═══
+function toggleDropdown(key, e){
+  e.stopPropagation();
+  const container = e.currentTarget.closest('.fdd');
+  const wasOpen = container.classList.contains('open');
+  // Close all others
+  document.querySelectorAll('.fdd.open').forEach(d => {
+    d.classList.remove('open');
+    d.querySelector('.fdd-btn').classList.remove('open');
+  });
+  if(!wasOpen){
+    container.classList.add('open');
+    container.querySelector('.fdd-btn').classList.add('open');
+  }
+}
+
+// Close dropdowns on outside click
+document.addEventListener('click', e => {
+  if(!e.target.closest('.fdd')){
+    document.querySelectorAll('.fdd.open').forEach(d => {
+      d.classList.remove('open');
+      d.querySelector('.fdd-btn').classList.remove('open');
+    });
+  }
+  // Close saved views popover
+  if(!e.target.closest('.f-saved-pop') && !e.target.closest('.f-saved-btn')){
+    const pop = document.getElementById('fSavedPop');
+    if(pop) pop.style.display = 'none';
+  }
+});
+
+function pickOption(key, value){
+  const def = FILTER_DEFS[key];
+  if(!def) return;
+  if(def.type === 'radio'){
+    FILTER_STATE[key] = value;
+    // Close dropdown after radio select
+    document.querySelectorAll('.fdd.open').forEach(d => {
+      d.classList.remove('open');
+      d.querySelector('.fdd-btn').classList.remove('open');
+    });
+  } else if(def.type === 'checkbox'){
+    const arr = FILTER_STATE[key] || [];
+    const idx = arr.indexOf(value);
+    if(idx === -1) arr.push(value);
+    else arr.splice(idx, 1);
+    FILTER_STATE[key] = arr;
+  }
+  applyFilters();
+}
+
+function setDate(key, which, value){
+  FILTER_STATE[key][which] = value;
+  applyFilters();
+}
+
+function resetFilter(key){
+  const def = FILTER_DEFS[key];
+  if(!def) return;
+  if(def.type === 'radio') FILTER_STATE[key] = def.default;
+  else if(def.type === 'checkbox') FILTER_STATE[key] = [...def.default];
+  else if(def.type === 'daterange') FILTER_STATE[key] = {...def.default};
+  applyFilters();
+}
+
+function searchDropdown(key, query){
+  const q = query.toLowerCase();
+  const container = document.querySelector(`.fdd[data-key="${key}"]`);
+  if(!container) return;
+  container.querySelectorAll('.fdd-opt').forEach(opt => {
+    const txt = opt.querySelector('.fdd-opt-txt').textContent.toLowerCase();
+    opt.style.display = txt.includes(q) ? '' : 'none';
+  });
+}
+
 function resetF(){
-  document.getElementById('fMonth').value='all';
-  document.getElementById('fChan').value='all';
-  document.getElementById('fState').value='all';
-  document.getElementById('fCat').value='all';
-  document.getElementById('fSize').value='all';
-  document.getElementById('fMargin').value='all';
-  document.getElementById('fAOV').value='all';
-  document.getElementById('fDateFrom').value='2026-01-01';
-  document.getElementById('fDateTo').value='2026-02-28';
-  document.querySelectorAll('.ftag[data-f]').forEach(b=>b.classList.add('on'));
-  document.querySelectorAll('.ftag[id^="f"]:not([data-f])').forEach(b=>b.classList.remove('on'));
-  Object.assign(FILTER_STATE,{month:'all',chan:'all',state:'all',cat:'all',size:'all',margin:'all',aov:'all',
-    customer:{new:true,repeat:true},payment:{cod:true,prepaid:true},source:{direct:true,facebook:true,instagram:true},
-    presets:{highmargin:false,lowstock:false,topsellers:false,lowrto:false},dateFrom:'2026-01-01',dateTo:'2026-02-28'});
+  Object.keys(FILTER_DEFS).forEach(key => {
+    const def = FILTER_DEFS[key];
+    if(def.type === 'radio') FILTER_STATE[key] = def.default;
+    else if(def.type === 'checkbox') FILTER_STATE[key] = [...def.default];
+    else if(def.type === 'daterange') FILTER_STATE[key] = {...def.default};
+  });
   applyFilters();
-  toast('&#x21BA; All filters reset');
+  if(typeof toast === 'function') toast('&#x21BA; All filters reset');
 }
 
-function toggleF(el){
-  el.classList.toggle('on');
-  const key = el.dataset.f;
-  const group = ['new','repeat'].includes(key)?'customer':['cod','prepaid'].includes(key)?'payment':'source';
-  FILTER_STATE[group][key] = el.classList.contains('on');
-  applyFilters();
+function updateFilterButtonStates(){
+  document.querySelectorAll('.fdd').forEach(dd => {
+    const key = dd.dataset.key;
+    const def = FILTER_DEFS[key];
+    if(!def) return;
+    const state = FILTER_STATE[key];
+    const {isActive, displayValue, count} = getDropdownDisplay(key, def, state);
+    const btn = dd.querySelector('.fdd-btn');
+    const valueEl = dd.querySelector('.fdd-value');
+    const countEl = dd.querySelector('.fdd-count');
+    btn.classList.toggle('has-value', isActive);
+    valueEl.innerHTML = displayValue;
+    if(countEl){
+      if(count > 0){ countEl.style.display=''; countEl.textContent = count; }
+      else countEl.remove();
+    } else if(count > 0){
+      const chev = btn.querySelector('.fdd-chevron');
+      const span = document.createElement('span');
+      span.className = 'fdd-count';
+      span.textContent = count;
+      chev.parentNode.insertBefore(span, chev);
+    }
+    // Rebuild options to reflect current selection state
+    const panel = dd.querySelector('.fdd-panel');
+    if(panel){
+      panel.innerHTML = buildDropdownPanel(key, def, state);
+    }
+  });
 }
 
-function togglePreset(el,key){
-  el.classList.toggle('on');
-  FILTER_STATE.presets[key] = el.classList.contains('on');
-  applyFilters();
-}
-
+// ═══ APPLY FILTERS — Actually filter the data on screen ═══
 function applyFilters(){
-  // Read values
-  FILTER_STATE.month = document.getElementById('fMonth').value;
-  FILTER_STATE.chan = document.getElementById('fChan').value;
-  FILTER_STATE.state = document.getElementById('fState').value;
-  FILTER_STATE.cat = document.getElementById('fCat').value;
-  FILTER_STATE.size = document.getElementById('fSize').value;
-  FILTER_STATE.margin = document.getElementById('fMargin').value;
-  FILTER_STATE.aov = document.getElementById('fAOV').value;
-  FILTER_STATE.dateFrom = document.getElementById('fDateFrom').value;
-  FILTER_STATE.dateTo = document.getElementById('fDateTo').value;
-
-  // Show loading toast
   showLoading();
-
-  // 1. Update active chip display
-  updateActiveChips();
-
-  // 2. Re-render KPIs based on month filter
+  updateFilterButtonStates();
+  updateChips();
   updateKPIsByMonth();
-
-  // 3. Update chart data (the hard part — re-render charts that are month-filterable)
   refilterCharts();
-
-  // 4. Fade non-matching elements
   applyElementFiltering();
-
-  // 5. Show count of active filters
-  updateFilterCount();
-
-  setTimeout(hideLoading, 400);
+  setTimeout(hideLoading, 300);
 }
 
 function showLoading(){
   let l = document.getElementById('__floading');
-  if(!l){l=document.createElement('div');l.id='__floading';l.className='f-loading';l.innerHTML='&#x25D4; Applying filters...';document.body.appendChild(l);}
+  if(!l){
+    l = document.createElement('div');
+    l.id = '__floading';
+    l.className = 'f-loading';
+    l.innerHTML = '&#x25D4; Applying filters...';
+    document.body.appendChild(l);
+  }
   l.classList.add('show');
 }
-function hideLoading(){const l=document.getElementById('__floading');if(l)l.classList.remove('show');}
-
-function updateActiveChips(){
-  const chips = document.getElementById('fchips');
-  if(!chips) return;
-  const active = [];
-  if(FILTER_STATE.month !== 'all') active.push({label:'Month', value:FILTER_STATE.month==='jan'?'January 2026':'February 2026', field:'fMonth'});
-  if(FILTER_STATE.chan !== 'all') active.push({label:'Channel', value:FILTER_STATE.chan, field:'fChan'});
-  if(FILTER_STATE.state !== 'all') active.push({label:'State', value:FILTER_STATE.state, field:'fState'});
-  if(FILTER_STATE.cat !== 'all') active.push({label:'Category', value:FILTER_STATE.cat, field:'fCat'});
-  if(FILTER_STATE.size !== 'all') active.push({label:'Size', value:FILTER_STATE.size, field:'fSize'});
-  if(FILTER_STATE.margin !== 'all') active.push({label:'Margin', value:FILTER_STATE.margin, field:'fMargin'});
-  if(FILTER_STATE.aov !== 'all') active.push({label:'AOV', value:FILTER_STATE.aov, field:'fAOV'});
-  Object.entries(FILTER_STATE.customer).forEach(([k,v])=>{if(!v)active.push({label:'Exclude', value:k+' customers', tagF:k})});
-  Object.entries(FILTER_STATE.payment).forEach(([k,v])=>{if(!v)active.push({label:'Exclude', value:k, tagF:k})});
-  Object.entries(FILTER_STATE.source).forEach(([k,v])=>{if(!v)active.push({label:'Exclude', value:k, tagF:k})});
-  Object.entries(FILTER_STATE.presets).forEach(([k,v])=>{if(v)active.push({label:'Preset', value:k.replace(/([A-Z])/g,' $1'), preset:k})});
-
-  chips.innerHTML = active.map(f=>{
-    const clr = f.field ? `onclick="document.getElementById('${f.field}').value='all';applyFilters()"`
-                : f.tagF ? `onclick="const b=document.querySelector('[data-f=\'${f.tagF}\']');b.classList.add('on');FILTER_STATE.customer['${f.tagF}']=FILTER_STATE.payment['${f.tagF}']=FILTER_STATE.source['${f.tagF}']=true;applyFilters()"`
-                : f.preset ? `onclick="const b=document.getElementById('f${f.preset.charAt(0).toUpperCase()+f.preset.slice(1)}');if(b){b.classList.remove('on');FILTER_STATE.presets['${f.preset}']=false};applyFilters()"` : '';
-    return `<span class="fchip"><span class="fchip-label">${f.label}</span>${f.value}<span class="fchip-x" ${clr}>&times;</span></span>`;
-  }).join('');
+function hideLoading(){
+  const l = document.getElementById('__floading');
+  if(l) l.classList.remove('show');
 }
 
-function updateFilterCount(){
-  const cnt = document.getElementById('fActiveCount');
-  if(!cnt) return;
-  let count = 0;
-  if(FILTER_STATE.month !== 'all') count++;
-  if(FILTER_STATE.chan !== 'all') count++;
-  if(FILTER_STATE.state !== 'all') count++;
-  if(FILTER_STATE.cat !== 'all') count++;
-  if(FILTER_STATE.size !== 'all') count++;
-  if(FILTER_STATE.margin !== 'all') count++;
-  if(FILTER_STATE.aov !== 'all') count++;
-  ['customer','payment','source'].forEach(g=>Object.values(FILTER_STATE[g]).forEach(v=>{if(!v)count++}));
-  Object.values(FILTER_STATE.presets).forEach(v=>{if(v)count++});
-  if(count > 0){
-    cnt.classList.add('has');
-    cnt.textContent = count + ' active';
+// ═══ CHIPS ═══
+function updateChips(){
+  const chips = document.getElementById('fchips');
+  if(!chips) return;
+  const active = collectActiveFilters();
+
+  if(active.length === 0){
+    chips.innerHTML = '';
+    return;
+  }
+
+  chips.innerHTML = active.map(f =>
+    `<span class="fchip">
+      <span class="fchip-label">${f.label}</span>
+      ${f.value}
+      <span class="fchip-x" onclick="removeFilter('${f.key}','${f.subValue || ''}')" title="Remove">&times;</span>
+    </span>`
+  ).join('') + `<span class="fchip-clear-all" onclick="resetF()">&#x21BA; Clear All (${active.length})</span>`;
+}
+
+function collectActiveFilters(){
+  const active = [];
+  const relevant = SECTION_FILTERS[CURRENT_SECTION] || [];
+  relevant.forEach(key => {
+    const def = FILTER_DEFS[key];
+    if(!def) return;
+    const state = FILTER_STATE[key];
+    if(def.type === 'radio'){
+      if(state !== def.default){
+        const opt = def.options.find(o => o.v === state);
+        active.push({key, label:def.label, value: opt ? opt.t : state});
+      }
+    } else if(def.type === 'checkbox'){
+      const defaultSorted = [...(def.default || [])].sort().join(',');
+      const currentSorted = [...(state || [])].sort().join(',');
+      if(defaultSorted !== currentSorted){
+        (state || []).forEach(v => {
+          const opt = def.options.find(o => o.v === v);
+          active.push({key, subValue:v, label:def.label, value: opt ? opt.t : v});
+        });
+        // Show "None" case
+        if((state || []).length === 0){
+          active.push({key, subValue:'__none__', label:def.label, value:'None'});
+        }
+      }
+    } else if(def.type === 'daterange'){
+      if(state.from !== def.default.from || state.to !== def.default.to){
+        active.push({key, label:def.label, value:`${fmtDate(state.from)} – ${fmtDate(state.to)}`});
+      }
+    }
+  });
+  return active;
+}
+
+function removeFilter(key, subValue){
+  const def = FILTER_DEFS[key];
+  if(!def) return;
+  if(def.type === 'radio' || def.type === 'daterange' || subValue === '__none__'){
+    resetFilter(key);
+  } else if(def.type === 'checkbox' && subValue){
+    const arr = FILTER_STATE[key] || [];
+    FILTER_STATE[key] = arr.filter(v => v !== subValue);
+    applyFilters();
   } else {
-    cnt.classList.remove('has');
+    resetFilter(key);
   }
 }
 
-// Data sets for month-level KPIs
+// ═══ SAVED VIEWS (localStorage-free, in-memory) ═══
+const SAVED_VIEWS = [
+  {name:'Feb · B2C Hero', state:{month:'feb', channel:['b2c'], size:['M','XL']}},
+  {name:'High-Margin Only', state:{margin:'high'}},
+  {name:'Karnataka Surge', state:{state:'KA'}},
+  {name:'Critical Stock', state:{stockStatus:['critical']}}
+];
+
+function toggleSavedViews(e){
+  e.stopPropagation();
+  const pop = document.getElementById('fSavedPop');
+  if(pop.style.display === 'none' || !pop.style.display){
+    pop.style.display = 'block';
+    renderSavedViewsList();
+  } else {
+    pop.style.display = 'none';
+  }
+}
+
+function renderSavedViewsList(){
+  const list = document.getElementById('fSavedList');
+  if(!list) return;
+  if(SAVED_VIEWS.length === 0){
+    list.innerHTML = '<div class="f-saved-empty">No saved views yet</div>';
+    return;
+  }
+  list.innerHTML = SAVED_VIEWS.map((v,i) =>
+    `<div class="f-saved-item" onclick="loadSavedView(${i})">
+      <span>&#9733;</span>
+      <span style="flex:1">${v.name}</span>
+      <span class="f-saved-item-x" onclick="event.stopPropagation();deleteSavedView(${i})">&times;</span>
+    </div>`
+  ).join('');
+}
+
+function loadSavedView(i){
+  const v = SAVED_VIEWS[i];
+  if(!v) return;
+  resetF();
+  Object.entries(v.state).forEach(([k, val]) => {
+    if(FILTER_DEFS[k]) FILTER_STATE[k] = Array.isArray(val) ? [...val] : val;
+  });
+  applyFilters();
+  document.getElementById('fSavedPop').style.display = 'none';
+  if(typeof toast === 'function') toast('&#9733; Loaded: ' + v.name);
+}
+
+function deleteSavedView(i){
+  SAVED_VIEWS.splice(i, 1);
+  renderSavedViewsList();
+}
+
+function saveCurrentView(){
+  const name = prompt('Name this view:');
+  if(!name) return;
+  const snap = {};
+  const relevant = SECTION_FILTERS[CURRENT_SECTION] || [];
+  relevant.forEach(k => {
+    const def = FILTER_DEFS[k];
+    const state = FILTER_STATE[k];
+    if(def.type === 'radio' && state !== def.default) snap[k] = state;
+    else if(def.type === 'checkbox'){
+      const defSorted = [...(def.default || [])].sort().join(',');
+      const curSorted = [...(state || [])].sort().join(',');
+      if(defSorted !== curSorted) snap[k] = [...state];
+    } else if(def.type === 'daterange' && (state.from !== def.default.from || state.to !== def.default.to)){
+      snap[k] = {...state};
+    }
+  });
+  SAVED_VIEWS.push({name, state:snap});
+  renderSavedViewsList();
+  if(typeof toast === 'function') toast('&#9733; Saved: ' + name);
+}
+
+// ═══ DATA UPDATERS ═══
 const KPI_DATA = {
   all:{gross:'&#8377;56.7L', net:'&#8377;51.6L', cogs:'&#8377;16.1L', gp:'&#8377;35.5L', ebitda:'+&#8377;3.8L', ebitdaClass:'pos'},
   jan:{gross:'&#8377;21.4L', net:'&#8377;18.9L', cogs:'&#8377;5.3L', gp:'&#8377;13.6L', ebitda:'&minus;&#8377;1.35L', ebitdaClass:'neg'},
@@ -1654,7 +2307,6 @@ const KPI_DATA = {
 function updateKPIsByMonth(){
   const m = FILTER_STATE.month;
   const data = KPI_DATA[m] || KPI_DATA.all;
-  // Find the 5 KPIs on the overview page
   const overviewKpis = document.querySelectorAll('#sec-overview .k5 .kpi-val');
   if(overviewKpis.length >= 5){
     overviewKpis[0].innerHTML = data.gross;
@@ -1664,76 +2316,201 @@ function updateKPIsByMonth(){
     overviewKpis[2].className = 'kpi-val neg';
     overviewKpis[3].innerHTML = data.gp;
     overviewKpis[4].innerHTML = data.ebitda;
-    overviewKpis[4].className = 'kpi-val '+data.ebitdaClass;
+    overviewKpis[4].className = 'kpi-val ' + data.ebitdaClass;
   }
 }
 
 function refilterCharts(){
-  // If month filter is set, re-render the main revenue bridge to show only that month
   if(typeof window.rebuildRevenueChart === 'function'){
     window.rebuildRevenueChart(FILTER_STATE.month);
   }
 }
 
+// ═══ ELEMENT FILTERING — Apply visual filtering across the dashboard ═══
 function applyElementFiltering(){
-  // State: hide state blocks that don't match filter
+  // STATES — Geo section
   if(FILTER_STATE.state !== 'all'){
-    document.querySelectorAll('.sblk').forEach(b=>{
-      const code = b.querySelector('.sc');
-      if(!code) return;
-      const match = code.textContent.trim() === FILTER_STATE.state;
+    document.querySelectorAll('.sblk').forEach(b => {
+      const codeEl = b.querySelector('.sc');
+      if(!codeEl) return;
+      const match = codeEl.textContent.trim() === FILTER_STATE.state;
       b.classList.toggle('data-hidden', !match);
     });
   } else {
-    document.querySelectorAll('.sblk').forEach(b=>b.classList.remove('data-hidden'));
+    document.querySelectorAll('.sblk').forEach(b => b.classList.remove('data-hidden'));
   }
 
-  // Size: highlight selected size in size chips
-  if(FILTER_STATE.size !== 'all'){
-    document.querySelectorAll('.schip').forEach(c=>{
-      const top = c.querySelector('.schip-top');
-      if(!top) return;
-      const match = top.textContent.trim().toUpperCase() === FILTER_STATE.size;
+  // SIZES — Shopify + Ops sections
+  if(FILTER_STATE.size && FILTER_STATE.size.length > 0){
+    document.querySelectorAll('.schip').forEach(c => {
+      const topEl = c.querySelector('.schip-top');
+      if(!topEl) return;
+      const match = FILTER_STATE.size.includes(topEl.textContent.trim().toUpperCase());
       c.classList.toggle('data-hidden', !match);
     });
   } else {
-    document.querySelectorAll('.schip').forEach(c=>c.classList.remove('data-hidden'));
+    document.querySelectorAll('.schip').forEach(c => c.classList.remove('data-hidden'));
   }
 
-  // Margin preset: filter SKU rows by margin %
-  if(FILTER_STATE.margin !== 'all' || FILTER_STATE.presets.highmargin){
-    document.querySelectorAll('.rank').forEach(r=>{
+  // MARGIN — Product SKU rows
+  if(FILTER_STATE.margin !== 'all'){
+    document.querySelectorAll('.rank').forEach(r => {
       const mtag = r.querySelector('.rtag');
       if(!mtag) return;
       const pct = parseFloat(mtag.textContent) || 0;
       let show = true;
-      if(FILTER_STATE.margin==='100') show = pct >= 99;
-      else if(FILTER_STATE.margin==='high') show = pct > 85 && pct < 99;
-      else if(FILTER_STATE.margin==='mid') show = pct >= 70 && pct <= 85;
-      else if(FILTER_STATE.margin==='low') show = pct < 70;
-      if(FILTER_STATE.presets.highmargin && pct < 85) show = false;
+      if(FILTER_STATE.margin === '100') show = pct >= 99;
+      else if(FILTER_STATE.margin === 'high') show = pct > 85 && pct < 99;
+      else if(FILTER_STATE.margin === 'mid') show = pct >= 70 && pct <= 85;
+      else if(FILTER_STATE.margin === 'low') show = pct < 70;
       r.classList.toggle('data-hidden', !show);
     });
   } else {
-    document.querySelectorAll('.rank').forEach(r=>r.classList.remove('data-hidden'));
+    document.querySelectorAll('.rank').forEach(r => r.classList.remove('data-hidden'));
   }
 
-  // Partner filter by channel
-  if(FILTER_STATE.chan !== 'all' && FILTER_STATE.chan !== 'b2c'){
-    document.querySelectorAll('.pcard').forEach(c=>{
-      const type = c.querySelector('.ptyp');
-      if(!type) return;
-      const t = type.textContent.trim().toLowerCase();
-      let show = true;
-      if(FILTER_STATE.chan==='cdc') show = t.includes('retail');
-      else if(FILTER_STATE.chan==='events') show = t.includes('event') || t.includes('concert');
-      else if(FILTER_STATE.chan==='international') show = t.includes('intl');
+  // PARTNER TYPE — B2B section
+  if(FILTER_STATE.partnerType && FILTER_STATE.partnerType.length > 0){
+    document.querySelectorAll('.pcard').forEach(c => {
+      const typeEl = c.querySelector('.ptyp');
+      if(!typeEl) return;
+      const t = typeEl.textContent.trim().toLowerCase();
+      let show = false;
+      FILTER_STATE.partnerType.forEach(pt => {
+        if(pt === 'retail' && t.includes('retail')) show = true;
+        if(pt === 'event' && t.includes('event')) show = true;
+        if(pt === 'concert' && t.includes('concert')) show = true;
+        if(pt === 'international' && (t.includes('intl') || t.includes('international'))) show = true;
+        if(pt === 'multi' && t.includes('multi')) show = true;
+      });
       c.classList.toggle('data-hidden', !show);
     });
   } else {
-    document.querySelectorAll('.pcard').forEach(c=>c.classList.remove('data-hidden'));
+    document.querySelectorAll('.pcard').forEach(c => c.classList.remove('data-hidden'));
+  }
+
+  // STOCK STATUS — Ops section
+  if(FILTER_STATE.stockStatus && FILTER_STATE.stockStatus.length > 0){
+    document.querySelectorAll('.stock-card').forEach(c => {
+      const status = c.dataset.status;
+      c.style.display = FILTER_STATE.stockStatus.includes(status) ? '' : 'none';
+    });
+  } else {
+    document.querySelectorAll('.stock-card').forEach(c => c.style.display = '');
+  }
+
+  // PRIORITY — Suggestions + Ops reorder queue
+  if(FILTER_STATE.priority && FILTER_STATE.priority.length > 0){
+    document.querySelectorAll('.sug').forEach(s => {
+      let level = 'low';
+      if(s.classList.contains('danger')) level = 'critical';
+      else if(s.classList.contains('warn')) level = 'high';
+      else if(s.classList.contains('good')) level = 'medium';
+      s.classList.toggle('data-hidden', !FILTER_STATE.priority.includes(level));
+    });
+    // Reorder queue
+    document.querySelectorAll('.reorder-tbl tbody tr').forEach(tr => {
+      const prio = tr.querySelector('.prio');
+      if(!prio) return;
+      const t = prio.textContent.toLowerCase();
+      let level = 'low';
+      if(t.includes('p1')) level = 'critical';
+      else if(t.includes('p2')) level = 'high';
+      else if(t.includes('p3')) level = 'medium';
+      tr.style.display = FILTER_STATE.priority.includes(level) ? '' : 'none';
+    });
+  } else {
+    document.querySelectorAll('.sug').forEach(s => s.classList.remove('data-hidden'));
+    document.querySelectorAll('.reorder-tbl tbody tr').forEach(tr => tr.style.display = '');
+  }
+
+  // SUPPLIER — Ops section
+  if(FILTER_STATE.supplier && FILTER_STATE.supplier.length > 0){
+    document.querySelectorAll('.sup-card').forEach(c => {
+      const nameEl = c.querySelector('.sup-name');
+      if(!nameEl) return;
+      const name = nameEl.textContent.toLowerCase();
+      let show = false;
+      FILTER_STATE.supplier.forEach(s => {
+        if(s === 'karol' && name.includes('karol')) show = true;
+        if(s === 'cc' && name.includes('cc')) show = true;
+        if(s === 'mill' && name.includes('mill')) show = true;
+      });
+      c.style.display = show ? '' : 'none';
+    });
+    // Reorder queue supplier column
+    document.querySelectorAll('.reorder-tbl tbody tr').forEach(tr => {
+      const cells = tr.querySelectorAll('td');
+      if(cells.length === 0) return;
+      const supCell = cells[cells.length - 1];
+      const supText = supCell.textContent.toLowerCase();
+      let show = false;
+      FILTER_STATE.supplier.forEach(s => {
+        if(s === 'karol' && supText.includes('karol')) show = true;
+        if(s === 'cc' && supText.includes('cc')) show = true;
+        if(s === 'mill' && supText.includes('mill')) show = true;
+      });
+      if(tr.style.display !== 'none') tr.style.display = show ? '' : 'none';
+    });
+  } else {
+    document.querySelectorAll('.sup-card').forEach(c => c.style.display = '');
+  }
+
+  // CATEGORY — Product + Ops
+  if(FILTER_STATE.category && FILTER_STATE.category.length > 0){
+    document.querySelectorAll('.rank').forEach(r => {
+      const nameEl = r.querySelector('.rname');
+      if(!nameEl) return;
+      const name = nameEl.textContent.toLowerCase();
+      let show = false;
+      FILTER_STATE.category.forEach(c => {
+        if(c === 'jersey' && name.includes('jersey')) show = true;
+        if(c === 'tshirt' && (name.includes('t-shirt') || name.includes('tshirt'))) show = true;
+        if(c === 'hoodie' && (name.includes('hoodie') || name.includes('sweatshirt'))) show = true;
+        if(c === 'fullsleeve' && (name.includes('full sleeve') || name.includes('fs'))) show = true;
+        if(c === 'pants' && (name.includes('pants') || name.includes('shorts'))) show = true;
+      });
+      // Don't override margin filter
+      if(!r.classList.contains('data-hidden')) r.classList.toggle('data-hidden', !show);
+    });
+  }
+
+  // CHANNEL — hide/show B2B partner section when channel filter narrows
+  if(FILTER_STATE.channel && FILTER_STATE.channel.length > 0){
+    // Partners by channel mapping
+    document.querySelectorAll('.pcard').forEach(c => {
+      const typeEl = c.querySelector('.ptyp');
+      if(!typeEl) return;
+      const t = typeEl.textContent.trim().toLowerCase();
+      let show = false;
+      FILTER_STATE.channel.forEach(ch => {
+        if(ch === 'b2c') show = false; // B2C has no partner cards
+        if(ch === 'cdc' && t.includes('retail')) show = true;
+        if(ch === 'events' && (t.includes('event') || t.includes('concert'))) show = true;
+        if(ch === 'international' && t.includes('intl')) show = true;
+      });
+      if(!c.classList.contains('data-hidden')) c.classList.toggle('data-hidden', !show);
+    });
   }
 }
+
+// ═══ HOOK INTO NAVIGATION ═══
+const __origGoFn = window.go;
+window.go = function(el, id){
+  if(__origGoFn) __origGoFn(el, id);
+  CURRENT_SECTION = id;
+  renderFiltersForSection(id);
+  // Re-apply filter state to newly shown elements
+  setTimeout(applyElementFiltering, 50);
+};
+
+// Initial render on page load
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', () => setTimeout(() => renderFiltersForSection('overview'), 200));
+} else {
+  setTimeout(() => renderFiltersForSection('overview'), 200);
+}
+
 function swGeo(el,m){
   el.closest('.tgl').querySelectorAll('.tb').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');

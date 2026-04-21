@@ -666,6 +666,111 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
 .seg-b{padding:4px 11px;border-radius:2px;border:none;background:none;color:var(--dim);font-family:"Inter",sans-serif;font-size:10.5px;font-weight:500;cursor:pointer;transition:all .12s}
 .seg-b.active{background:var(--bg3);color:var(--text);border:1px solid var(--b2)}
 
+
+/* ─── SIMULATOR ─── */
+.sim-grid{display:grid;grid-template-columns:360px 1fr;gap:14px;align-items:stretch}
+@media(max-width:1200px){.sim-grid{grid-template-columns:1fr}}
+.sim-controls{background:var(--bg1);border:1px solid var(--b);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:16px;max-height:calc(100vh - 200px);overflow-y:auto}
+.sim-group{padding-bottom:14px;border-bottom:1px solid var(--b)}
+.sim-group:last-child{border-bottom:none}
+.sim-group-title{font-size:9px;font-weight:700;letter-spacing:.14em;color:var(--red);text-transform:uppercase;margin-bottom:10px}
+.sim-slider{margin-bottom:11px}
+.sim-slider-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.sim-slider-l{font-size:10.5px;color:var(--text);font-weight:500}
+.sim-slider-v{font-family:"DM Mono",monospace;font-size:11px;color:var(--cream);font-weight:700;background:var(--bg2);padding:2px 7px;border-radius:2px;min-width:52px;text-align:center;border:1px solid var(--b2)}
+.sim-slider-sub{font-size:8.5px;color:var(--dim);margin-top:3px}
+.sim-range{-webkit-appearance:none;width:100%;height:3px;background:var(--bg3);border-radius:2px;outline:none;cursor:pointer}
+.sim-range::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;background:var(--red);border-radius:50%;cursor:pointer;border:2px solid var(--bg1);box-shadow:0 0 0 1px var(--red)}
+.sim-range::-moz-range-thumb{width:14px;height:14px;background:var(--red);border-radius:50%;cursor:pointer;border:2px solid var(--bg1)}
+.sim-range:hover::-webkit-slider-thumb{background:var(--cream);box-shadow:0 0 0 1px var(--cream)}
+
+.sim-output{display:flex;flex-direction:column;gap:14px}
+.sim-head-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.sim-kpi{background:var(--bg1);border:1px solid var(--b);border-radius:var(--rsm);padding:12px;transition:all .3s}
+.sim-kpi.flash{animation:flashVal .6s ease}
+@keyframes flashVal{0%,100%{border-color:var(--b)}50%{border-color:var(--red);background:var(--bg2)}}
+.sim-kpi-l{font-size:8px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;font-weight:700}
+.sim-kpi-v{font-family:"Bebas Neue",sans-serif;font-size:22px;letter-spacing:.04em;color:var(--text);line-height:1;margin-top:5px;transition:color .3s}
+.sim-kpi-sub{font-size:9px;color:var(--muted);margin-top:3px;font-family:"DM Mono",monospace}
+.sim-kpi-v.pos{color:var(--grn)}
+.sim-kpi-v.neg{color:var(--red)}
+
+.sim-scenarios{display:flex;gap:6px;flex-wrap:wrap}
+.sim-sc-btn{background:var(--bg2);border:1px solid var(--b2);border-radius:3px;padding:5px 11px;color:var(--muted);font-size:10px;font-weight:500;cursor:pointer;transition:all .12s;font-family:"Inter",sans-serif}
+.sim-sc-btn:hover{border-color:var(--b3);color:var(--text)}
+.sim-sc-btn.active{background:var(--red);border-color:var(--red);color:#fff}
+
+.sim-saved{background:var(--bg2);border:1px dashed var(--b2);border-radius:var(--rsm);padding:10px 12px;display:flex;justify-content:space-between;align-items:center;font-size:10px}
+.sim-saved-item{display:flex;align-items:center;gap:8px}
+.sim-saved-x{cursor:pointer;color:var(--muted);font-size:11px;margin-left:6px}
+.sim-saved-x:hover{color:var(--red)}
+
+/* ─── CRM ─── */
+.rfm-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px}
+.rfm-cell{background:var(--bg2);border:1px solid var(--b);border-radius:var(--rsm);padding:10px 8px;text-align:center;cursor:pointer;transition:all .15s;position:relative;min-height:80px}
+.rfm-cell:hover{transform:translateY(-1px)}
+.rfm-cell.tier-gold{background:rgba(240,192,64,0.14);border-color:rgba(240,192,64,0.4)}
+.rfm-cell.tier-silver{background:rgba(232,224,208,0.1);border-color:var(--b2)}
+.rfm-cell.tier-bronze{background:var(--bg2);border-color:var(--b)}
+.rfm-cell.tier-risk{background:rgba(240,160,32,0.1);border-color:rgba(240,160,32,0.3)}
+.rfm-cell.tier-lost{background:var(--red2);border-color:rgba(212,43,43,0.25)}
+.rfm-cell-seg{font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text)}
+.rfm-cell-n{font-family:"Bebas Neue",sans-serif;font-size:22px;letter-spacing:.04em;margin-top:4px;line-height:1;color:var(--text)}
+.rfm-cell-rev{font-family:"DM Mono",monospace;font-size:9px;color:var(--muted);margin-top:2px}
+.tier-gold .rfm-cell-n{color:#f0c040}
+.tier-lost .rfm-cell-n{color:var(--red)}
+.tier-risk .rfm-cell-n{color:#f0a020}
+
+.cust-list{background:var(--bg2);border:1px solid var(--b);border-radius:var(--rsm);max-height:360px;overflow-y:auto}
+.cust-row{display:grid;grid-template-columns:1.5fr 1fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr;gap:9px;padding:9px 12px;border-bottom:1px solid rgba(255,255,255,.025);font-size:10.5px;align-items:center;cursor:pointer;transition:background .1s}
+.cust-row:hover{background:rgba(255,255,255,.02)}
+.cust-row.header{background:var(--bg3);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:700;position:sticky;top:0;cursor:default;z-index:1}
+.cust-name{font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cust-email{font-size:9px;color:var(--muted);font-family:"DM Mono",monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cust-num{font-family:"DM Mono",monospace;font-size:10px;text-align:right}
+.cust-tag{display:inline-block;padding:2px 6px;border-radius:2px;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:"DM Mono",monospace}
+.cust-tag.champion{background:rgba(240,192,64,0.14);color:#f0c040}
+.cust-tag.loyal{background:var(--grn2);color:var(--grn)}
+.cust-tag.new{background:rgba(232,224,208,0.1);color:var(--cream)}
+.cust-tag.risk{background:rgba(240,160,32,0.1);color:#f0a020}
+.cust-tag.lost{background:var(--red2);color:var(--red)}
+
+.cohort-tbl{width:100%;border-collapse:collapse;font-size:10.5px}
+.cohort-tbl th{background:var(--bg2);font-size:8px;letter-spacing:.1em;color:var(--dim);padding:7px 8px;text-align:center;text-transform:uppercase;font-weight:700;border-bottom:1px solid var(--b2)}
+.cohort-tbl td{padding:8px;text-align:center;border-bottom:1px solid rgba(255,255,255,.025);font-family:"DM Mono",monospace;font-size:10px}
+.cohort-tbl td:first-child{text-align:left;font-family:"Inter",sans-serif;color:var(--text)}
+.cohort-cell{display:inline-block;width:100%;padding:5px 8px;border-radius:3px;font-weight:600}
+
+/* ─── PIPELINE ─── */
+.kanban{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;min-height:440px}
+.kan-col{background:var(--bg1);border:1px solid var(--b);border-radius:var(--r);padding:10px;display:flex;flex-direction:column;gap:7px;min-width:0}
+.kan-col-hd{display:flex;justify-content:space-between;align-items:center;padding:5px 3px 8px;border-bottom:1px solid var(--b);margin-bottom:4px}
+.kan-col-t{font-size:9px;font-weight:700;letter-spacing:.12em;color:var(--text);text-transform:uppercase}
+.kan-col-n{font-family:"DM Mono",monospace;font-size:10px;color:var(--muted);background:var(--bg3);padding:1px 6px;border-radius:10px;border:1px solid var(--b2)}
+.kan-col-v{font-family:"DM Mono",monospace;font-size:9px;color:var(--cream);margin-top:2px;padding:0 3px}
+.kan-col.won .kan-col-t{color:var(--grn)}
+.kan-col.lost .kan-col-t{color:var(--red)}
+
+.deal-card{background:var(--bg2);border:1px solid var(--b);border-radius:var(--rsm);padding:10px;cursor:pointer;transition:all .12s;border-left-width:3px}
+.deal-card:hover{transform:translateY(-1px);border-color:var(--b3)}
+.deal-card.prio-hi{border-left-color:var(--red)}
+.deal-card.prio-md{border-left-color:#f0a020}
+.deal-card.prio-lo{border-left-color:var(--muted)}
+.deal-card.won{border-left-color:var(--grn);opacity:.85}
+.deal-card.lost{border-left-color:var(--red);opacity:.65}
+.deal-t{font-size:11px;font-weight:600;color:var(--text);margin-bottom:4px;line-height:1.3}
+.deal-partner{font-size:9px;color:var(--muted);font-family:"DM Mono",monospace;margin-bottom:8px}
+.deal-v{font-family:"Bebas Neue",sans-serif;font-size:17px;letter-spacing:.04em;color:var(--cream);line-height:1}
+.deal-meta{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--b)}
+.deal-prob{font-family:"DM Mono",monospace;font-size:9px;color:var(--muted)}
+.deal-close{font-family:"DM Mono",monospace;font-size:8.5px;color:var(--dim)}
+
+.pipe-summary{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}
+.pipe-sum-c{background:var(--bg1);border:1px solid var(--b);border-radius:var(--rsm);padding:11px}
+.pipe-sum-l{font-size:8px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;font-weight:700}
+.pipe-sum-v{font-family:"Bebas Neue",sans-serif;font-size:20px;letter-spacing:.04em;color:var(--text);margin-top:4px;line-height:1}
+.pipe-sum-sub{font-size:9px;color:var(--muted);margin-top:2px;font-family:"DM Mono",monospace}
+
 /* RESPONSIVE */
 @media(max-width:1100px){.k5{grid-template-columns:repeat(3,1fr)}.g3,.g4{grid-template-columns:1fr 1fr}.g21,.g12{grid-template-columns:1fr}}
 @media(max-width:768px){.sb{transform:translateX(-100%)}.main{margin-left:0}.g2{grid-template-columns:1fr}.k5,.k4{grid-template-columns:1fr 1fr}}
@@ -749,8 +854,12 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
     <div class="sb-item" onclick="go(this,'geography')"><span class="sb-ico">&#x25D0;</span>Geography</div>
     <div class="sb-sec">Strategy</div>
     <div class="sb-item" onclick="go(this,'projections')"><span class="sb-ico">&#x25B2;</span>Projections</div>
+    <div class="sb-item" onclick="go(this,'simulator')"><span class="sb-ico">&#x2609;</span>Forecast Simulator<span class="sb-bdg hot">NEW</span></div>
     <div class="sb-item" onclick="go(this,'budget')"><span class="sb-ico">&#x25E7;</span>Budget vs Actual</div>
     <div class="sb-item" onclick="go(this,'suggestions')"><span class="sb-ico">&#x2B1F;</span>AI Insights<span class="sb-bdg hot">12</span></div>
+    <div class="sb-sec">Relationships</div>
+    <div class="sb-item" onclick="go(this,'crm')"><span class="sb-ico">&#x2740;</span>Customer Intel<span class="sb-bdg hot">NEW</span></div>
+    <div class="sb-item" onclick="go(this,'pipeline')"><span class="sb-ico">&#x25EF;</span>B2B Pipeline<span class="sb-bdg hot">NEW</span></div>
     <div class="sb-sec">Operations</div>
     <div class="sb-item" onclick="go(this,'ops')"><span class="sb-ico">&#x2699;</span>Ops &amp; Replenishment<span class="sb-bdg hot">PRO</span></div>
     <div class="sb-sec">Data</div>
@@ -1176,6 +1285,570 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
     <div class="sug good" onclick="drill('sug-fd')"><div class="sug-ico">&#128176;</div><div><div class="sug-title">Grow FD Corpus &mdash; Nearly Covers Rent</div><div class="sug-body">&#8377;43,785 YTD. Park &#8377;30&ndash;40L in FDs at 6.5&ndash;7% &rarr; &#8377;2&ndash;2.5L/year passive income.</div><span class="sug-imp imp-l">OPPORTUNITY &middot; Click for FD plan</span></div></div>
   </div>
 
+
+
+  <!-- FORECAST SIMULATOR -->
+  <div class="sec" id="sec-simulator">
+    <div class="sec-hd">
+      <div class="sec-hd-title">FORECAST SIMULATOR</div>
+      <div class="sec-hd-line"></div>
+      <div class="sec-hd-sub">Drag sliders &middot; Watch P&amp;L react live</div>
+    </div>
+
+    <div class="sim-scenarios" style="margin-bottom:14px">
+      <button class="sim-sc-btn active" onclick="loadScenario(this,'baseline')">Baseline</button>
+      <button class="sim-sc-btn" onclick="loadScenario(this,'conservative')">Conservative</button>
+      <button class="sim-sc-btn" onclick="loadScenario(this,'aggressive')">Aggressive</button>
+      <button class="sim-sc-btn" onclick="loadScenario(this,'crisis')">Crisis Mode</button>
+      <button class="sim-sc-btn" onclick="saveScenario()">&#x2605; Save Current</button>
+      <button class="sim-sc-btn" onclick="resetSimulator()">&#x21BA; Reset</button>
+      <button class="sim-sc-btn" onclick="exportSimPDF()">&#x2193; Export to PDF</button>
+    </div>
+
+    <div class="sim-grid">
+      <!-- LEFT: CONTROLS -->
+      <div class="sim-controls">
+        <div class="sim-group">
+          <div class="sim-group-title">Revenue Assumptions</div>
+
+          <div class="sim-slider">
+            <div class="sim-slider-hd"><span class="sim-slider-l">B2C Growth (MoM)</span><span class="sim-slider-v" id="simV-b2cGrowth">9%</span></div>
+            <input type="range" class="sim-range" id="sim-b2cGrowth" min="-20" max="50" step="1" value="9" oninput="runSim()">
+            <div class="sim-slider-sub">Current trend: +8.8% MoM &middot; Slider: &minus;20% to +50%</div>
+          </div>
+
+          <div class="sim-slider">
+            <div class="sim-slider-hd"><span class="sim-slider-l">B2C AOV (&#8377;)</span><span class="sim-slider-v" id="simV-aov">4,923</span></div>
+            <input type="range" class="sim-range" id="sim-aov" min="3000" max="8000" step="100" value="4923" oninput="runSim()">
+            <div class="sim-slider-sub">Current: &#8377;4,923 &middot; Premium bundles can push to &#8377;6K+</div>
+          </div>
+
+          <div class="sim-slider">
+            <div class="sim-slider-hd"><span class="sim-slider-l">Events Per Month</span><span class="sim-slider-v" id="simV-events">1</span></div>
+            <input type="range" class="sim-range" id="sim-events" min="0" max="5" step="1" value="1" oninput="runSim()">
+            <div class="sim-slider-sub">Each event avg &#8377;5-12L. Concert / corporate / festival</div>
+          </div>
+
+          <div class="sim-slider">
+            <div class="sim-slider-hd"><span class="sim-slider-l">Avg Event Value (&#8377;L)</span><span class="sim-slider-v" id="simV-eventVal">8.0L</span></div>
+            <input type="range" class="sim-range" id="sim-eventVal" min="3" max="20" step="0.5" value="8" oninput="runSim()">
+            <div class="sim-slider-sub">Team Innovation &#8377;11.6L was largest. Dubai Arena &#8377;4.3L smallest</div>
+          </div>
+
+          <div class="sim-slider">
+            <div class="sim-slider-hd"><span class="sim-slider-l">CDC Orders (&#8377;L)</span><span class="sim-slider-v" id="simV-cdc">8.0L</span></div>
+            <input type="range" class="sim-range" id="sim-cdc" min="0" max="20" step="0.5" value="8" oninput="runSim()">
+            <div class="sim-slider-sub">YTD avg: &#8377;9.9L/mo. Can grow or shrink this concentration</div>
+          </div>
+        </div>
+
+        <div class="sim-group">
+          <div class="sim-group-title">Cost Assumptions</div>
+
+          <div class="sim-slider">
+            <div class="sim-slider-hd"><span class="sim-slider-l">COGS % of Gross</span><span class="sim-slider-v" id="simV-cogs">29%</span></div>
+            <input type="range" class="sim-range" id="sim-cogs" min="15" max="45" step="1" value="29" oninput="runSim()">
+            <div class="sim-slider-sub">YTD avg 28.5% &middot; Lower COGS = fatter margins</div>
+          </div>
+
+          <div class="sim-slider">
+            <div class="sim-slider-hd"><span class="sim-slider-l">Commission % of B2B</span><span class="sim-slider-v" id="simV-commission">17%</span></div>
+            <input type="range" class="sim-range" id="sim-commission" min="0" max="50" step="1" value="17" oninput="runSim()">
+            <div class="sim-slider-sub">Current: 25.5% of net sales &middot; Target cap: 20% of gross</div>
+          </div>
+
+          <div class="sim-slider">
+            <div class="sim-slider-hd"><span class="sim-slider-l">Ad Spend (&#8377;K/mo)</span><span class="sim-slider-v" id="simV-ads">115</span></div>
+            <input type="range" class="sim-range" id="sim-ads" min="0" max="500" step="10" value="115" oninput="runSim()">
+            <div class="sim-slider-sub">YTD avg &#8377;1.15L/mo &middot; ROAS ~5.6&times; on current spend</div>
+          </div>
+
+          <div class="sim-slider">
+            <div class="sim-slider-hd"><span class="sim-slider-l">Photoshoot (&#8377;K/mo)</span><span class="sim-slider-v" id="simV-photo">69</span></div>
+            <input type="range" class="sim-range" id="sim-photo" min="0" max="200" step="5" value="69" oninput="runSim()">
+            <div class="sim-slider-sub">Jan &#8377;97.8K vs Feb &#8377;40K &middot; Quarterly calendar = &#8377;35K/mo avg</div>
+          </div>
+
+          <div class="sim-slider">
+            <div class="sim-slider-hd"><span class="sim-slider-l">Fixed Costs (&#8377;L/mo)</span><span class="sim-slider-v" id="simV-fixed">5.70</span></div>
+            <input type="range" class="sim-range" id="sim-fixed" min="3" max="10" step="0.1" value="5.7" oninput="runSim()">
+            <div class="sim-slider-sub">Salaries + rent + director &middot; Mostly inflexible</div>
+          </div>
+        </div>
+
+        <div class="sim-group">
+          <div class="sim-group-title">Financial Strategy</div>
+
+          <div class="sim-slider">
+            <div class="sim-slider-hd"><span class="sim-slider-l">FD Corpus (&#8377;L)</span><span class="sim-slider-v" id="simV-fd">37</span></div>
+            <input type="range" class="sim-range" id="sim-fd" min="0" max="100" step="1" value="37" oninput="runSim()">
+            <div class="sim-slider-sub">Current: ~&#8377;37L (yield ~7%) &middot; Adds passive income</div>
+          </div>
+
+          <div class="sim-slider">
+            <div class="sim-slider-hd"><span class="sim-slider-l">Forecast Horizon</span><span class="sim-slider-v" id="simV-horizon">6 mo</span></div>
+            <input type="range" class="sim-range" id="sim-horizon" min="3" max="12" step="1" value="6" oninput="runSim()">
+            <div class="sim-slider-sub">Longer = more uncertainty but shows compounding</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: OUTPUT -->
+      <div class="sim-output">
+
+        <!-- HEADLINE KPIs -->
+        <div class="sim-head-kpis">
+          <div class="sim-kpi" id="simK-gross">
+            <div class="sim-kpi-l">Projected Gross</div>
+            <div class="sim-kpi-v" id="simO-gross">&#8377;1.92Cr</div>
+            <div class="sim-kpi-sub" id="simO-grossSub">6-month total</div>
+          </div>
+          <div class="sim-kpi" id="simK-net">
+            <div class="sim-kpi-l">Projected Net</div>
+            <div class="sim-kpi-v" id="simO-net">&#8377;1.75Cr</div>
+            <div class="sim-kpi-sub" id="simO-netSub">Post-GST</div>
+          </div>
+          <div class="sim-kpi" id="simK-ebitda">
+            <div class="sim-kpi-l">Projected EBITDA</div>
+            <div class="sim-kpi-v pos" id="simO-ebitda">+&#8377;28.4L</div>
+            <div class="sim-kpi-sub" id="simO-ebitdaSub">16.2% margin</div>
+          </div>
+          <div class="sim-kpi" id="simK-cash">
+            <div class="sim-kpi-l">Cash Generated</div>
+            <div class="sim-kpi-v pos" id="simO-cash">+&#8377;30.8L</div>
+            <div class="sim-kpi-sub" id="simO-cashSub">EBITDA + FD interest</div>
+          </div>
+        </div>
+
+        <!-- PROJECTION CHART -->
+        <div class="card">
+          <div class="card-hd"><div class="card-t">Monthly Revenue &amp; EBITDA Trajectory</div><div class="card-sub" id="sim-chartSub">6 months ahead</div></div>
+          <div class="leg"><span class="leg-i"><span class="leg-d" style="background:var(--cream)"></span>Gross Sales</span><span class="leg-i"><span class="leg-d" style="background:var(--muted)"></span>Net Sales</span><span class="leg-i"><span class="leg-d" style="background:var(--red)"></span>EBITDA</span></div>
+          <div class="ch" style="height:220px"><canvas id="c-sim"></canvas></div>
+        </div>
+
+        <!-- MONTHLY BREAKDOWN TABLE -->
+        <div class="card">
+          <div class="card-hd"><div class="card-t">Monthly P&amp;L Simulation</div><div class="card-sub">Hover any cell for calculation</div></div>
+          <div style="overflow-x:auto"><table class="tbl" id="simTable" style="min-width:640px"></table></div>
+        </div>
+
+        <!-- SENSITIVITY PANEL -->
+        <div class="g2">
+          <div class="card">
+            <div class="card-hd"><div class="card-t">Break-even Analysis</div></div>
+            <table class="m-tbl" id="simBreakEven"></table>
+          </div>
+          <div class="card">
+            <div class="card-hd"><div class="card-t">Sensitivity: What Moves EBITDA Most?</div></div>
+            <div id="simSensitivity" style="display:flex;flex-direction:column;gap:7px"></div>
+          </div>
+        </div>
+
+        <!-- SAVED SCENARIOS -->
+        <div class="card" id="simSavedCard" style="display:none">
+          <div class="card-hd"><div class="card-t">Saved Scenarios</div></div>
+          <div id="simSaved" style="display:flex;flex-direction:column;gap:6px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- CUSTOMER INTEL / CRM -->
+  <div class="sec" id="sec-crm">
+    <div class="sec-hd">
+      <div class="sec-hd-title">CUSTOMER INTEL</div>
+      <div class="sec-hd-line"></div>
+      <div class="sec-hd-sub">RFM segmentation &middot; Cohorts &middot; CLV &middot; Win-back targets</div>
+    </div>
+
+    <!-- TOP KPIs -->
+    <div class="k5">
+      <div class="kpi" onclick="drill('crm-total')"><div class="kpi-bar" style="background:var(--cream)"></div><div class="kpi-lbl">Total Customers</div><div class="kpi-val">148</div><div class="kpi-foot"><span class="tag t-neu">Jan+Feb</span>YTD unique</div><span class="kpi-hint">&rarr;</span></div>
+      <div class="kpi" onclick="drill('crm-repeat')"><div class="kpi-bar" style="background:#f0a020"></div><div class="kpi-lbl">Repeat Rate</div><div class="kpi-val" style="color:#f0a020">17.1%</div><div class="kpi-foot"><span class="tag t-dn">&minus;32%</span>from 25.4% Jan</div><span class="kpi-hint">&rarr;</span></div>
+      <div class="kpi" onclick="drill('crm-clv')"><div class="kpi-bar" style="background:var(--grn)"></div><div class="kpi-lbl">Avg CLV</div><div class="kpi-val pos">&#8377;5,840</div><div class="kpi-foot"><span class="tag t-up">1.28 orders/cust</span></div><span class="kpi-hint">&rarr;</span></div>
+      <div class="kpi" onclick="drill('crm-champions')"><div class="kpi-bar" style="background:#f0c040"></div><div class="kpi-lbl">Champions</div><div class="kpi-val" style="color:#f0c040">12</div><div class="kpi-foot">Top 8% &middot; 28% of revenue</div><span class="kpi-hint">&rarr;</span></div>
+      <div class="kpi" onclick="drill('crm-atrisk')"><div class="kpi-bar" style="background:var(--red)"></div><div class="kpi-lbl">At Risk</div><div class="kpi-val neg">23</div><div class="kpi-foot">No order 45+ days</div><span class="kpi-hint">&rarr;</span></div>
+    </div>
+
+    <!-- RFM SEGMENTATION -->
+    <div class="ops-section">
+      <div class="ops-hd">
+        <div class="ops-hd-ic">&#x2740;</div>
+        <div class="ops-hd-t">RFM Segmentation Matrix</div>
+        <div class="ops-hd-sub">Recency &middot; Frequency &middot; Monetary score &middot; Click any segment</div>
+      </div>
+
+      <div class="rfm-grid">
+        <div class="rfm-cell tier-gold" onclick="drill('crm-seg-champions')">
+          <div class="rfm-cell-seg">&#9733; Champions</div>
+          <div class="rfm-cell-n">12</div>
+          <div class="rfm-cell-rev">&#8377;4.17L rev</div>
+        </div>
+        <div class="rfm-cell tier-silver" onclick="drill('crm-seg-loyal')">
+          <div class="rfm-cell-seg">Loyal</div>
+          <div class="rfm-cell-n">18</div>
+          <div class="rfm-cell-rev">&#8377;2.34L rev</div>
+        </div>
+        <div class="rfm-cell tier-silver" onclick="drill('crm-seg-potential')">
+          <div class="rfm-cell-seg">Potential</div>
+          <div class="rfm-cell-n">27</div>
+          <div class="rfm-cell-rev">&#8377;2.08L rev</div>
+        </div>
+        <div class="rfm-cell tier-bronze" onclick="drill('crm-seg-new')">
+          <div class="rfm-cell-seg">New</div>
+          <div class="rfm-cell-n">41</div>
+          <div class="rfm-cell-rev">&#8377;1.93L rev</div>
+        </div>
+        <div class="rfm-cell tier-bronze" onclick="drill('crm-seg-promising')">
+          <div class="rfm-cell-seg">Promising</div>
+          <div class="rfm-cell-n">15</div>
+          <div class="rfm-cell-rev">&#8377;68K rev</div>
+        </div>
+        <div class="rfm-cell tier-risk" onclick="drill('crm-seg-needatt')">
+          <div class="rfm-cell-seg">Need Attention</div>
+          <div class="rfm-cell-n">9</div>
+          <div class="rfm-cell-rev">&#8377;47K rev</div>
+        </div>
+        <div class="rfm-cell tier-risk" onclick="drill('crm-seg-sleep')">
+          <div class="rfm-cell-seg">About to Sleep</div>
+          <div class="rfm-cell-n">14</div>
+          <div class="rfm-cell-rev">&#8377;58K rev</div>
+        </div>
+        <div class="rfm-cell tier-lost" onclick="drill('crm-seg-risk')">
+          <div class="rfm-cell-seg">At Risk</div>
+          <div class="rfm-cell-n">6</div>
+          <div class="rfm-cell-rev">&#8377;52K rev</div>
+        </div>
+        <div class="rfm-cell tier-lost" onclick="drill('crm-seg-cant')">
+          <div class="rfm-cell-seg">Cant Lose</div>
+          <div class="rfm-cell-n">3</div>
+          <div class="rfm-cell-rev">&#8377;41K rev</div>
+        </div>
+        <div class="rfm-cell tier-lost" onclick="drill('crm-seg-lost')">
+          <div class="rfm-cell-seg">Lost</div>
+          <div class="rfm-cell-n">3</div>
+          <div class="rfm-cell-rev">&#8377;11K rev</div>
+        </div>
+      </div>
+
+      <div class="ops-actions">
+        <button class="ops-btn primary" onclick="drill('crm-winback')">&#x1F3AF; Launch Win-Back Campaign</button>
+        <button class="ops-btn" onclick="drill('crm-seg-champions')">&#9733; Reward Champions</button>
+        <button class="ops-btn" onclick="doCSV()">&#x2193; Export Segmented List</button>
+      </div>
+    </div>
+
+    <!-- TOP CUSTOMERS TABLE -->
+    <div class="ops-section">
+      <div class="ops-hd">
+        <div class="ops-hd-ic">&#x1F451;</div>
+        <div class="ops-hd-t">Top 15 Customers by CLV</div>
+        <div class="ops-hd-sub">Champions + Loyal segments</div>
+      </div>
+      <div class="cust-list">
+        <div class="cust-row header">
+          <div>Customer</div><div>Email</div><div>Orders</div><div>Spent</div><div>AOV</div><div>Last Order</div><div>Segment</div>
+        </div>
+        <div class="cust-row" onclick="drill('crm-customer')"><div class="cust-name">Priya Sharma</div><div class="cust-email">priya***@gmail.com</div><div class="cust-num">7</div><div class="cust-num">&#8377;41,228</div><div class="cust-num">&#8377;5,890</div><div class="cust-num">3d ago</div><div><span class="cust-tag champion">CHAMPION</span></div></div>
+        <div class="cust-row" onclick="drill('crm-customer')"><div class="cust-name">Rahul Verma</div><div class="cust-email">rahul***@outlook.com</div><div class="cust-num">5</div><div class="cust-num">&#8377;34,850</div><div class="cust-num">&#8377;6,970</div><div class="cust-num">7d ago</div><div><span class="cust-tag champion">CHAMPION</span></div></div>
+        <div class="cust-row" onclick="drill('crm-customer')"><div class="cust-name">Ananya Iyer</div><div class="cust-email">ananya***@gmail.com</div><div class="cust-num">4</div><div class="cust-num">&#8377;28,416</div><div class="cust-num">&#8377;7,104</div><div class="cust-num">12d ago</div><div><span class="cust-tag champion">CHAMPION</span></div></div>
+        <div class="cust-row" onclick="drill('crm-customer')"><div class="cust-name">Arjun Mehta</div><div class="cust-email">arjun***@yahoo.com</div><div class="cust-num">4</div><div class="cust-num">&#8377;26,184</div><div class="cust-num">&#8377;6,546</div><div class="cust-num">5d ago</div><div><span class="cust-tag champion">CHAMPION</span></div></div>
+        <div class="cust-row" onclick="drill('crm-customer')"><div class="cust-name">Kavya Reddy</div><div class="cust-email">kavya***@gmail.com</div><div class="cust-num">3</div><div class="cust-num">&#8377;22,945</div><div class="cust-num">&#8377;7,648</div><div class="cust-num">2d ago</div><div><span class="cust-tag champion">CHAMPION</span></div></div>
+        <div class="cust-row" onclick="drill('crm-customer')"><div class="cust-name">Vihaan Kapoor</div><div class="cust-email">vihaan***@gmail.com</div><div class="cust-num">3</div><div class="cust-num">&#8377;19,872</div><div class="cust-num">&#8377;6,624</div><div class="cust-num">9d ago</div><div><span class="cust-tag loyal">LOYAL</span></div></div>
+        <div class="cust-row" onclick="drill('crm-customer')"><div class="cust-name">Ishaan Patel</div><div class="cust-email">ishaan***@gmail.com</div><div class="cust-num">3</div><div class="cust-num">&#8377;18,450</div><div class="cust-num">&#8377;6,150</div><div class="cust-num">14d ago</div><div><span class="cust-tag loyal">LOYAL</span></div></div>
+        <div class="cust-row" onclick="drill('crm-customer')"><div class="cust-name">Aditya Rao</div><div class="cust-email">aditya***@outlook.com</div><div class="cust-num">3</div><div class="cust-num">&#8377;17,109</div><div class="cust-num">&#8377;5,703</div><div class="cust-num">4d ago</div><div><span class="cust-tag loyal">LOYAL</span></div></div>
+        <div class="cust-row" onclick="drill('crm-customer')"><div class="cust-name">Meera Desai</div><div class="cust-email">meera***@gmail.com</div><div class="cust-num">3</div><div class="cust-num">&#8377;16,380</div><div class="cust-num">&#8377;5,460</div><div class="cust-num">18d ago</div><div><span class="cust-tag loyal">LOYAL</span></div></div>
+        <div class="cust-row" onclick="drill('crm-customer')"><div class="cust-name">Rohan Sharma</div><div class="cust-email">rohan***@gmail.com</div><div class="cust-num">2</div><div class="cust-num">&#8377;15,224</div><div class="cust-num">&#8377;7,612</div><div class="cust-num">6d ago</div><div><span class="cust-tag loyal">LOYAL</span></div></div>
+        <div class="cust-row" onclick="drill('crm-customer')"><div class="cust-name">Tara Menon</div><div class="cust-email">tara***@gmail.com</div><div class="cust-num">2</div><div class="cust-num">&#8377;14,106</div><div class="cust-num">&#8377;7,053</div><div class="cust-num">52d ago</div><div><span class="cust-tag risk">AT RISK</span></div></div>
+        <div class="cust-row" onclick="drill('crm-customer')"><div class="cust-name">Siddharth Nair</div><div class="cust-email">sid***@outlook.com</div><div class="cust-num">2</div><div class="cust-num">&#8377;13,840</div><div class="cust-num">&#8377;6,920</div><div class="cust-num">67d ago</div><div><span class="cust-tag risk">AT RISK</span></div></div>
+        <div class="cust-row" onclick="drill('crm-customer')"><div class="cust-name">Diya Bhatt</div><div class="cust-email">diya***@gmail.com</div><div class="cust-num">2</div><div class="cust-num">&#8377;12,956</div><div class="cust-num">&#8377;6,478</div><div class="cust-num">8d ago</div><div><span class="cust-tag loyal">LOYAL</span></div></div>
+        <div class="cust-row" onclick="drill('crm-customer')"><div class="cust-name">Karan Singh</div><div class="cust-email">karan***@yahoo.com</div><div class="cust-num">2</div><div class="cust-num">&#8377;12,180</div><div class="cust-num">&#8377;6,090</div><div class="cust-num">72d ago</div><div><span class="cust-tag risk">AT RISK</span></div></div>
+        <div class="cust-row" onclick="drill('crm-customer')"><div class="cust-name">Neha Gupta</div><div class="cust-email">neha***@gmail.com</div><div class="cust-num">1</div><div class="cust-num">&#8377;11,432</div><div class="cust-num">&#8377;11,432</div><div class="cust-num">2d ago</div><div><span class="cust-tag new">NEW</span></div></div>
+      </div>
+    </div>
+
+    <!-- COHORT RETENTION -->
+    <div class="ops-section">
+      <div class="ops-hd">
+        <div class="ops-hd-ic">&#x1F4CA;</div>
+        <div class="ops-hd-t">Cohort Retention Analysis</div>
+        <div class="ops-hd-sub">% of each cohort that ordered again in subsequent months</div>
+      </div>
+
+      <table class="cohort-tbl">
+        <thead>
+          <tr><th>Cohort</th><th>Size</th><th>M0</th><th>M1</th><th>M2</th><th>M3</th><th>M4</th><th>M5</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Oct 2025</td><td>42</td><td><span class="cohort-cell" style="background:rgba(74,222,128,0.65)">100%</span></td><td><span class="cohort-cell" style="background:rgba(74,222,128,0.26)">26%</span></td><td><span class="cohort-cell" style="background:rgba(74,222,128,0.19)">19%</span></td><td><span class="cohort-cell" style="background:rgba(74,222,128,0.14)">14%</span></td><td><span class="cohort-cell" style="background:rgba(74,222,128,0.11)">11%</span></td><td><span class="cohort-cell" style="background:rgba(74,222,128,0.08)">8%</span></td></tr>
+          <tr><td>Nov 2025</td><td>58</td><td><span class="cohort-cell" style="background:rgba(74,222,128,0.65)">100%</span></td><td><span class="cohort-cell" style="background:rgba(74,222,128,0.22)">22%</span></td><td><span class="cohort-cell" style="background:rgba(74,222,128,0.15)">15%</span></td><td><span class="cohort-cell" style="background:rgba(74,222,128,0.10)">10%</span></td><td><span class="cohort-cell" style="background:rgba(74,222,128,0.07)">7%</span></td><td><span class="cohort-cell" style="color:var(--dim)">&mdash;</span></td></tr>
+          <tr><td>Dec 2025</td><td>74</td><td><span class="cohort-cell" style="background:rgba(74,222,128,0.65)">100%</span></td><td><span class="cohort-cell" style="background:rgba(74,222,128,0.28)">28%</span></td><td><span class="cohort-cell" style="background:rgba(74,222,128,0.18)">18%</span></td><td><span class="cohort-cell" style="background:rgba(74,222,128,0.12)">12%</span></td><td><span class="cohort-cell" style="color:var(--dim)">&mdash;</span></td><td><span class="cohort-cell" style="color:var(--dim)">&mdash;</span></td></tr>
+          <tr><td>Jan 2026</td><td>63</td><td><span class="cohort-cell" style="background:rgba(74,222,128,0.65)">100%</span></td><td><span class="cohort-cell" style="background:rgba(240,160,32,0.25)">17%</span></td><td><span class="cohort-cell" style="color:var(--dim)">&mdash;</span></td><td><span class="cohort-cell" style="color:var(--dim)">&mdash;</span></td><td><span class="cohort-cell" style="color:var(--dim)">&mdash;</span></td><td><span class="cohort-cell" style="color:var(--dim)">&mdash;</span></td></tr>
+          <tr><td>Feb 2026</td><td>51</td><td><span class="cohort-cell" style="background:rgba(74,222,128,0.65)">100%</span></td><td><span class="cohort-cell" style="color:var(--dim)">&mdash;</span></td><td><span class="cohort-cell" style="color:var(--dim)">&mdash;</span></td><td><span class="cohort-cell" style="color:var(--dim)">&mdash;</span></td><td><span class="cohort-cell" style="color:var(--dim)">&mdash;</span></td><td><span class="cohort-cell" style="color:var(--dim)">&mdash;</span></td></tr>
+        </tbody>
+      </table>
+
+      <div class="m-note" style="margin-top:12px;background:rgba(240,160,32,0.06);border-color:rgba(240,160,32,0.25)">
+        &#x26A0; <strong>Jan cohort M1 retention dropped to 17%</strong> (vs Dec 28% and Oct 26%). Something changed in Jan &rarr; Feb that made first-time buyers not return. Possible causes: delivery delays, product quality issue, no re-engagement touch, pricing perception. Audit Feb new customer experience urgently.
+      </div>
+    </div>
+
+    <!-- CLV + ACQUISITION -->
+    <div class="g2">
+      <div class="card">
+        <div class="card-hd"><div class="card-t">CLV Distribution</div><div class="card-sub">By segment tier</div></div>
+        <div class="ch" style="height:240px"><canvas id="c-clv"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-t">Acquisition Source ROI</div><div class="card-sub">Customer LTV by source</div></div>
+        <div style="display:flex;flex-direction:column;gap:9px;margin-top:6px">
+          <div class="pb"><div class="pb-l" style="width:80px">Direct</div><div class="pb-tr"><div class="pb-f" style="width:100%;background:var(--cream)"></div></div><div class="pb-v">&#8377;7,280</div></div>
+          <div class="pb"><div class="pb-l" style="width:80px">Facebook</div><div class="pb-tr"><div class="pb-f" style="width:72%;background:#5588FF"></div></div><div class="pb-v">&#8377;5,240</div></div>
+          <div class="pb"><div class="pb-l" style="width:80px">Instagram</div><div class="pb-tr"><div class="pb-f" style="width:68%;background:#D42B8B"></div></div><div class="pb-v">&#8377;4,920</div></div>
+          <div class="pb"><div class="pb-l" style="width:80px">Google Ads</div><div class="pb-tr"><div class="pb-f" style="width:54%;background:#FFAA44"></div></div><div class="pb-v">&#8377;3,920</div></div>
+          <div class="pb"><div class="pb-l" style="width:80px">Email</div><div class="pb-tr"><div class="pb-f" style="width:89%;background:var(--grn)"></div></div><div class="pb-v">&#8377;6,480</div></div>
+          <div class="pb"><div class="pb-l" style="width:80px">Referral</div><div class="pb-tr"><div class="pb-f" style="width:95%;background:#f0c040"></div></div><div class="pb-v">&#8377;6,920</div></div>
+        </div>
+        <div class="m-note" style="margin-top:14px">&#x1F4A1; Direct and Referral have the highest CLV &mdash; word of mouth is gold. Build a referral program: &#8377;200 off for every friend who orders.</div>
+      </div>
+    </div>
+
+    <!-- WIN-BACK CAMPAIGN -->
+    <div class="ops-section">
+      <div class="ops-hd">
+        <div class="ops-hd-ic">&#x1F504;</div>
+        <div class="ops-hd-t">Win-Back Campaign Targets</div>
+        <div class="ops-hd-sub">23 at-risk + lost customers &middot; &#8377;1.43L historical value</div>
+      </div>
+      <div class="sug warn" onclick="drill('crm-winback-whatsapp')"><div class="sug-ic">&#x1F4AC;</div><div><div class="sug-t">WhatsApp re-engagement &middot; 23 customers &middot; ETA 3 days</div><div class="sug-b">Send personalized WhatsApp with their last purchase + 15% offer + 1-click reorder. Expected recovery: 30-40% = 7-9 orders = &#8377;45-55K revenue.</div><span class="sug-imp imp-m">HIGH &middot; Launch today</span></div></div>
+      <div class="sug warn" onclick="drill('crm-winback-email')"><div class="sug-ic">&#x1F4E7;</div><div><div class="sug-t">Email sequence &middot; 14 &quot;about to sleep&quot; customers</div><div class="sug-b">3-email series over 2 weeks: social proof &rarr; new drops &rarr; last-chance 20%. Recovery rate typically 15-25%.</div><span class="sug-imp imp-m">HIGH</span></div></div>
+      <div class="sug good" onclick="drill('crm-champions-reward')"><div class="sug-ic">&#9733;</div><div><div class="sug-t">Reward 12 Champions &middot; build lifetime loyalty</div><div class="sug-b">Send handwritten thank-you note + exclusive early access to next drop + free shipping for life. Costs &#8377;2K-3K, locks in &#8377;4.17L+ annual revenue.</div><span class="sug-imp imp-l">OPPORTUNITY</span></div></div>
+    </div>
+
+  </div>
+
+
+  <!-- B2B PIPELINE -->
+  <div class="sec" id="sec-pipeline">
+    <div class="sec-hd">
+      <div class="sec-hd-title">B2B PIPELINE</div>
+      <div class="sec-hd-line"></div>
+      <div class="sec-hd-sub">Deal flow &middot; Weighted forecast &middot; Partner pipeline</div>
+    </div>
+
+    <!-- PIPELINE SUMMARY -->
+    <div class="pipe-summary">
+      <div class="pipe-sum-c"><div class="pipe-sum-l">Open Deals</div><div class="pipe-sum-v">14</div><div class="pipe-sum-sub">Across 5 stages</div></div>
+      <div class="pipe-sum-c"><div class="pipe-sum-l">Pipeline Value</div><div class="pipe-sum-v">&#8377;1.12Cr</div><div class="pipe-sum-sub">Unweighted total</div></div>
+      <div class="pipe-sum-c"><div class="pipe-sum-l">Weighted Forecast</div><div class="pipe-sum-v" style="color:var(--grn)">&#8377;54.3L</div><div class="pipe-sum-sub">By probability</div></div>
+      <div class="pipe-sum-c"><div class="pipe-sum-l">Avg Deal Size</div><div class="pipe-sum-v">&#8377;8.0L</div><div class="pipe-sum-sub">Target &#8377;10L+</div></div>
+      <div class="pipe-sum-c"><div class="pipe-sum-l">Win Rate</div><div class="pipe-sum-v" style="color:var(--grn)">64%</div><div class="pipe-sum-sub">Last 3 months</div></div>
+    </div>
+
+    <!-- ACTIONS BAR -->
+    <div class="ops-actions" style="margin-bottom:14px">
+      <button class="ops-btn primary" onclick="drill('pipe-new-deal')">&#x2795; Add New Deal</button>
+      <button class="ops-btn" onclick="drill('pipe-forecast')">&#x1F4C8; Weighted Forecast</button>
+      <button class="ops-btn" onclick="drill('pipe-stuck')">&#x26A0; Stuck Deals (&gt;14d)</button>
+      <button class="ops-btn" onclick="doCSV()">&#x2193; Export Pipeline</button>
+    </div>
+
+    <!-- KANBAN BOARD -->
+    <div class="kanban">
+      <!-- LEAD -->
+      <div class="kan-col">
+        <div class="kan-col-hd">
+          <div><div class="kan-col-t">Lead</div><div class="kan-col-v">&#8377;42L &middot; weighted &#8377;4.2L</div></div>
+          <span class="kan-col-n">5</span>
+        </div>
+        <div class="deal-card prio-md" onclick="drill('pipe-d1')">
+          <div class="deal-t">Sunburn Festival 2026 Merch</div>
+          <div class="deal-partner">Sunburn Events &middot; DJ Ansh</div>
+          <div class="deal-v">&#8377;18L</div>
+          <div class="deal-meta"><span class="deal-prob">10%</span><span class="deal-close">Close: Jun 2026</span></div>
+        </div>
+        <div class="deal-card prio-md" onclick="drill('pipe-d2')">
+          <div class="deal-t">NH7 Weekender T-shirt Line</div>
+          <div class="deal-partner">OML Entertainment</div>
+          <div class="deal-v">&#8377;9L</div>
+          <div class="deal-meta"><span class="deal-prob">10%</span><span class="deal-close">Close: May 2026</span></div>
+        </div>
+        <div class="deal-card prio-lo" onclick="drill('pipe-d3')">
+          <div class="deal-t">Inbound: Bangalore Cafe chain</div>
+          <div class="deal-partner">Third Wave Coffee</div>
+          <div class="deal-v">&#8377;6L</div>
+          <div class="deal-meta"><span class="deal-prob">10%</span><span class="deal-close">Close: Q2</span></div>
+        </div>
+        <div class="deal-card prio-lo" onclick="drill('pipe-d4')">
+          <div class="deal-t">Corporate: Tech startup swag</div>
+          <div class="deal-partner">InMobi (via agency)</div>
+          <div class="deal-v">&#8377;5L</div>
+          <div class="deal-meta"><span class="deal-prob">10%</span><span class="deal-close">Close: Jul</span></div>
+        </div>
+        <div class="deal-card prio-lo" onclick="drill('pipe-d5')">
+          <div class="deal-t">Singapore pop-up inquiry</div>
+          <div class="deal-partner">Funan Mall rep</div>
+          <div class="deal-v">&#8377;4L</div>
+          <div class="deal-meta"><span class="deal-prob">10%</span><span class="deal-close">TBD</span></div>
+        </div>
+      </div>
+
+      <!-- QUALIFIED -->
+      <div class="kan-col">
+        <div class="kan-col-hd">
+          <div><div class="kan-col-t">Qualified</div><div class="kan-col-v">&#8377;24L &middot; weighted &#8377;7.2L</div></div>
+          <span class="kan-col-n">3</span>
+        </div>
+        <div class="deal-card prio-md" onclick="drill('pipe-d6')">
+          <div class="deal-t">Karan Aujla Tour 2 (multi-city)</div>
+          <div class="deal-partner">Innovation Nightlife</div>
+          <div class="deal-v">&#8377;12L</div>
+          <div class="deal-meta"><span class="deal-prob">30%</span><span class="deal-close">Close: Apr 28</span></div>
+        </div>
+        <div class="deal-card prio-hi" onclick="drill('pipe-d7')">
+          <div class="deal-t">CDC Pune store opening</div>
+          <div class="deal-partner">Crepdog Crew Mumbai</div>
+          <div class="deal-v">&#8377;7L</div>
+          <div class="deal-meta"><span class="deal-prob">30%</span><span class="deal-close">Close: May 5</span></div>
+        </div>
+        <div class="deal-card prio-md" onclick="drill('pipe-d8')">
+          <div class="deal-t">Dubai Arena &mdash; Q2 reorder</div>
+          <div class="deal-partner">Dubai Arena Operations</div>
+          <div class="deal-v">&#8377;5L</div>
+          <div class="deal-meta"><span class="deal-prob">30%</span><span class="deal-close">Close: May 15</span></div>
+        </div>
+      </div>
+
+      <!-- PROPOSAL -->
+      <div class="kan-col">
+        <div class="kan-col-hd">
+          <div><div class="kan-col-t">Proposal</div><div class="kan-col-v">&#8377;18L &middot; weighted &#8377;9.0L</div></div>
+          <span class="kan-col-n">3</span>
+        </div>
+        <div class="deal-card prio-hi" onclick="drill('pipe-d9')">
+          <div class="deal-t">HappyFest Holi Bash</div>
+          <div class="deal-partner">HappyFest</div>
+          <div class="deal-v">&#8377;8L</div>
+          <div class="deal-meta"><span class="deal-prob">50%</span><span class="deal-close">Close: Apr 25</span></div>
+        </div>
+        <div class="deal-card prio-hi" onclick="drill('pipe-d10')">
+          <div class="deal-t">Team Innovation: 1,500 unit order</div>
+          <div class="deal-partner">Team Entertainment</div>
+          <div class="deal-v">&#8377;6.5L</div>
+          <div class="deal-meta"><span class="deal-prob">50%</span><span class="deal-close">Close: Apr 30</span></div>
+        </div>
+        <div class="deal-card prio-md" onclick="drill('pipe-d11')">
+          <div class="deal-t">Pada91 Chapter 2 launch</div>
+          <div class="deal-partner">Pada91</div>
+          <div class="deal-v">&#8377;3.5L</div>
+          <div class="deal-meta"><span class="deal-prob">50%</span><span class="deal-close">Close: May 10</span></div>
+        </div>
+      </div>
+
+      <!-- NEGOTIATION -->
+      <div class="kan-col">
+        <div class="kan-col-hd">
+          <div><div class="kan-col-t">Negotiation</div><div class="kan-col-v">&#8377;28L &middot; weighted &#8377;22.4L</div></div>
+          <span class="kan-col-n">3</span>
+        </div>
+        <div class="deal-card prio-hi" onclick="drill('pipe-d12')">
+          <div class="deal-t">Divine World Tour Merch</div>
+          <div class="deal-partner">Mass Appeal India</div>
+          <div class="deal-v">&#8377;15L</div>
+          <div class="deal-meta"><span class="deal-prob">80%</span><span class="deal-close">Close: Apr 24</span></div>
+        </div>
+        <div class="deal-card prio-hi" onclick="drill('pipe-d13')">
+          <div class="deal-t">CDC Bangalore expansion</div>
+          <div class="deal-partner">CDC Bangalore</div>
+          <div class="deal-v">&#8377;8L</div>
+          <div class="deal-meta"><span class="deal-prob">80%</span><span class="deal-close">Close: Apr 22</span></div>
+        </div>
+        <div class="deal-card prio-md" onclick="drill('pipe-d14')">
+          <div class="deal-t">Nike India capsule collab</div>
+          <div class="deal-partner">Nike India (via agent)</div>
+          <div class="deal-v">&#8377;5L</div>
+          <div class="deal-meta"><span class="deal-prob">80%</span><span class="deal-close">Close: May 3</span></div>
+        </div>
+      </div>
+
+      <!-- WON -->
+      <div class="kan-col won">
+        <div class="kan-col-hd">
+          <div><div class="kan-col-t">Won &middot; Last 30 Days</div><div class="kan-col-v" style="color:var(--grn)">&#8377;11.5L closed</div></div>
+          <span class="kan-col-n">3</span>
+        </div>
+        <div class="deal-card won" onclick="drill('pipe-w1')">
+          <div class="deal-t">CDC Delhi Feb drop &#x2713;</div>
+          <div class="deal-partner">Crepdog Crew</div>
+          <div class="deal-v">&#8377;4.5L</div>
+          <div class="deal-meta"><span class="deal-prob" style="color:var(--grn)">CLOSED</span><span class="deal-close">Delivered</span></div>
+        </div>
+        <div class="deal-card won" onclick="drill('pipe-w2')">
+          <div class="deal-t">CDC Mumbai + Hyd batches &#x2713;</div>
+          <div class="deal-partner">Crepdog Crew MUM+HYD</div>
+          <div class="deal-v">&#8377;3.2L</div>
+          <div class="deal-meta"><span class="deal-prob" style="color:var(--grn)">CLOSED</span><span class="deal-close">Delivered</span></div>
+        </div>
+        <div class="deal-card won" onclick="drill('pipe-w3')">
+          <div class="deal-t">Competent Hotels uniform &#x2713;</div>
+          <div class="deal-partner">Competent Hotel</div>
+          <div class="deal-v">&#8377;3.8L</div>
+          <div class="deal-meta"><span class="deal-prob" style="color:var(--grn)">CLOSED</span><span class="deal-close">Paid</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS BELOW -->
+    <div class="g2" style="margin-top:14px">
+      <div class="card">
+        <div class="card-hd"><div class="card-t">Pipeline Velocity by Stage</div><div class="card-sub">Avg days per stage</div></div>
+        <div class="ch" style="height:220px"><canvas id="c-pipe-velocity"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-t">Deal Source Performance</div><div class="card-sub">Win rate by lead channel</div></div>
+        <div style="display:flex;flex-direction:column;gap:9px;margin-top:6px">
+          <div class="pb"><div class="pb-l" style="width:120px">Warm intro / referral</div><div class="pb-tr"><div class="pb-f" style="width:82%;background:var(--grn)"></div></div><div class="pb-v">82% win</div></div>
+          <div class="pb"><div class="pb-l" style="width:120px">Direct inbound</div><div class="pb-tr"><div class="pb-f" style="width:68%;background:var(--cream)"></div></div><div class="pb-v">68% win</div></div>
+          <div class="pb"><div class="pb-l" style="width:120px">Event networking</div><div class="pb-tr"><div class="pb-f" style="width:54%;background:#f0c040"></div></div><div class="pb-v">54% win</div></div>
+          <div class="pb"><div class="pb-l" style="width:120px">Cold outreach</div><div class="pb-tr"><div class="pb-f" style="width:22%;background:var(--muted)"></div></div><div class="pb-v">22% win</div></div>
+          <div class="pb"><div class="pb-l" style="width:120px">Agency leads</div><div class="pb-tr"><div class="pb-f" style="width:38%;background:#f0a020"></div></div><div class="pb-v">38% win</div></div>
+        </div>
+        <div class="m-note" style="margin-top:14px">&#x1F91D; Referrals and inbound crush cold outreach. Build a referral commission program for existing B2B partners.</div>
+      </div>
+    </div>
+
+    <!-- FORECAST TABLE -->
+    <div class="ops-section">
+      <div class="ops-hd">
+        <div class="ops-hd-ic">&#x1F52E;</div>
+        <div class="ops-hd-t">Q2 Weighted Revenue Forecast</div>
+        <div class="ops-hd-sub">Based on current pipeline + close probability</div>
+      </div>
+      <table class="m-tbl">
+        <tr><th>Month</th><th>Pipeline Value</th><th>Weighted Value</th><th>Expected Close</th><th>Confidence</th></tr>
+        <tr><td>April 2026</td><td>&#8377;31.5L</td><td class="pos">&#8377;23.8L</td><td>4 deals</td><td class="pos">High</td></tr>
+        <tr><td>May 2026</td><td>&#8377;24.5L</td><td class="pos">&#8377;15.8L</td><td>3 deals</td><td>Medium</td></tr>
+        <tr><td>June 2026</td><td>&#8377;22L</td><td>&#8377;8.2L</td><td>2 deals</td><td>Medium</td></tr>
+        <tr><td>Jul-Sep 2026</td><td>&#8377;35L</td><td>&#8377;6.5L</td><td>Early stage</td><td style="color:#f0a020">Low</td></tr>
+        <tr class="tot"><td>Q2+Q3 Total</td><td>&#8377;1.13Cr</td><td class="pos">&#8377;54.3L</td><td>11 deals</td><td class="pos">Weighted</td></tr>
+      </table>
+    </div>
+
+    <!-- ALERTS -->
+    <div class="ops-section">
+      <div class="ops-hd">
+        <div class="ops-hd-ic">&#x1F6A8;</div>
+        <div class="ops-hd-t">Pipeline Alerts</div>
+        <div class="ops-hd-sub">3 items need action</div>
+      </div>
+      <div class="sug danger" onclick="drill('pipe-stuck-divine')"><div class="sug-ic">&#x26A0;</div><div><div class="sug-t">Divine World Tour deal stuck in Negotiation 18 days</div><div class="sug-b">&#8377;15L deal, 80% probability. Client asked for 15% discount. Decision needed: accept or counter?</div><span class="sug-imp imp-h">CRITICAL &middot; Follow up today</span></div></div>
+      <div class="sug warn" onclick="drill('pipe-comm-risk')"><div class="sug-ic">&#x1F4B0;</div><div><div class="sug-t">HappyFest proposal has 28% commission structure</div><div class="sug-b">If accepted as-is, repeats January pattern (commission &gt; deal revenue). Push for 20% cap or walk away.</div><span class="sug-imp imp-m">HIGH &middot; Renegotiate</span></div></div>
+      <div class="sug good" onclick="drill('pipe-divine-prep')"><div class="sug-ic">&#x2728;</div><div><div class="sug-t">3 deals likely to close this week</div><div class="sug-b">Divine, CDC Bangalore, and Nike India all in final negotiation. Ensure production capacity is ready for potential &#8377;28L inflow.</div><span class="sug-imp imp-l">OPPORTUNITY &middot; Prepare capacity</span></div></div>
+    </div>
+
+  </div>
 
   <!-- OPS & REPLENISHMENT -->
   <div class="sec" id="sec-ops">
@@ -1619,7 +2292,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
 
 <script>
 // ── NAV ──
-const pgNames={overview:'COMMAND OVERVIEW',pnl:'P&L STATEMENT',channels:'CHANNEL MATRIX',shopify:'SHOPIFY B2C',b2b:'B2B PARTNERS',products:'PRODUCT INTEL',geography:'GEO ANALYTICS',projections:'PROJECTIONS',budget:'BUDGET VS ACTUAL',suggestions:'AI INSIGHTS',ops:'OPS & REPLENISHMENT',drive:'DRIVE HUB'};
+const pgNames={overview:'COMMAND OVERVIEW',pnl:'P&L STATEMENT',channels:'CHANNEL MATRIX',shopify:'SHOPIFY B2C',b2b:'B2B PARTNERS',products:'PRODUCT INTEL',geography:'GEO ANALYTICS',projections:'PROJECTIONS',simulator:'FORECAST SIMULATOR',budget:'BUDGET VS ACTUAL',suggestions:'AI INSIGHTS',crm:'CUSTOMER INTEL',pipeline:'B2B PIPELINE',ops:'OPS & REPLENISHMENT',drive:'DRIVE HUB'};
 function go(el,id){
   document.querySelectorAll('.sb-item').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
@@ -2844,6 +3517,111 @@ function openUp(){
 } // override below
 
 const DRILLS={
+  'crm-seg-champions':{t:'CHAMPIONS · 12 CUSTOMERS',h:`
+    <div class="m-kpis">
+      <div class="m-kpi"><div class="m-kpi-l">Customers</div><div class="m-kpi-v">12</div><div class="m-kpi-sub">Top 8% of base</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Revenue</div><div class="m-kpi-v pos">&#8377;4.17L</div><div class="m-kpi-sub">28% of YTD B2C</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Avg CLV</div><div class="m-kpi-v">&#8377;18,420</div><div class="m-kpi-sub">4&times; baseline</div></div>
+    </div>
+    <div class="m-note">&#x1F451; These 12 customers are gold. They bought 3&plus; times, each &gt;&#8377;15K lifetime spend. Priya Sharma alone has 7 orders, &#8377;41K.</div>
+    <div class="m-lbl" style="margin-top:12px">Recommended actions</div>
+    <table class="m-tbl"><tr><th>Action</th><th>Expected Impact</th></tr>
+    <tr><td>Handwritten thank-you + Odd pin/sticker</td><td class="pos">+35% retention</td></tr>
+    <tr><td>First access to next drop (24h early)</td><td class="pos">+50% conversion</td></tr>
+    <tr><td>Free shipping for life badge</td><td class="pos">+15% reorder</td></tr>
+    <tr><td>Birthday discount auto-send</td><td class="pos">+20% engagement</td></tr>
+    </table>`},
+
+  'crm-seg-risk':{t:'AT RISK · 6 CUSTOMERS',h:`
+    <div class="m-kpis">
+      <div class="m-kpi"><div class="m-kpi-l">Customers</div><div class="m-kpi-v neg">6</div><div class="m-kpi-sub">Recency score 1-2</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Historical</div><div class="m-kpi-v">&#8377;52K</div><div class="m-kpi-sub">Before going cold</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Last Order</div><div class="m-kpi-v" style="color:#f0a020">60-90d</div><div class="m-kpi-sub">Ago</div></div>
+    </div>
+    <div class="m-note">&#x26A0; These customers bought 2&plus; times but haven&apos;t ordered in 60-90 days. Cost of acquisition already paid. Re-engagement is pure ROI.</div>
+    <button class="m-btn" onclick="drill('crm-winback-whatsapp')">Launch WhatsApp Campaign &rarr;</button>`},
+
+  'crm-winback-whatsapp':{t:'WIN-BACK · WHATSAPP CAMPAIGN',h:`
+    <div class="m-kpis">
+      <div class="m-kpi"><div class="m-kpi-l">Target</div><div class="m-kpi-v">23</div><div class="m-kpi-sub">At-risk customers</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Exp Recovery</div><div class="m-kpi-v pos">7-9</div><div class="m-kpi-sub">Orders (30-40%)</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Est Revenue</div><div class="m-kpi-v pos">&#8377;45-55K</div><div class="m-kpi-sub">30-day recovery</div></div>
+    </div>
+    <div class="m-lbl">Message template</div>
+    <div style="background:var(--bg2);border:1px solid var(--b2);border-radius:var(--rsm);padding:12px;font-size:11px;line-height:1.6;color:var(--text);margin-top:6px">
+      Hey [Name]! &#x1F44B;<br><br>
+      It&apos;s Arpit from ODD NOT EVEN. Noticed it&apos;s been a minute since your last order (that {LAST_SKU} still a hit?).<br><br>
+      We just dropped some pieces I think you&apos;ll love &mdash; and since you&apos;re one of our OG customers, here&apos;s a personal 15% code: <strong>WELCOMEBACK15</strong><br><br>
+      Valid till Apr 30. One tap to browse &rarr; [link]<br><br>
+      &mdash; Arpit &middot; ODD NOT EVEN
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px"><button class="m-btn" onclick="closeDrill()">Export customer list</button><button class="m-btn g" onclick="closeDrill()">Push to WhatsApp API</button></div>`},
+
+  'crm-customer':{t:'CUSTOMER PROFILE',h:`
+    <div class="m-kpis">
+      <div class="m-kpi"><div class="m-kpi-l">Orders</div><div class="m-kpi-v">7</div><div class="m-kpi-sub">Last 5 months</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Spent</div><div class="m-kpi-v pos">&#8377;41,228</div><div class="m-kpi-sub">CLV tier: Champion</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Avg Order</div><div class="m-kpi-v">&#8377;5,890</div><div class="m-kpi-sub">+20% vs site avg</div></div>
+    </div>
+    <div class="m-lbl">Order timeline</div>
+    <table class="m-tbl"><tr><th>Date</th><th>Items</th><th>Value</th><th>Discount</th></tr>
+    <tr><td>3 days ago</td><td>2 jerseys M</td><td>&#8377;7,420</td><td>PREPAID5</td></tr>
+    <tr><td>24 days ago</td><td>1 FS shirt L</td><td>&#8377;3,920</td><td>&mdash;</td></tr>
+    <tr><td>47 days ago</td><td>2 jerseys + 1 tshirt</td><td>&#8377;8,890</td><td>ODD15</td></tr>
+    <tr><td>72 days ago</td><td>1 jersey M</td><td>&#8377;4,140</td><td>&mdash;</td></tr>
+    <tr><td>95 days ago</td><td>2 jerseys M+L</td><td>&#8377;7,180</td><td>PREPAID5</td></tr>
+    <tr><td>128 days ago</td><td>1 sweatshirt</td><td>&#8377;3,892</td><td>ARTISODD</td></tr>
+    <tr><td>154 days ago</td><td>2 tshirts + 1 jersey</td><td>&#8377;5,786</td><td>&mdash;</td></tr>
+    </table>
+    <div class="m-note">&#x1F3AF; Prefers Size M jerseys. Discount-responsive (uses codes on 57% of orders). Recent ordering velocity improving. Candidate for Champions loyalty tier.</div>`},
+
+  'pipe-d12':{t:'DIVINE WORLD TOUR MERCH',h:`
+    <div class="m-kpis">
+      <div class="m-kpi"><div class="m-kpi-l">Deal Value</div><div class="m-kpi-v">&#8377;15L</div><div class="m-kpi-sub">Negotiation stage</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Probability</div><div class="m-kpi-v pos">80%</div><div class="m-kpi-sub">Weighted &#8377;12L</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Close Date</div><div class="m-kpi-v" style="color:#f0a020">Apr 24</div><div class="m-kpi-sub">3 days</div></div>
+    </div>
+    <div class="m-lbl">Deal dynamics</div>
+    <table class="m-tbl"><tr><th>Aspect</th><th>Status</th></tr>
+    <tr><td>Partner</td><td>Mass Appeal India (Divine&apos;s team)</td></tr>
+    <tr><td>Scope</td><td>6,500 units &middot; 4 designs &middot; 3 cities</td></tr>
+    <tr><td>Commission ask</td><td class="neg">22% (pushing to 18%)</td></tr>
+    <tr><td>Payment terms</td><td>50% advance &middot; 50% on delivery</td></tr>
+    <tr><td>Production window</td><td>18 days from PO</td></tr>
+    <tr><td>Deadline</td><td class="neg">Apr 24 decision</td></tr>
+    </table>
+    <div class="m-note">&#x1F3A4; Biggest deal in pipeline. Previous tour with Karan Aujla had commission &gt; revenue &mdash; don&apos;t repeat. Counter their 22% ask with 18% + free expedited shipping.</div>
+    <div style="display:flex;gap:8px;margin-top:12px"><button class="m-btn" onclick="closeDrill()">Log note</button><button class="m-btn g" onclick="closeDrill()">Draft counter-email</button></div>`},
+
+  'pipe-forecast':{t:'WEIGHTED PIPELINE FORECAST',h:`
+    <div class="m-kpis">
+      <div class="m-kpi"><div class="m-kpi-l">Unweighted</div><div class="m-kpi-v">&#8377;1.12Cr</div><div class="m-kpi-sub">Total pipeline</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Weighted</div><div class="m-kpi-v pos">&#8377;54.3L</div><div class="m-kpi-sub">Probability-adjusted</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Next 30d</div><div class="m-kpi-v pos">&#8377;23.8L</div><div class="m-kpi-sub">April close</div></div>
+    </div>
+    <div class="m-lbl">Stage probabilities used</div>
+    <table class="m-tbl"><tr><th>Stage</th><th>Probability</th><th>Reasoning</th></tr>
+    <tr><td>Lead</td><td>10%</td><td>First contact, no commitment</td></tr>
+    <tr><td>Qualified</td><td>30%</td><td>Need + budget confirmed</td></tr>
+    <tr><td>Proposal</td><td>50%</td><td>Formal offer sent</td></tr>
+    <tr><td>Negotiation</td><td>80%</td><td>Discussing terms</td></tr>
+    <tr><td>Won</td><td>100%</td><td>PO received</td></tr>
+    </table>
+    <div class="m-note">&#x1F4CA; Model pulled from industry D2C benchmarks. Adjust stage % if your actual win rate differs significantly.</div>`},
+
+  'pipe-stuck':{t:'STUCK DEALS &middot; &gt; 14 DAYS NO MOVEMENT',h:`
+    <div class="m-kpis">
+      <div class="m-kpi"><div class="m-kpi-l">Stuck Deals</div><div class="m-kpi-v neg">3</div><div class="m-kpi-sub">No progress 14&plus;d</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Value at Risk</div><div class="m-kpi-v">&#8377;23L</div><div class="m-kpi-sub">If all lost</div></div>
+      <div class="m-kpi"><div class="m-kpi-l">Oldest</div><div class="m-kpi-v" style="color:#f0a020">18d</div><div class="m-kpi-sub">Divine tour</div></div>
+    </div>
+    <div class="m-lbl">Action required</div>
+    <table class="m-tbl"><tr><th>Deal</th><th>Days Stuck</th><th>Action</th></tr>
+    <tr><td>Divine World Tour (&#8377;15L)</td><td class="neg">18d</td><td>Finalize commission, close this week</td></tr>
+    <tr><td>Sunburn 2026 (&#8377;18L)</td><td>15d</td><td>Re-engage, schedule call</td></tr>
+    <tr><td>Nike India (&#8377;5L)</td><td>16d</td><td>Push agent for decision</td></tr>
+    </table>`}
+,
   'ops-stock-health':{t:'STOCK HEALTH · CRITICAL ITEMS',h:`
     <div class="m-kpis">
       <div class="m-kpi"><div class="m-kpi-l">Critical</div><div class="m-kpi-v neg">4</div><div class="m-kpi-sub">Stock out in 7 days</div></div>
@@ -3761,6 +4539,415 @@ const __origGo = window.go;
 window.go = function(el, id){
   __origGo(el, id);
   if(id === 'ops') setTimeout(buildOpsSizeChart, 150);
+};
+
+
+// ═══════════════════════════════════════════════════════
+// FORECAST SIMULATOR ENGINE
+// ═══════════════════════════════════════════════════════
+const SIM_SCENARIOS = {
+  baseline: {b2cGrowth:9, aov:4923, events:1, eventVal:8, cdc:8, cogs:29, commission:17, ads:115, photo:69, fixed:5.7, fd:37, horizon:6},
+  conservative: {b2cGrowth:2, aov:4500, events:0, eventVal:5, cdc:5, cogs:32, commission:22, ads:80, photo:50, fixed:5.7, fd:37, horizon:6},
+  aggressive: {b2cGrowth:18, aov:5500, events:2, eventVal:10, cdc:10, cogs:27, commission:15, ads:200, photo:80, fixed:6.2, fd:50, horizon:6},
+  crisis: {b2cGrowth:-12, aov:3800, events:0, eventVal:3, cdc:3, cogs:38, commission:28, ads:50, photo:30, fixed:5.7, fd:37, horizon:6}
+};
+let SIM_CHART = null;
+let SIM_SAVED = [];
+
+function fmtL(v){if(v<0)return '&minus;&#8377;'+fmtL(-v).replace('&#8377;','');if(v>=10000000)return '&#8377;'+(v/10000000).toFixed(2)+'Cr';if(v>=100000)return '&#8377;'+(v/100000).toFixed(1)+'L';if(v>=1000)return '&#8377;'+(v/1000).toFixed(1)+'K';return '&#8377;'+Math.round(v)}
+function fmtL0(v){return fmtL(v).replace(/\.0+([LKCr]+)/,'$1')}
+
+function getSimInputs(){
+  return {
+    b2cGrowth: parseFloat(document.getElementById('sim-b2cGrowth').value),
+    aov: parseFloat(document.getElementById('sim-aov').value),
+    events: parseFloat(document.getElementById('sim-events').value),
+    eventVal: parseFloat(document.getElementById('sim-eventVal').value),
+    cdc: parseFloat(document.getElementById('sim-cdc').value),
+    cogs: parseFloat(document.getElementById('sim-cogs').value),
+    commission: parseFloat(document.getElementById('sim-commission').value),
+    ads: parseFloat(document.getElementById('sim-ads').value),
+    photo: parseFloat(document.getElementById('sim-photo').value),
+    fixed: parseFloat(document.getElementById('sim-fixed').value),
+    fd: parseFloat(document.getElementById('sim-fd').value),
+    horizon: parseInt(document.getElementById('sim-horizon').value)
+  };
+}
+
+function updateSimLabels(i){
+  document.getElementById('simV-b2cGrowth').textContent = (i.b2cGrowth>0?'+':'')+i.b2cGrowth+'%';
+  document.getElementById('simV-aov').textContent = '&#8377;'+i.aov.toLocaleString('en-IN');
+  document.getElementById('simV-events').innerHTML = i.events;
+  document.getElementById('simV-eventVal').innerHTML = i.eventVal.toFixed(1)+'L';
+  document.getElementById('simV-cdc').innerHTML = i.cdc.toFixed(1)+'L';
+  document.getElementById('simV-cogs').textContent = i.cogs+'%';
+  document.getElementById('simV-commission').textContent = i.commission+'%';
+  document.getElementById('simV-ads').textContent = i.ads;
+  document.getElementById('simV-photo').textContent = i.photo;
+  document.getElementById('simV-fixed').textContent = i.fixed.toFixed(2);
+  document.getElementById('simV-fd').textContent = i.fd;
+  document.getElementById('simV-horizon').textContent = i.horizon+' mo';
+}
+
+function computeSim(inputs){
+  // Returns monthly projections for `horizon` months
+  // Base: Feb 2026 actuals. Start from Mar = month 1.
+  const rows = [];
+  const startB2C = 857000; // Feb actual Shopify
+  for(let m=0; m<inputs.horizon; m++){
+    // B2C grows MoM
+    const b2cRev = startB2C * Math.pow(1 + inputs.b2cGrowth/100, m+1);
+    // Adjust by AOV ratio (baseline AOV 4923)
+    const b2cAdjusted = b2cRev * (inputs.aov / 4923);
+    // Events revenue
+    const eventRev = inputs.events * inputs.eventVal * 100000;
+    // CDC fixed monthly value
+    const cdcRev = inputs.cdc * 100000;
+    // Total gross
+    const gross = b2cAdjusted + eventRev + cdcRev;
+    // GST (approx 9% of gross based on historical)
+    const gst = gross * 0.089;
+    const net = gross - gst;
+    // COGS
+    const cogs = gross * (inputs.cogs / 100);
+    const gp = net - cogs;
+    // Commission (% of B2B revenue = events + cdc)
+    const b2b = eventRev + cdcRev;
+    const commission = b2b * (inputs.commission / 100);
+    // Ads + photo + fixed
+    const ads = inputs.ads * 1000;
+    const photo = inputs.photo * 1000;
+    const fixed = inputs.fixed * 100000;
+    // Other expenses estimated 15% of net
+    const otherExp = net * 0.12;
+    const totalExp = cogs + commission + ads + photo + fixed + otherExp;
+    // EBITDA
+    const ebitda = net - totalExp + (cogs); // wait, fix: gross profit minus opex (excluding COGS since already deducted)
+    const ebitdaCorrect = gp - commission - ads - photo - fixed - otherExp;
+    // FD interest (monthly)
+    const fdInterest = (inputs.fd * 100000 * 0.07) / 12;
+    const cash = ebitdaCorrect + fdInterest;
+
+    const monthNames = ['Mar 26','Apr 26','May 26','Jun 26','Jul 26','Aug 26','Sep 26','Oct 26','Nov 26','Dec 26','Jan 27','Feb 27'];
+    rows.push({
+      month: monthNames[m] || 'M'+(m+1),
+      gross, net, cogs, gp, commission, ads, photo, fixed, otherExp, totalExp,
+      ebitda: ebitdaCorrect,
+      ebitdaPct: (ebitdaCorrect/net*100),
+      fdInterest, cash,
+      b2c: b2cAdjusted, events: eventRev, cdc: cdcRev
+    });
+  }
+  return rows;
+}
+
+function runSim(){
+  const i = getSimInputs();
+  updateSimLabels(i);
+  const rows = computeSim(i);
+
+  // Totals
+  const totGross = rows.reduce((s,r)=>s+r.gross,0);
+  const totNet = rows.reduce((s,r)=>s+r.net,0);
+  const totEbitda = rows.reduce((s,r)=>s+r.ebitda,0);
+  const totCash = rows.reduce((s,r)=>s+r.cash,0);
+  const avgEbitdaPct = totNet>0 ? (totEbitda/totNet*100) : 0;
+
+  // Update headline KPIs
+  flashKpi('simK-gross');
+  document.getElementById('simO-gross').innerHTML = fmtL(totGross);
+  document.getElementById('simO-grossSub').textContent = i.horizon+'-month total';
+  document.getElementById('simO-net').innerHTML = fmtL(totNet);
+  document.getElementById('simO-netSub').innerHTML = 'After &#8377;'+fmtL(totGross-totNet).replace('&#8377;','')+' GST';
+
+  const ebitdaEl = document.getElementById('simO-ebitda');
+  ebitdaEl.innerHTML = (totEbitda>=0?'+':'')+fmtL(totEbitda);
+  ebitdaEl.className = 'sim-kpi-v '+(totEbitda>=0?'pos':'neg');
+  document.getElementById('simO-ebitdaSub').textContent = avgEbitdaPct.toFixed(1)+'% margin';
+
+  const cashEl = document.getElementById('simO-cash');
+  cashEl.innerHTML = (totCash>=0?'+':'')+fmtL(totCash);
+  cashEl.className = 'sim-kpi-v '+(totCash>=0?'pos':'neg');
+
+  document.getElementById('sim-chartSub').textContent = i.horizon+' months ahead';
+
+  // Render table
+  renderSimTable(rows);
+  // Render chart
+  renderSimChart(rows);
+  // Render break-even + sensitivity
+  renderBreakEven(i, rows);
+  renderSensitivity(i, totEbitda);
+}
+
+function flashKpi(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.classList.remove('flash');
+  void el.offsetWidth; // reflow
+  el.classList.add('flash');
+}
+
+function renderSimTable(rows){
+  const tbl = document.getElementById('simTable');
+  if(!tbl) return;
+  let h = '<thead><tr><th>Month</th><th style="text-align:right">Gross</th><th style="text-align:right">Net</th><th style="text-align:right">GP</th><th style="text-align:right">OpEx</th><th style="text-align:right">EBITDA</th><th style="text-align:right">Margin</th></tr></thead><tbody>';
+  rows.forEach(r=>{
+    const cls = r.ebitda>=0?'pos':'neg';
+    h += `<tr><td>${r.month}</td><td style="text-align:right">${fmtL(r.gross)}</td><td style="text-align:right">${fmtL(r.net)}</td><td style="text-align:right" class="pos">${fmtL(r.gp)}</td><td style="text-align:right">${fmtL(r.totalExp - r.cogs)}</td><td style="text-align:right" class="${cls}">${(r.ebitda>=0?'+':'')}${fmtL(r.ebitda)}</td><td style="text-align:right" class="${cls}">${r.ebitdaPct.toFixed(1)}%</td></tr>`;
+  });
+  // Totals row
+  const tG = rows.reduce((s,r)=>s+r.gross,0);
+  const tN = rows.reduce((s,r)=>s+r.net,0);
+  const tE = rows.reduce((s,r)=>s+r.ebitda,0);
+  const tGP = rows.reduce((s,r)=>s+r.gp,0);
+  const tOp = rows.reduce((s,r)=>s+(r.totalExp-r.cogs),0);
+  const avgM = tN>0?(tE/tN*100):0;
+  const clsT = tE>=0?'pos':'neg';
+  h += `<tr class="tot"><td><strong>Total</strong></td><td style="text-align:right"><strong>${fmtL(tG)}</strong></td><td style="text-align:right"><strong>${fmtL(tN)}</strong></td><td style="text-align:right" class="pos"><strong>${fmtL(tGP)}</strong></td><td style="text-align:right"><strong>${fmtL(tOp)}</strong></td><td style="text-align:right" class="${clsT}"><strong>${(tE>=0?'+':'')}${fmtL(tE)}</strong></td><td style="text-align:right" class="${clsT}"><strong>${avgM.toFixed(1)}%</strong></td></tr>`;
+  h += '</tbody>';
+  tbl.innerHTML = h;
+}
+
+function renderSimChart(rows){
+  const canvas = document.getElementById('c-sim');
+  if(!canvas) return;
+  if(SIM_CHART) SIM_CHART.destroy();
+  if(typeof Chart === 'undefined') return;
+  SIM_CHART = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: rows.map(r=>r.month),
+      datasets: [
+        {label:'Gross', data:rows.map(r=>r.gross), backgroundColor:'rgba(232,224,208,0.35)', borderColor:'rgba(232,224,208,0.75)', borderWidth:1.5, borderRadius:3, order:3},
+        {label:'Net', data:rows.map(r=>r.net), backgroundColor:'rgba(130,130,130,0.30)', borderColor:'rgba(130,130,130,0.65)', borderWidth:1.5, borderRadius:3, order:2},
+        {label:'EBITDA', data:rows.map(r=>r.ebitda), type:'line', tension:.4, borderColor:'#D42B2B', backgroundColor:'rgba(212,43,43,0.06)', fill:true, pointBackgroundColor:'#D42B2B', pointRadius:4, borderWidth:2, yAxisID:'y2', order:1}
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {legend:{display:false}, tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+(c.raw>=0?'+':'')+Math.abs(c.raw/100000).toFixed(2)+'L'}}},
+      scales: {
+        x: {grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#555', font:{size:9}}},
+        y: {grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#555', font:{size:9, family:'DM Mono'}, callback:v=>'\u20b9'+(v/100000).toFixed(0)+'L'}, position:'left'},
+        y2: {grid:{display:false}, ticks:{color:'#D42B2B', font:{size:9, family:'DM Mono'}, callback:v=>(v<0?'&minus;':'+')+'\u20b9'+Math.abs(v/100000).toFixed(1)+'L'}, position:'right'}
+      }
+    }
+  });
+}
+
+function renderBreakEven(i, rows){
+  const tbl = document.getElementById('simBreakEven');
+  if(!tbl) return;
+  // Break-even gross = total fixed costs / gross margin
+  const monthlyFixed = i.fixed*100000 + i.ads*1000 + i.photo*1000;
+  const grossMargin = 1 - (i.cogs/100);
+  const minBreakEvenGross = monthlyFixed / grossMargin;
+  const firstMonth = rows[0];
+  const surplus = firstMonth.gross - minBreakEvenGross;
+  tbl.innerHTML = `
+    <tr><th>Metric</th><th style="text-align:right">Value</th></tr>
+    <tr><td>Monthly Fixed Costs</td><td style="text-align:right">${fmtL(monthlyFixed)}</td></tr>
+    <tr><td>Gross Margin</td><td style="text-align:right">${(grossMargin*100).toFixed(1)}%</td></tr>
+    <tr><td>Break-even Gross Rev</td><td style="text-align:right"><strong>${fmtL(minBreakEvenGross)}</strong></td></tr>
+    <tr><td>Projected Gross (Month 1)</td><td style="text-align:right" class="${surplus>0?'pos':'neg'}">${fmtL(firstMonth.gross)}</td></tr>
+    <tr><td>Surplus / Gap</td><td style="text-align:right" class="${surplus>0?'pos':'neg'}"><strong>${surplus>=0?'+':''}${fmtL(surplus)}</strong></td></tr>
+    <tr><td>Required Events/Mo for B/E</td><td style="text-align:right"><strong>${Math.max(0,((minBreakEvenGross-firstMonth.b2c-firstMonth.cdc)/(i.eventVal*100000)).toFixed(1))}</strong></td></tr>
+  `;
+}
+
+function renderSensitivity(i, baseEbitda){
+  const cont = document.getElementById('simSensitivity');
+  if(!cont) return;
+  // Compute EBITDA delta when each lever moves 10%
+  const base = computeSim(i).reduce((s,r)=>s+r.ebitda,0);
+  const levers = [
+    {name:'+1 Event/mo', key:'events', delta:+1},
+    {name:'B2C +5% MoM growth', key:'b2cGrowth', delta:+5},
+    {name:'Commission &minus;5%', key:'commission', delta:-5},
+    {name:'COGS &minus;3%', key:'cogs', delta:-3},
+    {name:'Ad spend +50%', key:'ads', delta:i.ads*0.5},
+    {name:'Photoshoot &minus;50%', key:'photo', delta:-i.photo*0.5},
+    {name:'AOV +&#8377;500', key:'aov', delta:500},
+  ];
+  const results = levers.map(l=>{
+    const modI = {...i};
+    modI[l.key] = i[l.key] + l.delta;
+    const modE = computeSim(modI).reduce((s,r)=>s+r.ebitda,0);
+    return {name: l.name, impact: modE - base};
+  });
+  results.sort((a,b)=>Math.abs(b.impact)-Math.abs(a.impact));
+  const maxImp = Math.max(...results.map(r=>Math.abs(r.impact)));
+  cont.innerHTML = results.map(r=>{
+    const pct = (Math.abs(r.impact)/maxImp*100).toFixed(0);
+    const pos = r.impact >= 0;
+    return `<div class="pb" style="margin-bottom:2px"><div class="pb-l" style="width:170px;font-size:10px">${r.name}</div><div class="pb-tr" style="height:4px"><div class="pb-f" style="width:${pct}%;background:${pos?'var(--grn)':'var(--red)'}"></div></div><div class="pb-v" style="color:${pos?'var(--grn)':'var(--red)'}">${pos?'+':''}${fmtL(r.impact)}</div></div>`;
+  }).join('');
+}
+
+function loadScenario(el, key){
+  document.querySelectorAll('.sim-sc-btn').forEach(b=>b.classList.remove('active'));
+  if(el) el.classList.add('active');
+  const s = SIM_SCENARIOS[key];
+  if(!s) return;
+  Object.entries(s).forEach(([k,v])=>{
+    const el = document.getElementById('sim-'+k);
+    if(el) el.value = v;
+  });
+  runSim();
+  if(typeof toast === 'function') toast('Loaded scenario: <strong>'+key+'</strong>');
+}
+
+function resetSimulator(){
+  loadScenario(document.querySelector('.sim-sc-btn'), 'baseline');
+  if(typeof toast === 'function') toast('&#x21BA; Simulator reset to baseline');
+}
+
+function saveScenario(){
+  const i = getSimInputs();
+  const rows = computeSim(i);
+  const tE = rows.reduce((s,r)=>s+r.ebitda,0);
+  const tG = rows.reduce((s,r)=>s+r.gross,0);
+  const name = prompt('Name this scenario:', 'Scenario '+(SIM_SAVED.length+1));
+  if(!name) return;
+  SIM_SAVED.push({name, inputs:i, totEbitda:tE, totGross:tG, savedAt: new Date().toLocaleString('en-IN')});
+  renderSavedScenarios();
+  if(typeof toast === 'function') toast('&#x2605; Saved: '+name);
+}
+
+function renderSavedScenarios(){
+  const card = document.getElementById('simSavedCard');
+  const cont = document.getElementById('simSaved');
+  if(!cont) return;
+  if(SIM_SAVED.length === 0){card.style.display='none'; return;}
+  card.style.display = 'block';
+  cont.innerHTML = SIM_SAVED.map((s,idx)=>`
+    <div class="sim-saved">
+      <div class="sim-saved-item">
+        <strong style="font-size:11px">${s.name}</strong>
+        <span style="color:var(--dim);font-size:9px;font-family:'DM Mono',monospace">${s.savedAt}</span>
+      </div>
+      <div style="display:flex;gap:14px;align-items:center">
+        <span style="font-family:'DM Mono',monospace;font-size:10px">Gross: <strong>${fmtL(s.totGross)}</strong></span>
+        <span style="font-family:'DM Mono',monospace;font-size:10px">EBITDA: <strong class="${s.totEbitda>=0?'pos':'neg'}">${s.totEbitda>=0?'+':''}${fmtL(s.totEbitda)}</strong></span>
+        <button class="ops-btn" onclick="loadSaved(${idx})" style="padding:4px 10px;font-size:9px">Load</button>
+        <span class="sim-saved-x" onclick="delSaved(${idx})">&times;</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function loadSaved(idx){
+  const s = SIM_SAVED[idx];
+  if(!s) return;
+  Object.entries(s.inputs).forEach(([k,v])=>{
+    const el = document.getElementById('sim-'+k);
+    if(el) el.value = v;
+  });
+  runSim();
+  if(typeof toast === 'function') toast('Loaded: '+s.name);
+}
+
+function delSaved(idx){
+  SIM_SAVED.splice(idx,1);
+  renderSavedScenarios();
+}
+
+function exportSimPDF(){
+  const i = getSimInputs();
+  const rows = computeSim(i);
+  const tG = rows.reduce((s,r)=>s+r.gross,0);
+  const tN = rows.reduce((s,r)=>s+r.net,0);
+  const tE = rows.reduce((s,r)=>s+r.ebitda,0);
+  const w = window.open('', '_blank', 'width=900,height=800');
+  if(!w){toast('Popup blocked',true);return;}
+  const rowsHtml = rows.map(r=>`<tr><td>${r.month}</td><td style="text-align:right">\u20b9${Math.round(r.gross/100000)}L</td><td style="text-align:right">\u20b9${Math.round(r.net/100000)}L</td><td style="text-align:right" class="pos">${r.ebitda>=0?'+':''}\u20b9${(r.ebitda/100000).toFixed(1)}L</td><td style="text-align:right">${r.ebitdaPct.toFixed(1)}%</td></tr>`).join('');
+  w.document.write(`<!DOCTYPE html><html><head><title>ODD NOT EVEN · Forecast Simulation</title><style>body{font-family:Arial;padding:28px;font-size:12px}h1{font-size:22px;border-bottom:3px solid #000;padding-bottom:10px}h2{background:#111;color:#fff;padding:6px 10px;font-size:13px;margin:20px 0 8px}table{width:100%;border-collapse:collapse;margin-bottom:16px}th{background:#222;color:#fff;padding:6px 10px;font-size:10px;text-align:right}th:first-child{text-align:left}td{padding:5px 10px;border-bottom:1px solid #eee;font-size:11px;text-align:right}td:first-child{text-align:left}.pos{color:#16a34a}.neg{color:#dc2626}.tot td{background:#f5f5f5;font-weight:700}</style></head><body><h1>ODD NOT EVEN &mdash; Forecast Simulation</h1><p style="color:#666">Generated ${new Date().toLocaleString('en-IN')}</p><h2>Assumptions</h2><table><tr><th>Parameter</th><th>Value</th></tr><tr><td>B2C Growth MoM</td><td>${i.b2cGrowth>0?'+':''}${i.b2cGrowth}%</td></tr><tr><td>AOV</td><td>\u20b9${i.aov}</td></tr><tr><td>Events/month</td><td>${i.events} &times; \u20b9${i.eventVal}L</td></tr><tr><td>CDC Monthly</td><td>\u20b9${i.cdc}L</td></tr><tr><td>COGS %</td><td>${i.cogs}%</td></tr><tr><td>Commission %</td><td>${i.commission}%</td></tr><tr><td>Ad Spend / Photoshoot / Fixed</td><td>\u20b9${i.ads}K + \u20b9${i.photo}K + \u20b9${i.fixed}L</td></tr><tr><td>FD Corpus</td><td>\u20b9${i.fd}L</td></tr></table><h2>Monthly P&amp;L Projection</h2><table><tr><th>Month</th><th>Gross</th><th>Net</th><th>EBITDA</th><th>Margin</th></tr>${rowsHtml}<tr class="tot"><td><b>${i.horizon}-mo Total</b></td><td>\u20b9${Math.round(tG/100000)}L</td><td>\u20b9${Math.round(tN/100000)}L</td><td class="pos">${tE>=0?'+':''}\u20b9${(tE/100000).toFixed(1)}L</td><td>${(tE/tN*100).toFixed(1)}%</td></tr></table><button onclick="window.print()" style="background:#000;color:#fff;border:none;padding:8px 18px;font-size:12px;cursor:pointer;margin-top:10px">&#128438; Print / Save as PDF</button></body></html>`);
+  w.document.close();
+  setTimeout(()=>{try{w.focus();w.print();}catch(e){}},500);
+  if(typeof toast === 'function') toast('&#x2713; Opened forecast PDF');
+}
+
+// ═══════════════════════════════════════════════════════
+// CRM CHARTS
+// ═══════════════════════════════════════════════════════
+let CLV_CHART = null;
+function buildCRMCharts(){
+  const canvas = document.getElementById('c-clv');
+  if(!canvas) return;
+  if(CLV_CHART) return; // already built
+  if(typeof Chart === 'undefined') return;
+  CLV_CHART = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: ['Champions', 'Loyal', 'Potential', 'New', 'Promising', 'Need Att.', 'Sleep', 'At Risk', 'Lost'],
+      datasets: [{
+        label: 'Avg CLV',
+        data: [18420, 8920, 5420, 4710, 2830, 3150, 2960, 5420, 1230],
+        backgroundColor: d=>{
+          const i = d.dataIndex;
+          if(i<=1) return 'rgba(240,192,64,0.55)';
+          if(i<=4) return 'rgba(232,224,208,0.4)';
+          if(i<=6) return 'rgba(240,160,32,0.45)';
+          return 'rgba(212,43,43,0.45)';
+        },
+        borderColor: d=>{
+          const i = d.dataIndex;
+          if(i<=1) return '#f0c040';
+          if(i<=4) return '#E8E0D0';
+          if(i<=6) return '#f0a020';
+          return '#D42B2B';
+        },
+        borderWidth: 1.5, borderRadius: 3
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {legend:{display:false}, tooltip:{callbacks:{label:c=>' CLV: \u20b9'+c.raw.toLocaleString('en-IN')}}},
+      scales: {
+        x: {grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#555', font:{size:8}, maxRotation:40}},
+        y: {grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#555', font:{size:9, family:'DM Mono'}, callback:v=>'\u20b9'+(v/1000).toFixed(0)+'K'}}
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// PIPELINE CHART
+// ═══════════════════════════════════════════════════════
+let PIPE_CHART = null;
+function buildPipelineCharts(){
+  const canvas = document.getElementById('c-pipe-velocity');
+  if(!canvas) return;
+  if(PIPE_CHART) return;
+  if(typeof Chart === 'undefined') return;
+  PIPE_CHART = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: ['Lead', 'Qualified', 'Proposal', 'Negotiation', 'Close'],
+      datasets: [
+        {label: 'Avg Days', data: [12, 8, 14, 18, 3], backgroundColor:'rgba(232,224,208,0.45)', borderColor:'rgba(232,224,208,0.85)', borderWidth: 1.5, borderRadius: 3},
+        {label: 'Target', data: [7, 5, 10, 10, 2], backgroundColor:'rgba(212,43,43,0.35)', borderColor:'#D42B2B', borderWidth: 1.5, borderRadius: 3, type:'line', fill:false, tension:0.2, pointRadius:4}
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {legend:{display:false}, tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+c.raw+' days'}}},
+      scales: {
+        x: {grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#555', font:{size:9}}},
+        y: {grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#555', font:{size:9, family:'DM Mono'}, callback:v=>v+'d'}}
+      }
+    }
+  });
+}
+
+// Hook new page nav
+const __prevGo2 = window.go;
+window.go = function(el, id){
+  __prevGo2(el, id);
+  if(id === 'simulator'){setTimeout(()=>{if(typeof runSim==='function') runSim();}, 150);}
+  if(id === 'crm'){setTimeout(buildCRMCharts, 150);}
+  if(id === 'pipeline'){setTimeout(buildPipelineCharts, 150);}
 };
 
 </script>

@@ -3426,7 +3426,7 @@ async function startUploads(){
 }
 // Google OAuth access token
 let _gdToken=null,_gdTokenExpiry=0,_gdClient=null;
-const GOOGLE_CLIENT_ID=window.GOOGLE_CLIENT_ID||'286201536539-tof11in4qc3arb7tpl76b72dr5sbvdhb.apps.googleusercontent.com'; // Set to your OAuth Client ID to enable direct upload
+const GOOGLE_CLIENT_ID=window.GOOGLE_CLIENT_ID = '286201536539-tof11in4qc3arb7tpl76b72dr5sbvdhb.apps.googleusercontent.com'; // Set to your OAuth Client ID to enable direct upload
 
 function initGoogleAuth(){
   if(!window.google||!google.accounts||!google.accounts.oauth2)return false;

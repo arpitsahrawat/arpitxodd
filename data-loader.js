@@ -25,10 +25,18 @@
   'use strict';
 
   const NEXUS_LIVE = window.NEXUS_LIVE = {
-    VERSION: '1.6.0',
+    VERSION: '1.7.0',
 
     // ─── CONFIG ───────────────────────────────────────────
     CLIENT_ID: '',
+    // Supabase Storage is used as a fast network cache. After every Drive
+    // sync we serialize `{ files, data, lastSync }` as one JSON blob and
+    // upload it; next page load fetches that blob (~500 ms vs 30-60 s
+    // for re-downloading 20+ Drive files).
+    SUPABASE_URL: 'https://twzvinjjbwxzrmrbfpaa.supabase.co',
+    SUPABASE_KEY: 'sb_publishable_S2osWuKpsb4y86f4c7zkrw_rAfWGhI_',
+    SUPABASE_BUCKET: 'nexus-cache',
+    SUPABASE_SNAPSHOT: 'snapshot.json',
     SCOPES: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file',
     PARENT_FOLDER: '1aVLGpFyTtlDXw7SSDW1cQZTGbry7gpRm',
     FOLDERS: {
@@ -365,6 +373,22 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
       }
       this.success(`CLIENT_ID OK (${this.CLIENT_ID.slice(0,12)}…)`);
 
+      // Fast-path: try Supabase snapshot first. One HTTP GET instead of
+      // 20 Drive downloads. If it succeeds, we paint from it immediately
+      // and prime localStorage for offline subsequent loads.
+      this.log('▼ Checking Supabase for cached snapshot…');
+      const snap = await this.loadSnapshot();
+      if (snap) {
+        this.data = snap.data || {};
+        this.files = snap.files || {};
+        this.lastSync = snap.lastSync ? new Date(snap.lastSync) : null;
+        this.success(`Loaded Supabase snapshot from ${this.lastSync ? this.lastSync.toLocaleString() : '—'} — click 🔄 Force resync to refresh from Drive`);
+        try { localStorage.setItem(this.STORAGE_KEY, JSON.stringify({ data: this.data, files: this.files, lastSync: this.lastSync })); } catch(_){ }
+        this.applyToUI();
+        this.showPanel();
+        return true;
+      }
+
       // Cached data for instant render — paint the dashboard with whatever
       // we last synced, but DO NOT hit the network. Sync only happens on
       // an explicit 🔄 Force resync or 🔑 Re-auth click.
@@ -424,6 +448,7 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
         await this.syncAll();
         this.connected = true;
         this.saveCache();
+        this.uploadSnapshot().catch(() => {});  // fire-and-forget — don't block UI
         this.applyToUI();
         this.success('▶ Sync complete');
         return true;
@@ -938,6 +963,60 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
         if (Date.now() - new Date(parsed.lastSync).getTime() > 7 * 24 * 3600 * 1000) return null;
         return parsed;
       } catch(_) { return null; }
+    },
+
+    // ─── SUPABASE FAST-PATH CACHE ─────────────────────────
+    //
+    // Downloads the latest `snapshot.json` from the public nexus-cache
+    // bucket. One HTTP GET, no OAuth, no XLSX parsing. Returns the same
+    // shape as loadCache() or null on miss.
+    async loadSnapshot() {
+      if (!this.SUPABASE_URL || !this.SUPABASE_BUCKET) return null;
+      try {
+        const url = `${this.SUPABASE_URL}/storage/v1/object/public/${this.SUPABASE_BUCKET}/${this.SUPABASE_SNAPSHOT}?t=${Date.now()}`;
+        const r = await fetch(url);
+        if (!r.ok) { this.log(`Supabase snapshot ${r.status} — skipping fast path`); return null; }
+        const blob = await r.json();
+        if (!blob.lastSync) return null;
+        return blob;
+      } catch (e) {
+        this.warn('Supabase snapshot fetch failed', String(e));
+        return null;
+      }
+    },
+
+    async uploadSnapshot() {
+      if (!this.SUPABASE_URL || !this.SUPABASE_KEY || !this.SUPABASE_BUCKET) return false;
+      try {
+        const payload = {
+          version: this.VERSION,
+          lastSync: this.lastSync,
+          files: this.files,
+          data: this.data
+        };
+        const body = JSON.stringify(payload);
+        const url = `${this.SUPABASE_URL}/storage/v1/object/${this.SUPABASE_BUCKET}/${this.SUPABASE_SNAPSHOT}`;
+        const r = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + this.SUPABASE_KEY,
+            'Content-Type': 'application/json',
+            'x-upsert': 'true',
+            'cache-control': 'max-age=0'
+          },
+          body
+        });
+        if (!r.ok) {
+          const t = await r.text();
+          this.warn(`Supabase snapshot upload ${r.status}: ${t.slice(0,160)}`);
+          return false;
+        }
+        this.success(`▲ Snapshot uploaded to Supabase (${(body.length/1024).toFixed(1)} KB)`);
+        return true;
+      } catch (e) {
+        this.warn('Supabase snapshot upload failed', String(e));
+        return false;
+      }
     },
     saveCache() {
       try {

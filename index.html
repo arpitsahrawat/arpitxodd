@@ -9,6 +9,7 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%230a0a0a'/%3E%3Ctext x='256' y='320' font-family='Arial' font-size='280' fill='%23D42B2B' text-anchor='middle' font-weight='700'%3EN%3C/text%3E%3C/svg%3E">
 <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));}</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style id="nx-god-tier-overrides">
 /* ═══════════════════════════════════════════════════════════
@@ -598,6 +599,149 @@ aside.sb .sb-item.active .sb-ico { color: var(--nx-accent); }
 /* Ensure body never has horizontal scroll ------------------- */
 html, body { overflow-x: hidden; }
 main { max-width: 100vw; }
+
+
+/* ═══════════════════════════════════════════════════════════
+ *  NEXUS · GOD MODE 3D LAYER
+ * ═══════════════════════════════════════════════════════════ */
+#nx-intro-splash {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: #000; z-index: 10000;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.8s var(--nx-ease);
+}
+#nx-intro-splash canvas { width: 100%; height: 100%; }
+#nx-intro-splash.done { opacity: 0; pointer-events: none; }
+
+#nx-bg-shader {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 0; pointer-events: none; opacity: 0.45;
+  mix-blend-mode: screen;
+}
+main, aside.sb { position: relative; z-index: 2; }
+#nx-filter-bar { z-index: 80 !important; }
+
+#nx-hero-3d {
+  position: relative;
+  width: 100%; height: 340px;
+  margin: 0 0 22px;
+  border: 1px solid var(--nx-line-strong);
+  border-radius: 3px;
+  overflow: hidden;
+  background: radial-gradient(ellipse at center, rgba(212,43,43,0.08) 0%, transparent 70%), var(--nx-ink-2);
+  box-shadow: var(--nx-shadow-lg), inset 0 0 60px rgba(212,43,43,0.08);
+}
+#nx-hero-3d canvas { display: block; width: 100% !important; height: 100% !important; }
+#nx-hero-overlay {
+  position: absolute; inset: 0; pointer-events: none; z-index: 3;
+  display: flex; flex-direction: column; justify-content: space-between; padding: 22px;
+}
+#nx-hero-title {
+  font-family: var(--nx-font-display); font-size: 40px; letter-spacing: 0.12em;
+  background: linear-gradient(135deg, #F0EBE0 0%, #D42B2B 50%, #F0EBE0 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: nxGradShift 8s ease infinite;
+  text-shadow: 0 0 40px rgba(212,43,43,0.4);
+  line-height: 1;
+}
+@keyframes nxGradShift { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+#nx-hero-sub {
+  font-family: var(--nx-font-mono); font-size: 10px; color: var(--nx-cream-dim);
+  letter-spacing: 0.3em; text-transform: uppercase; margin-top: 6px;
+}
+#nx-hero-stats {
+  display: flex; gap: 24px; font-family: var(--nx-font-mono);
+}
+.nx-hero-stat { }
+.nx-hero-stat-l { font-size: 9px; color: rgba(240,235,224,0.4); text-transform: uppercase; letter-spacing: 0.15em; }
+.nx-hero-stat-v { font-family: var(--nx-font-display); font-size: 28px; color: var(--nx-cream); letter-spacing: 0.05em; margin-top: 2px; text-shadow: 0 0 20px rgba(212,43,43,0.3); }
+
+/* 3D card tilt — perspective + mouse-reactive */
+.card, .kpi {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.kpi:hover {
+  transform: perspective(1000px) rotateX(var(--ry, 0deg)) rotateY(var(--rx, 0deg)) translateZ(8px) !important;
+}
+
+/* Cursor-following red glow */
+#nx-cursor-glow {
+  position: fixed; width: 500px; height: 500px;
+  border-radius: 50%; pointer-events: none; z-index: 1;
+  background: radial-gradient(circle, rgba(212,43,43,0.15) 0%, transparent 60%);
+  transform: translate(-50%, -50%);
+  transition: opacity 0.4s ease;
+  mix-blend-mode: screen;
+}
+
+/* Glowing section dividers */
+.sec-hd-title::before {
+  box-shadow: 0 0 20px var(--nx-accent), 0 0 40px rgba(212,43,43,0.5) !important;
+  animation: nxAccentPulse 2.5s ease infinite;
+}
+@keyframes nxAccentPulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 16px var(--nx-accent), 0 0 32px rgba(212,43,43,0.4); }
+  50% { opacity: 0.7; box-shadow: 0 0 28px var(--nx-accent), 0 0 56px rgba(212,43,43,0.7); }
+}
+
+/* Holographic shimmer on KPI card tops */
+.kpi::before {
+  background: linear-gradient(180deg, var(--nx-accent) 0%, transparent 100%) !important;
+  box-shadow: 0 0 8px rgba(212,43,43,0.6);
+}
+
+/* 3D-flip section entry */
+.sec.active {
+  animation: nx3dFlipIn 0.6s var(--nx-ease) !important;
+  transform-style: preserve-3d;
+  perspective: 2000px;
+}
+@keyframes nx3dFlipIn {
+  0% { opacity: 0; transform: perspective(2000px) rotateX(-8deg) translateY(20px); }
+  100% { opacity: 1; transform: perspective(2000px) rotateX(0deg) translateY(0); }
+}
+
+/* Neon border on hover for .card.click */
+.card.click { position: relative; }
+.card.click::after {
+  content: ""; position: absolute; inset: -1px; border-radius: 3px; pointer-events: none;
+  background: linear-gradient(135deg, rgba(212,43,43,0) 0%, rgba(212,43,43,0.5) 50%, rgba(212,43,43,0) 100%);
+  opacity: 0; transition: opacity 0.4s ease;
+  filter: blur(1px);
+  z-index: -1;
+}
+.card.click:hover::after { opacity: 1; }
+
+/* Numeric pulse on value change */
+@keyframes nxNumPulse { 0% { text-shadow: 0 0 40px var(--nx-accent); } 100% { text-shadow: 0 0 0 transparent; } }
+
+/* Topbar upgrade — neon underline */
+.tb::after, .topbar::after {
+  content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--nx-accent) 50%, transparent 100%);
+  animation: nxBorderSlide 4s ease infinite;
+}
+@keyframes nxBorderSlide { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+.tb, .topbar { position: relative !important; }
+
+/* Sidebar brand / header glow */
+aside.sb .sb-hd {
+  background: radial-gradient(ellipse at top, rgba(212,43,43,0.12) 0%, transparent 70%);
+  position: relative;
+}
+
+/* Micro-interaction: ripple on button click */
+.btn, button.btn { position: relative; overflow: hidden; }
+@keyframes nxRipple { 0% { transform: scale(0); opacity: 0.6; } 100% { transform: scale(4); opacity: 0; } }
+
+/* Respect motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  #nx-bg-shader, #nx-cursor-glow { display: none; }
+}
 
 /* Brand watermark in corner --------------------------------- */
 body::after {
@@ -1513,6 +1657,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
 
   <!-- OVERVIEW -->
   <div class="sec active" id="sec-overview">
+    <div id="nx-hero-3d"><div id="nx-hero-overlay"><div><div id="nx-hero-title">NEXUS</div><div id="nx-hero-sub">Odd Not Even · Live Business Intelligence</div></div><div id="nx-hero-stats"></div></div></div>
     <div class="sec-hd"><div class="sec-hd-title">COMMAND OVERVIEW</div><div class="sec-hd-line"></div><div class="sec-hd-sub">Jan&ndash;Feb 2026 &middot; Click any metric for deep analysis</div></div>
     <div class="ins-strip">
       <span class="ins" onclick="drill('feb-surge')"><span class="ins-dot" style="background:var(--grn)"></span>Feb +64% vs Jan &mdash; event channel surge</span>
@@ -8260,6 +8405,410 @@ if (typeof Chart !== 'undefined') {
 })();
 
 </script>
+
+<div id="nx-cursor-glow"></div>
+<canvas id="nx-bg-shader"></canvas>
+<div id="nx-intro-splash"><canvas id="nx-intro-canvas"></canvas></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   NEXUS · GOD MODE 3D RUNTIME
+   Intro splash · WebGL background · Three.js hero · cursor
+   glow · card tilt · sidebar nav particle burst
+   ══════════════════════════════════════════════════════════ */
+(function(){
+  const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduced || typeof THREE === 'undefined') {
+    // graceful no-op if three.js didn't load or user wants less motion
+    const splash = document.getElementById('nx-intro-splash');
+    if (splash) splash.classList.add('done');
+    return;
+  }
+
+  /* ── 1. Cursor-following red glow ───────────────────── */
+  const glow = document.getElementById('nx-cursor-glow');
+  if (glow) {
+    document.addEventListener('mousemove', (e) => {
+      glow.style.left = e.clientX + 'px';
+      glow.style.top = e.clientY + 'px';
+    });
+  }
+
+  /* ── 2. Card / KPI tilt on mousemove ────────────────── */
+  function tiltInit(el) {
+    let rect;
+    el.addEventListener('mouseenter', () => { rect = el.getBoundingClientRect(); });
+    el.addEventListener('mousemove', (e) => {
+      if (!rect) rect = el.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+      el.style.setProperty('--rx', (x * 8).toFixed(2) + 'deg');
+      el.style.setProperty('--ry', (-y * 8).toFixed(2) + 'deg');
+    });
+    el.addEventListener('mouseleave', () => {
+      el.style.setProperty('--rx', '0deg');
+      el.style.setProperty('--ry', '0deg');
+      rect = null;
+    });
+  }
+  const installTilts = () => {
+    document.querySelectorAll('.kpi:not([data-nx-tilt]), .card.click:not([data-nx-tilt])').forEach(el => {
+      el.setAttribute('data-nx-tilt', '1'); tiltInit(el);
+    });
+  };
+  setTimeout(installTilts, 600);
+  new MutationObserver(() => setTimeout(installTilts, 200)).observe(document.body, { childList: true, subtree: true });
+
+  /* ── 3. WebGL background shader — flowing aurora ───── */
+  const bgCanvas = document.getElementById('nx-bg-shader');
+  const bgRenderer = new THREE.WebGLRenderer({ canvas: bgCanvas, antialias: true, alpha: true });
+  bgRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  bgRenderer.setSize(window.innerWidth, window.innerHeight);
+  const bgScene = new THREE.Scene();
+  const bgCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  const bgGeom = new THREE.PlaneGeometry(2, 2);
+  const bgMat = new THREE.ShaderMaterial({
+    uniforms: {
+      u_time: { value: 0 },
+      u_res: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+      u_mouse: { value: new THREE.Vector2(0.5, 0.5) }
+    },
+    vertexShader: `
+      varying vec2 vUv;
+      void main() { vUv = uv; gl_Position = vec4(position, 1.0); }
+    `,
+    fragmentShader: `
+      precision highp float;
+      varying vec2 vUv;
+      uniform float u_time;
+      uniform vec2 u_res;
+      uniform vec2 u_mouse;
+
+      // Simplex-ish smoothed noise
+      float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float noise(vec2 p) {
+        vec2 i = floor(p); vec2 f = fract(p);
+        float a = hash(i);
+        float b = hash(i + vec2(1.0, 0.0));
+        float c = hash(i + vec2(0.0, 1.0));
+        float d = hash(i + vec2(1.0, 1.0));
+        vec2 u = f * f * (3.0 - 2.0 * f);
+        return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+      }
+      float fbm(vec2 p) {
+        float v = 0.0; float a = 0.5;
+        for (int i = 0; i < 5; i++) {
+          v += a * noise(p);
+          p *= 2.0; a *= 0.5;
+        }
+        return v;
+      }
+
+      void main() {
+        vec2 uv = vUv;
+        vec2 aspect = vec2(u_res.x / u_res.y, 1.0);
+        vec2 p = (uv - 0.5) * aspect;
+        float t = u_time * 0.08;
+        vec2 q = vec2(fbm(p + t), fbm(p + vec2(2.3, 5.1) + t));
+        vec2 r = vec2(fbm(p + q + vec2(1.7, 9.2) + 0.15 * t),
+                      fbm(p + q + vec2(8.3, 2.8) + 0.126 * t));
+        float f = fbm(p + r);
+        // mouse warp
+        vec2 m = (u_mouse - 0.5) * aspect;
+        float mouseInfluence = exp(-length(p - m) * 4.0) * 0.3;
+        f += mouseInfluence;
+        // red-dominant palette with cream highlights
+        vec3 col = mix(vec3(0.04, 0.02, 0.02), vec3(0.83, 0.17, 0.17), pow(f, 2.0));
+        col = mix(col, vec3(0.94, 0.92, 0.87), pow(f * 0.7, 5.0) * 0.5);
+        // vignette
+        float vig = smoothstep(1.4, 0.4, length((uv - 0.5) * 2.0));
+        col *= vig;
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `
+  });
+  const bgMesh = new THREE.Mesh(bgGeom, bgMat);
+  bgScene.add(bgMesh);
+  window.addEventListener('resize', () => {
+    bgRenderer.setSize(window.innerWidth, window.innerHeight);
+    bgMat.uniforms.u_res.value.set(window.innerWidth, window.innerHeight);
+  });
+  window.addEventListener('mousemove', (e) => {
+    bgMat.uniforms.u_mouse.value.set(e.clientX / window.innerWidth, 1.0 - e.clientY / window.innerHeight);
+  });
+  const bgStart = performance.now();
+  function bgLoop() {
+    bgMat.uniforms.u_time.value = (performance.now() - bgStart) / 1000;
+    bgRenderer.render(bgScene, bgCam);
+    requestAnimationFrame(bgLoop);
+  }
+  bgLoop();
+
+  /* ── 4. Hero 3D scene — particles + revenue bars ──── */
+  let heroStarted = false;
+  function initHero() {
+    if (heroStarted) return;
+    const container = document.getElementById('nx-hero-3d');
+    if (!container) return;
+    heroStarted = true;
+
+    const W = container.clientWidth, H = container.clientHeight;
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x0a0a0a, 8, 25);
+    const cam = new THREE.PerspectiveCamera(55, W / H, 0.1, 100);
+    cam.position.set(0, 3, 11);
+    cam.lookAt(0, 0, 0);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(W, H);
+    container.appendChild(renderer.domElement);
+
+    // Lights
+    const ambient = new THREE.AmbientLight(0x332222, 0.6);
+    scene.add(ambient);
+    const keyLight = new THREE.PointLight(0xD42B2B, 2.5, 30);
+    keyLight.position.set(4, 5, 5);
+    scene.add(keyLight);
+    const fillLight = new THREE.PointLight(0xF0EBE0, 0.6, 20);
+    fillLight.position.set(-4, 3, 3);
+    scene.add(fillLight);
+
+    // Particle field — 1500 points
+    const N = 1500;
+    const geom = new THREE.BufferGeometry();
+    const positions = new Float32Array(N * 3);
+    const colors = new Float32Array(N * 3);
+    for (let i = 0; i < N; i++) {
+      positions[i*3]   = (Math.random() - 0.5) * 30;
+      positions[i*3+1] = (Math.random() - 0.5) * 15;
+      positions[i*3+2] = (Math.random() - 0.5) * 20 - 2;
+      const shade = Math.random();
+      if (shade > 0.85) { colors[i*3]=0.83; colors[i*3+1]=0.17; colors[i*3+2]=0.17; }
+      else { colors[i*3]=0.94; colors[i*3+1]=0.92; colors[i*3+2]=0.87; }
+    }
+    geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    const pmat = new THREE.PointsMaterial({
+      size: 0.06, vertexColors: true, transparent: true, opacity: 0.8,
+      sizeAttenuation: true, blending: THREE.AdditiveBlending, depthWrite: false
+    });
+    const points = new THREE.Points(geom, pmat);
+    scene.add(points);
+
+    // Glowing torus (holographic ring)
+    const ringGeom = new THREE.TorusGeometry(3.2, 0.05, 16, 180);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xD42B2B, transparent: true, opacity: 0.55 });
+    const ring = new THREE.Mesh(ringGeom, ringMat);
+    ring.rotation.x = Math.PI / 2.5;
+    scene.add(ring);
+    const ring2Geom = new THREE.TorusGeometry(3.8, 0.015, 16, 180);
+    const ring2Mat = new THREE.MeshBasicMaterial({ color: 0xF0EBE0, transparent: true, opacity: 0.25 });
+    const ring2 = new THREE.Mesh(ring2Geom, ring2Mat);
+    ring2.rotation.x = Math.PI / 2.5;
+    ring2.rotation.z = 0.3;
+    scene.add(ring2);
+
+    // Revenue bars from MIS (3 bars: Jan/Feb/Mar)
+    const bars = [];
+    const barGroup = new THREE.Group();
+    for (let i = 0; i < 3; i++) {
+      const g = new THREE.BoxGeometry(0.6, 1, 0.6);
+      const m = new THREE.MeshStandardMaterial({
+        color: 0xD42B2B, metalness: 0.3, roughness: 0.4, emissive: 0x4A0E0E, emissiveIntensity: 0.5
+      });
+      const b = new THREE.Mesh(g, m);
+      b.position.x = (i - 1) * 1.3;
+      b.position.y = 0;
+      barGroup.add(b);
+      bars.push(b);
+    }
+    barGroup.position.y = -1.5;
+    scene.add(barGroup);
+
+    // Floor grid for depth
+    const grid = new THREE.GridHelper(30, 30, 0x442222, 0x1a0808);
+    grid.position.y = -2;
+    grid.material.transparent = true; grid.material.opacity = 0.5;
+    scene.add(grid);
+
+    // Resize
+    function resize() {
+      const w = container.clientWidth, h = container.clientHeight;
+      cam.aspect = w / h; cam.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    }
+    window.addEventListener('resize', resize);
+    new ResizeObserver(resize).observe(container);
+
+    // Mouse parallax
+    let mx = 0, my = 0;
+    container.addEventListener('mousemove', (e) => {
+      const r = container.getBoundingClientRect();
+      mx = ((e.clientX - r.left) / r.width - 0.5) * 2;
+      my = ((e.clientY - r.top) / r.height - 0.5) * 2;
+    });
+
+    // Update bars from live MIS
+    function updateBars() {
+      const mis = (window.NEXUS_DATA_FILTERED && window.NEXUS_DATA_FILTERED.mis) || (window.NEXUS_DATA && window.NEXUS_DATA.mis);
+      if (!mis || !mis.gross) return;
+      const vals = [mis.gross.jan||0, mis.gross.feb||0, mis.gross.mar||0];
+      const max = Math.max(...vals, 1);
+      const hero = document.getElementById('nx-hero-stats');
+      if (hero) {
+        const ytd = mis.gross.ytd || 0;
+        const eb = (mis.ebitda && mis.ebitda.ytd) || 0;
+        const orders = (window.NEXUS_DATA_FILTERED && window.NEXUS_DATA_FILTERED.shopifyOnline && window.NEXUS_DATA_FILTERED.shopifyOnline.rows.length) || 0;
+        hero.innerHTML = `
+          <div class="nx-hero-stat"><div class="nx-hero-stat-l">YTD Gross</div><div class="nx-hero-stat-v">${(window.fmtINR ? fmtINR(ytd) : '₹'+ytd.toLocaleString())}</div></div>
+          <div class="nx-hero-stat"><div class="nx-hero-stat-l">EBITDA</div><div class="nx-hero-stat-v" style="color:${eb>=0?'#10B981':'#D42B2B'}">${(window.fmtINR ? fmtINR(eb, {signed:true}) : '₹'+eb.toLocaleString())}</div></div>
+          <div class="nx-hero-stat"><div class="nx-hero-stat-l">Orders</div><div class="nx-hero-stat-v">${orders.toLocaleString('en-IN')}</div></div>`;
+      }
+      bars.forEach((b, i) => {
+        const h = Math.max(0.2, (vals[i] / max) * 3.5);
+        // Animate scale
+        b.userData.targetHeight = h;
+      });
+    }
+    updateBars();
+    window.addEventListener('nx-data-updated', updateBars);
+    setInterval(updateBars, 2500); // catch data changes cheaply
+
+    // Animation loop
+    function loop() {
+      points.rotation.y += 0.0008;
+      points.rotation.x += 0.0003;
+      ring.rotation.z += 0.004;
+      ring2.rotation.z -= 0.0022;
+      // Bars animate height + subtle bob
+      bars.forEach((b, i) => {
+        const tgt = b.userData.targetHeight || 0.5;
+        b.scale.y += (tgt - b.scale.y) * 0.08;
+        b.position.y = b.scale.y / 2 + Math.sin(performance.now() / 800 + i) * 0.08;
+      });
+      barGroup.rotation.y = Math.sin(performance.now() / 3000) * 0.2 + mx * 0.3;
+      cam.position.x += ((mx * 1.2) - cam.position.x) * 0.05;
+      cam.position.y += ((3 - my * 0.8) - cam.position.y) * 0.05;
+      cam.lookAt(0, 0, 0);
+      renderer.render(scene, cam);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  }
+
+  /* ── 5. Intro splash — cinematic reveal ─────────────── */
+  function runIntro() {
+    const splash = document.getElementById('nx-intro-splash');
+    const canvas = document.getElementById('nx-intro-canvas');
+    if (!splash || !canvas) { initHero(); return; }
+    // Has user already seen it this session? Skip.
+    if (sessionStorage.getItem('nx-intro-done')) {
+      splash.classList.add('done');
+      setTimeout(() => splash.remove(), 800);
+      initHero();
+      return;
+    }
+    const W = window.innerWidth, H = window.innerHeight;
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(W, H);
+    const scene = new THREE.Scene();
+    const cam = new THREE.PerspectiveCamera(50, W / H, 0.1, 100);
+    cam.position.set(0, 0, 8);
+
+    // Build "NEXUS" from floating cubes forming text (procedural)
+    // Rows = letter pixel map (simple 5x7 font)
+    const FONT5x7 = {
+      N: ["10001","11001","10101","10011","10001","10001","10001"],
+      E: ["11111","10000","10000","11110","10000","10000","11111"],
+      X: ["10001","10001","01010","00100","01010","10001","10001"],
+      U: ["10001","10001","10001","10001","10001","10001","01110"],
+      S: ["01111","10000","10000","01110","00001","00001","11110"]
+    };
+    const letters = "NEXUS";
+    const cubeGroup = new THREE.Group();
+    const cubes = [];
+    const CELL = 0.28;
+    const LETTER_W = 6 * CELL; // 5 cols + 1 gap
+    const totalW = letters.length * LETTER_W - CELL;
+    letters.split('').forEach((ch, li) => {
+      const map = FONT5x7[ch]; if (!map) return;
+      for (let r = 0; r < 7; r++) {
+        for (let c = 0; c < 5; c++) {
+          if (map[r][c] === '1') {
+            const g = new THREE.BoxGeometry(CELL*0.85, CELL*0.85, CELL*0.85);
+            const m = new THREE.MeshStandardMaterial({
+              color: 0xD42B2B, emissive: 0xD42B2B, emissiveIntensity: 0.6,
+              metalness: 0.6, roughness: 0.3
+            });
+            const cube = new THREE.Mesh(g, m);
+            cube.userData.targetX = li * LETTER_W + c * CELL - totalW/2;
+            cube.userData.targetY = -(r * CELL) + 3 * CELL;
+            cube.userData.targetZ = 0;
+            // Start from random scatter
+            cube.position.set(
+              (Math.random() - 0.5) * 20,
+              (Math.random() - 0.5) * 15,
+              (Math.random() - 0.5) * 15 - 5
+            );
+            cube.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+            cubeGroup.add(cube);
+            cubes.push(cube);
+          }
+        }
+      }
+    });
+    scene.add(cubeGroup);
+    scene.add(new THREE.AmbientLight(0x442222, 0.5));
+    const light = new THREE.PointLight(0xD42B2B, 3, 50);
+    light.position.set(5, 5, 10);
+    scene.add(light);
+    const light2 = new THREE.PointLight(0xF0EBE0, 1, 30);
+    light2.position.set(-5, -3, 8);
+    scene.add(light2);
+
+    const start = performance.now();
+    const DURATION = 2200;
+    function loop() {
+      const t = Math.min(1, (performance.now() - start) / DURATION);
+      const ease = 1 - Math.pow(1 - t, 4); // easeOutQuart
+      cubes.forEach(c => {
+        c.position.x += (c.userData.targetX - c.position.x) * 0.08;
+        c.position.y += (c.userData.targetY - c.position.y) * 0.08;
+        c.position.z += (c.userData.targetZ - c.position.z) * 0.08;
+        c.rotation.x *= 0.93; c.rotation.y *= 0.93; c.rotation.z *= 0.93;
+      });
+      cubeGroup.rotation.y = (1 - ease) * Math.PI * 0.5;
+      cam.position.z = 10 - ease * 2;
+      renderer.render(scene, cam);
+      if (t < 1) requestAnimationFrame(loop);
+      else {
+        setTimeout(() => {
+          splash.classList.add('done');
+          setTimeout(() => { splash.remove(); sessionStorage.setItem('nx-intro-done','1'); initHero(); }, 800);
+        }, 400);
+      }
+    }
+    requestAnimationFrame(loop);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', runIntro);
+  } else {
+    runIntro();
+  }
+
+  // Dispatch data-updated event from inside renderNexus so hero refreshes
+  const origRN = window.renderNexus;
+  if (typeof origRN === 'function') {
+    window.renderNexus = function(d) {
+      origRN(d);
+      setTimeout(() => window.dispatchEvent(new CustomEvent('nx-data-updated')), 100);
+    };
+  }
+})();
+</script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>

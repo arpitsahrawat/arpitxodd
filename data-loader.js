@@ -643,7 +643,7 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
       // Post-process folders into analytics-ready shapes. Each produces a
       // sibling key on this.data without disturbing the raw folder view.
       try { this._postShopifySplit(); } catch(e){ this.warn('shopify split failed', String(e)); }
-      try { this._postInvoiceSections(); } catch(e){ this.warn('invoice sections failed', String(e)); }
+      try { await this._postInvoiceSections(); } catch(e){ this.warn('invoice sections failed', String(e)); }
       try { this._postAdspendsTranspose(); } catch(e){ this.warn('adspends transpose failed', String(e)); }
       try { this._postSkuFlatten(); } catch(e){ this.warn('sku flatten failed', String(e)); }
 
@@ -678,40 +678,69 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
     },
 
     // Invoice xlsx files have TWO tables stacked: invoice summary on top,
-    // then an "Item Details" banner, then item-wise detail. The generic
-    // _readTable picks one header row and mixes both. We re-parse from the
-    // raw matrix and split them cleanly.
-    _postInvoiceSections() {
+    // then an "Item Details" banner, then item-wise detail. Re-download
+    // each invoice file and parse the raw matrix with explicit section
+    // detection — much cleaner than the old column-shape heuristic.
+    async _postInvoiceSections() {
       const inv = this.data.invoices;
       if (!inv || !inv.files) return;
       const summary = [], items = [];
       for (const f of inv.files) {
         try {
-          // Re-download + raw-matrix read so section detection works
-          // We don't have arrayBuf cached; rely on already-merged f.rows
-          // plus a heuristic based on column shape.
-          // Practically, f.rows (smart-header result) contains some mix.
-          // Re-fetch for clean split.
-          // NOTE: The download is blocking but cached by the browser http
-          // layer after first fetch so it's inexpensive.
-        } catch(_) {}
-      }
-      // Heuristic splitter on already-merged rows (no re-download needed).
-      for (const f of inv.files) {
-        for (const r of f.rows) {
-          const keys = Object.keys(r);
-          const hasItemName  = keys.some(k => /item.*name/i.test(k));
-          const hasUnitPrice = keys.some(k => /unit.*price/i.test(k));
-          const hasTotalAmt  = keys.some(k => /total.*amount/i.test(k));
-          const hasParty     = keys.some(k => /party.*name|customer|buyer/i.test(k));
-          const row = Object.assign({ _source: f.name }, r);
-          if (hasItemName || hasUnitPrice) items.push(row);
-          else if (hasParty || hasTotalAmt) summary.push(row);
+          // Locate the original Drive file id via this.files.invoices
+          const meta = (this.files.invoices || []).find(x => x.name === f.name);
+          if (!meta) continue;
+          const buf = await this.downloadFile(meta.id);
+          const wb  = XLSX.read(buf, { type: 'array' });
+          const ws  = wb.Sheets[wb.SheetNames[0]];
+          const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+
+          // Find section markers
+          let sumHdr = -1, itemMarker = -1, itemHdr = -1;
+          for (let i = 0; i < raw.length; i++) {
+            const row = raw[i] || [];
+            const first = String(row[0]||'').trim();
+            if (sumHdr < 0 && /^Date$/i.test(first) &&
+                row.some(c => /party.*name/i.test(String(c||''))) &&
+                row.some(c => /total.*amount/i.test(String(c||'')))) {
+              sumHdr = i;
+            }
+            if (itemMarker < 0 && /item\s*details|item\s*wise/i.test(first)) itemMarker = i;
+            if (itemMarker >= 0 && i > itemMarker && itemHdr < 0 &&
+                /^Date$/i.test(first) &&
+                row.some(c => /item.*name/i.test(String(c||'')))) {
+              itemHdr = i;
+            }
+          }
+
+          const parseSection = (headerIdx, endIdx) => {
+            if (headerIdx < 0) return [];
+            const hdr = (raw[headerIdx] || []).map((h,j) => h != null ? String(h).trim() : `col${j}`);
+            const out = [];
+            for (let i = headerIdx + 1; i < endIdx; i++) {
+              const r = raw[i];
+              if (!r || r.every(c => c == null || String(c).trim() === '')) continue;
+              const first = String(r[0]||'').trim();
+              if (/^(total|item\s*details)/i.test(first)) continue;  // guard row
+              const obj = { _source: f.name };
+              for (let j = 0; j < hdr.length; j++) obj[hdr[j] || `col${j}`] = r[j];
+              out.push(obj);
+            }
+            return out;
+          };
+
+          const sumEnd = itemMarker >= 0 ? itemMarker : raw.length;
+          const fileSummary = parseSection(sumHdr, sumEnd);
+          const fileItems   = parseSection(itemHdr, raw.length);
+          summary.push(...fileSummary);
+          items.push(...fileItems);
+        } catch (e) {
+          this.warn(`  invoice reparse failed for ${f.name}`, String(e));
         }
       }
       this.data.invoicesSummary = { rows: summary };
       this.data.invoicesItems   = { rows: items };
-      this.log(`  split invoices: ${summary.length} summary rows, ${items.length} item rows`);
+      this.log(`  reparse invoices: ${summary.length} summary rows, ${items.length} item rows (from raw-matrix split)`);
     },
 
     // Ad spend files store days 1-31 as rows and months as columns (with

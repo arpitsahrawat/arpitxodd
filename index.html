@@ -4592,6 +4592,209 @@ function topN(obj, n){
   return Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n);
 }
 
+// ── H2 #16 COHORT / REPEAT ANALYSIS ───────────────────────
+// Uses Shopify order-number prefix as a stand-in customer key (no
+// email in the CDC export). Groups by first-month, tracks repeat
+// purchase rate. Rendered on Sales page below channel P&L.
+function renderCohortAnalysis(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const sO = (data.shopifyOnline && data.shopifyOnline.rows) || [];
+  if(!sO.length) return;
+  const dateKey = findKey(sO[0], [/order\s*date/i]);
+  const orderKey = findKey(sO[0], [/^shopify\s*order\s*number$/i, /unique\s*order\s*number/i, /st\s*unique\s*order\s*id/i]);
+  if(!dateKey || !orderKey) return;
+  // Build per-unique-order first-date map (multiple rows can share an order id)
+  const orderFirst = new Map();
+  for(const r of sO){
+    const oid = String(r[orderKey]||'').trim(); if(!oid) continue;
+    const dt = new Date(r[dateKey]); if(!isFinite(dt.valueOf())) continue;
+    const prev = orderFirst.get(oid);
+    if(!prev || dt < prev) orderFirst.set(oid, dt);
+  }
+  // Cohort by first-seen month. Shopify "CDC" orders don't share customers
+  // by order id, so this is effectively a per-order monthly cohort.
+  const byCohort = {};
+  for(const [oid, dt] of orderFirst){
+    const m = dt.toISOString().slice(0,7);
+    byCohort[m] = byCohort[m] || { month:m, orders:0, uniqueCustomers: new Set() };
+    byCohort[m].orders++;
+    // Customer proxy: share stem of order id before numeric suffix
+    const stem = oid.replace(/\d+$/, '') || oid;
+    byCohort[m].uniqueCustomers.add(stem);
+  }
+  const cohorts = Object.values(byCohort).sort((a,b)=>a.month.localeCompare(b.month));
+  if(!cohorts.length) return;
+  const host = document.getElementById('sales-deep');
+  if(!host) return;
+  const html = `<div style="margin-top:14px"><div style="font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:.07em;margin-bottom:6px">Cohort &amp; Repeat (proxy: order-id stem)</div>
+    <table class="tbl" style="font-size:10px"><thead><tr><th style="text-align:left">Cohort (month)</th><th>Orders</th><th>Unique IDs</th><th>Orders/ID</th></tr></thead><tbody>
+      ${cohorts.map(c => `<tr>
+        <td style="text-align:left">${escapeHTML(c.month)}</td>
+        <td>${fmtNum(c.orders)}</td>
+        <td>${fmtNum(c.uniqueCustomers.size)}</td>
+        <td>${(c.orders/Math.max(c.uniqueCustomers.size,1)).toFixed(2)}</td>
+      </tr>`).join('')}
+    </tbody></table>
+    <div style="font-size:9px;color:var(--dim);margin-top:4px">True cohort retention needs a persistent customer key (email, phone). The CDC Online export doesn't expose one, so this uses the order-id stem as a proxy. Replace with real customer key when available.</div>
+  </div>`;
+  let wrap = host.querySelector('.nx-cohort');
+  if(!wrap){ wrap = document.createElement('div'); wrap.className = 'nx-cohort'; host.appendChild(wrap); }
+  wrap.innerHTML = html;
+}
+
+// ── H2 #17 SELL-THROUGH / VELOCITY ────────────────────────
+// For each SKU with a cost, compute units sold online+retail, revenue,
+// and inferred sell-through (units sold / days on sale). No starting
+// stock in the data, so we report velocity per day rather than %.
+function renderSellThrough(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const sO = (data.shopifyOnline && data.shopifyOnline.rows) || [];
+  const sR = (data.shopifyRetail && data.shopifyRetail.rows) || [];
+  if(!sO.length && !sR.length) return;
+  const onName = sO[0] ? findKey(sO[0], [/^product\s*name$/i]) : null;
+  const onQty  = sO[0] ? findKey(sO[0], [/product\s*quantity/i, /^quantity$/i]) : null;
+  const onDate = sO[0] ? findKey(sO[0], [/order\s*date/i]) : null;
+  const rtName = sR[0] ? findKey(sR[0], [/style.*name/i, /^style$/i]) : null;
+  const rtQty  = sR[0] ? findKey(sR[0], [/^qty$/i]) : null;
+  const rtDate = sR[0] ? findKey(sR[0], [/^date$/i]) : null;
+  const agg = {};
+  const dateSpan = { min: null, max: null };
+  const track = (name, qty, when) => {
+    if(!name) return;
+    const key = String(name).trim(); if(!key) return;
+    agg[key] = agg[key] || { name:key, units:0, firstSale:null, lastSale:null };
+    agg[key].units += isFinite(qty)?qty:1;
+    if(when){ const d = new Date(when); if(isFinite(d.valueOf())){
+      if(!agg[key].firstSale || d < agg[key].firstSale) agg[key].firstSale = d;
+      if(!agg[key].lastSale  || d > agg[key].lastSale)  agg[key].lastSale  = d;
+      if(!dateSpan.min || d < dateSpan.min) dateSpan.min = d;
+      if(!dateSpan.max || d > dateSpan.max) dateSpan.max = d;
+    }}
+  };
+  for(const r of sO) track(onName?r[onName]:null, onQty?toNum(r[onQty]):1, onDate?r[onDate]:null);
+  for(const r of sR) track(rtName?r[rtName]:null, rtQty ?toNum(r[rtQty]):1, rtDate?r[rtDate]:null);
+  const L = window.NEXUS_LIVE;
+  const products = Object.values(agg).map(p => {
+    const rc = L.resolveCost(p.name);
+    const daysOnSale = (p.firstSale && p.lastSale) ? Math.max(1, Math.round((p.lastSale - p.firstSale)/86400000)+1) : 1;
+    const velocity = p.units / daysOnSale;
+    return Object.assign(p, { cost: rc.cost, daysOnSale, velocity });
+  }).sort((a,b) => b.velocity - a.velocity).slice(0, 15);
+  if(!products.length) return;
+  const sec = document.getElementById('sec-products');
+  if(!sec) return;
+  let wrap = document.getElementById('nx-sellthrough');
+  if(!wrap){
+    wrap = document.createElement('div'); wrap.id = 'nx-sellthrough'; wrap.className = 'card mb14';
+    sec.appendChild(wrap);
+  }
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Sell-Through Velocity (top 15)</div><div class="card-sub">Units per day · combines online + retail · ${dateSpan.min?dateSpan.min.toISOString().slice(0,10):'—'} → ${dateSpan.max?dateSpan.max.toISOString().slice(0,10):'—'}</div></div>
+    <table class="tbl" style="font-size:10px"><thead><tr><th>#</th><th style="text-align:left">Product</th><th>Units</th><th>Days</th><th>u/day</th><th>Cost</th></tr></thead><tbody>
+      ${products.map((p,i) => `<tr><td>${String(i+1).padStart(2,'0')}</td>
+        <td style="text-align:left">${escapeHTML(p.name.slice(0,44))}</td>
+        <td>${fmtNum(p.units)}</td>
+        <td>${p.daysOnSale}</td>
+        <td>${p.velocity.toFixed(2)}</td>
+        <td>${isFinite(p.cost)?fmtINR(p.cost):'<span class="neg">—</span>'}</td></tr>`).join('')}
+    </tbody></table>`;
+}
+
+// ── H2 #19 B2B PARTY SEGMENTATION (2×2 quadrant) ──────────
+// Anchor (recurring + large) · Growth (small + recurring) · One-off (large + one) · Risky (small + one)
+// Thresholds: ≥3 invoices = "recurring"; revenue ≥ median = "large".
+function renderB2BSegmentation(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const parties = (window.__B2B_AGG && window.__B2B_AGG.parties) || [];
+  if(!parties.length) return;
+  const revenues = parties.map(p => p.revenue).sort((a,b)=>a-b);
+  const median = revenues[Math.floor(revenues.length/2)] || 0;
+  const segs = { anchor:[], growth:[], oneoff:[], risky:[] };
+  for(const p of parties){
+    const recurring = p.count >= 3;
+    const large = p.revenue >= median;
+    const key = recurring && large ? 'anchor' : recurring ? 'growth' : large ? 'oneoff' : 'risky';
+    segs[key].push(p);
+  }
+  const sec = document.getElementById('sec-b2b');
+  if(!sec) return;
+  let wrap = document.getElementById('nx-b2b-segments');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id = 'nx-b2b-segments'; wrap.className = 'card mb14'; sec.appendChild(wrap); }
+  const box = (title, list, colour, desc) => `<div style="background:var(--bg1);border:1px solid var(--border);border-radius:3px;padding:10px;border-left:3px solid ${colour}">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:.07em;margin-bottom:2px">${title} (${list.length})</div>
+    <div style="font-size:9px;color:var(--dim);margin-bottom:6px">${desc}</div>
+    ${list.slice(0,5).map(p => `<div style="font-size:10px;color:var(--cream);padding:2px 0">${escapeHTML(p.name.slice(0,30))} <span style="color:var(--muted)">${fmtINR(p.revenue)}</span></div>`).join('') || '<div style="color:var(--dim);font-size:9px">—</div>'}
+  </div>`;
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">B2B Segmentation (2×2)</div><div class="card-sub">Recurring = ≥3 invoices · Large = above median (${fmtINR(median)})</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      ${box('ANCHOR', segs.anchor, '#10B981', 'Recurring + large — protect these')}
+      ${box('GROWTH', segs.growth, '#E8E0D0', 'Recurring but small — nurture')}
+      ${box('ONE-OFF', segs.oneoff, '#F59E0B', 'Large but singular — chase repeat')}
+      ${box('RISKY',   segs.risky,  '#D42B2B', 'Small + one invoice — deprioritise')}
+    </div>`;
+}
+
+// ── H2 #20 ROLLING CAC / ROAS ────────────────────────────
+// Compute monthly CAC = spend / orders (online), and rolling ROAS =
+// monthly revenue / monthly spend. No per-campaign attribution (GA4
+// export has no revenue linkage), but gross CAC/ROAS are computable.
+function renderRollingCAC(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const sO = (data.shopifyOnline && data.shopifyOnline.rows) || [];
+  const monthlySpend = data.adspendsMonthly || {};
+  if(!sO.length || !Object.keys(monthlySpend).length) return;
+  const dk = findKey(sO[0], [/order\s*date/i]);
+  const tot = findKey(sO[0], [/total\s*order\s*value/i]);
+  if(!dk) return;
+  const byMonth = {};
+  for(const r of sO){
+    const m = monthOf(r[dk]); if(!m) continue;
+    byMonth[m] = byMonth[m] || { orders:0, revenue:0 };
+    byMonth[m].orders++;
+    if(tot){ const v = toNum(r[tot]); if(isFinite(v)) byMonth[m].revenue += v; }
+  }
+  const months = Object.keys(byMonth).sort();
+  if(!months.length) return;
+  const rows = months.map(m => {
+    const spend = monthlySpend[m] || 0;
+    const d = byMonth[m];
+    return {
+      month: m,
+      spend,
+      orders: d.orders,
+      revenue: d.revenue,
+      cac: d.orders > 0 ? spend / d.orders : null,
+      roas: spend > 0 ? d.revenue / spend : null
+    };
+  });
+  const sec = document.getElementById('sec-marketing');
+  if(!sec) return;
+  let wrap = document.getElementById('nx-rolling-cac');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id = 'nx-rolling-cac'; wrap.className = 'card mb14'; sec.appendChild(wrap); }
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Rolling CAC &amp; ROAS (monthly)</div><div class="card-sub">Ad spend ÷ online orders, online revenue ÷ spend</div></div>
+    <table class="tbl" style="font-size:10px"><thead><tr><th>Month</th><th>Spend</th><th>Orders</th><th>CAC</th><th>Revenue</th><th>ROAS</th></tr></thead><tbody>
+      ${rows.map(r => `<tr>
+        <td>${escapeHTML(r.month)}</td>
+        <td>${fmtINR(r.spend)}</td>
+        <td>${fmtNum(r.orders)}</td>
+        <td class="${r.cac>1000?'neg':''}">${isFinite(r.cac)?fmtINR(r.cac):'—'}</td>
+        <td>${fmtINR(r.revenue)}</td>
+        <td class="${r.roas>=4?'pos':r.roas<2?'neg':''}">${isFinite(r.roas)?r.roas.toFixed(2)+'×':'—'}</td>
+      </tr>`).join('')}
+    </tbody></table>`;
+}
+
+// Hook all four into the render cycle
+const __prevRenderNx5 = window.renderNexus;
+window.renderNexus = function(data){
+  __prevRenderNx5(data);
+  setTimeout(() => {
+    try { renderCohortAnalysis(); } catch(e){ console.error('renderCohortAnalysis', e); }
+    try { renderSellThrough(); } catch(e){ console.error('renderSellThrough', e); }
+    try { renderB2BSegmentation(); } catch(e){ console.error('renderB2BSegmentation', e); }
+    try { renderRollingCAC(); } catch(e){ console.error('renderRollingCAC', e); }
+  }, 240);
+};
+
 // ── H2 #14 CHANNEL P&L ALLOCATION ──────────────────────────
 // Attribute ad spend (from adspendsMonthly) + CDC commission (from
 // merchant_commission column) + returns to each channel → contribution

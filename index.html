@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ODD NOT EVEN · NEXUS</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#D42B2B">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%230a0a0a'/%3E%3Ctext x='256' y='320' font-family='Arial' font-size='280' fill='%23D42B2B' text-anchor='middle' font-weight='700'%3EN%3C/text%3E%3C/svg%3E">
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));}</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -774,6 +778,17 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
 /* RESPONSIVE */
 @media(max-width:1100px){.k5{grid-template-columns:repeat(3,1fr)}.g3,.g4{grid-template-columns:1fr 1fr}.g21,.g12{grid-template-columns:1fr}}
 @media(max-width:768px){.sb{transform:translateX(-100%)}.main{margin-left:0}.g2{grid-template-columns:1fr}.k5,.k4{grid-template-columns:1fr 1fr}}
+</style>
+<style id="nx-print-style">
+@media print {
+  aside.sb, .tb, #nx-filter-bar, .nx-dp-hd, #nx-debug-panel, #nx-fb-toggle, .sb-foot { display: none !important; }
+  main { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
+  .sec { display: block !important; page-break-after: always; }
+  .card { page-break-inside: avoid; margin-bottom: 14px !important; border: 1px solid #ccc !important; }
+  body, html { background: white !important; color: black !important; }
+  .kpi, .kpi-val, .kpi-lbl, .kpi-foot, td, th { color: black !important; }
+  canvas { max-height: 260px !important; }
+}
 </style>
 </head>
 <body>
@@ -4398,6 +4413,155 @@ function renderDataQuality(data){
     return;
   }
   host.innerHTML = issues.map(i => `<div style="font-size:10px;color:${i.level==='err'?'var(--red)':'#F59E0B'};padding:2px 0">${i.level==='err'?'✗':'⚠'} ${escapeHTML(i.text)}</div>`).join('');
+}
+
+// ── H2 #22 DATE RANGE PICKER ──────────────────────────────
+// Replaces the single "Month" selector with a from/to range. Persists
+// on window.NEXUS_FILTERS.dateFrom / dateTo (YYYY-MM-DD). applyFilters
+// uses whichever filter is tighter (month selector OR range).
+function renderDateRange(){
+  const bar = document.getElementById('nx-filter-bar'); if(!bar) return;
+  if(bar.querySelector('#nxf-range-from')) return;
+  const monthSel = bar.querySelector('#nxf-month');
+  if(!monthSel) return;
+  const wrap = document.createElement('span');
+  wrap.style.cssText = 'display:flex;gap:4px;align-items:center';
+  wrap.innerHTML = `<span style="color:var(--dim);font-size:9px">Range</span>
+    <input type="date" id="nxf-range-from" style="background:var(--bg1);color:var(--cream);border:1px solid var(--border);padding:3px 6px;font-family:inherit;font-size:inherit;color-scheme:dark">
+    <span style="color:var(--dim)">→</span>
+    <input type="date" id="nxf-range-to" style="background:var(--bg1);color:var(--cream);border:1px solid var(--border);padding:3px 6px;font-family:inherit;font-size:inherit;color-scheme:dark">`;
+  monthSel.parentNode.after(wrap);
+  const f = document.getElementById('nxf-range-from');
+  const t = document.getElementById('nxf-range-to');
+  f.value = window.NEXUS_FILTERS.dateFrom || '';
+  t.value = window.NEXUS_FILTERS.dateTo || '';
+  f.onchange = e => { window.NEXUS_FILTERS.dateFrom = e.target.value; rehydrate(); };
+  t.onchange = e => { window.NEXUS_FILTERS.dateTo = e.target.value; rehydrate(); };
+}
+// Extend applyFilters to honor the range
+const __prevApplyFilters = window.applyFilters;
+window.applyFilters = function(data){
+  const out = __prevApplyFilters ? __prevApplyFilters(data) : data;
+  const f = window.NEXUS_FILTERS;
+  if(!f.dateFrom && !f.dateTo) return out;
+  const from = f.dateFrom ? new Date(f.dateFrom) : null;
+  const to   = f.dateTo   ? new Date(f.dateTo)   : null;
+  const inRange = (v) => {
+    const d = typeof v === 'string' ? (() => {
+      const dmy = v.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+      if(dmy){ let y = Number(dmy[3]); if(y<100) y += 2000; return new Date(y, Number(dmy[2])-1, Number(dmy[1])); }
+      return new Date(v);
+    })() : new Date(v);
+    if(!isFinite(d.valueOf())) return true;
+    if(from && d < from) return false;
+    if(to && d > to) return false;
+    return true;
+  };
+  const filtered = Object.assign({}, out);
+  for(const key of Object.keys(out)){
+    if(key === 'mis') continue;
+    const d = out[key]; if(!d || !d.rows) continue;
+    const dk = d.rows[0] ? findKey(d.rows[0], [/order\s*date/i, /^date$/i, /pickup.*date/i, /invoice.*date/i]) : null;
+    if(!dk) continue;
+    filtered[key] = Object.assign({}, d, { rows: d.rows.filter(r => inRange(r[dk])) });
+  }
+  return filtered;
+};
+
+// ── H2 #24 SAVED VIEWS ────────────────────────────────────
+// Persist named filter combos in localStorage. Sidebar-popup already
+// exists in markup; this wires it.
+const VIEWS_KEY = 'nexus_saved_views_v1';
+function loadSavedViews(){
+  try { return JSON.parse(localStorage.getItem(VIEWS_KEY)||'[]'); } catch(_){ return []; }
+}
+function saveSavedViews(views){ try { localStorage.setItem(VIEWS_KEY, JSON.stringify(views)); } catch(_){} }
+window.saveCurrentView = function(){
+  const name = prompt('Name this view (e.g. "Feb · Online · Delhi"):');
+  if(!name) return;
+  const views = loadSavedViews();
+  views.push({ name, filters: Object.assign({}, window.NEXUS_FILTERS), savedAt: new Date().toISOString() });
+  saveSavedViews(views);
+  renderSavedViewsList();
+};
+function applyView(view){
+  window.NEXUS_FILTERS = Object.assign({ month:'', source:'', channel:'', store:'', category:'', dateFrom:'', dateTo:'' }, view.filters);
+  rehydrate();
+}
+function deleteView(idx){
+  const views = loadSavedViews();
+  views.splice(idx, 1);
+  saveSavedViews(views);
+  renderSavedViewsList();
+}
+function renderSavedViewsList(){
+  const list = document.getElementById('fSavedList'); if(!list) return;
+  const views = loadSavedViews();
+  if(!views.length){ list.innerHTML = '<div style="padding:8px;color:var(--dim);font-size:9.5px">No saved views yet.</div>'; return; }
+  list.innerHTML = views.map((v, idx) => {
+    const fs = v.filters;
+    const chips = [fs.month, fs.channel, fs.store, fs.source].filter(Boolean);
+    return `<div style="display:flex;gap:6px;padding:4px 6px;border-bottom:1px solid rgba(255,255,255,0.04);align-items:center">
+      <div style="flex:1;cursor:pointer" onclick="applyView(${JSON.stringify(v).replace(/"/g,'&quot;')})">
+        <div style="font-size:10px;color:var(--cream)">${escapeHTML(v.name)}</div>
+        <div style="font-size:9px;color:var(--muted)">${chips.map(c=>escapeHTML(c).slice(0,15)).join(' · ')||'no filters'}</div>
+      </div>
+      <button onclick="deleteView(${idx})" style="background:transparent;border:1px solid var(--border);color:var(--red);padding:2px 6px;font-size:9px;cursor:pointer">×</button>
+    </div>`;
+  }).join('');
+}
+window.applyView = applyView;
+window.deleteView = deleteView;
+document.addEventListener('DOMContentLoaded', () => setTimeout(renderSavedViewsList, 200));
+setTimeout(renderSavedViewsList, 800);
+
+// Toggle the saved-views popup from a new button next to the filter bar
+function renderSavedViewsToggle(){
+  const bar = document.getElementById('nx-filter-bar'); if(!bar) return;
+  if(bar.querySelector('#nxf-views-btn')) return;
+  const clear = bar.querySelector('#nxf-clear');
+  const btn = document.createElement('button');
+  btn.id = 'nxf-views-btn';
+  btn.textContent = '★ Views';
+  btn.style.cssText = 'background:transparent;border:1px solid var(--border);color:var(--cream);padding:3px 10px;cursor:pointer;font-family:inherit;font-size:inherit;margin-right:6px';
+  btn.onclick = () => {
+    let pop = document.getElementById('fSavedPop');
+    if(pop) pop.style.display = pop.style.display === 'none' ? 'block' : 'none';
+  };
+  if(clear && clear.parentNode) clear.parentNode.insertBefore(btn, clear);
+}
+
+// Hook these extensions into initFilterBar
+const __prevInitFb = window.initFilterBar;
+if(typeof __prevInitFb === 'function'){
+  window.initFilterBar = function(data){
+    __prevInitFb(data);
+    setTimeout(() => { renderDateRange(); renderSavedViewsToggle(); renderSavedViewsList(); }, 20);
+  };
+}
+
+// ── H2 #28 PDF EXPORT (via window.print) ──────────────────
+function exportDashboardPdf(){
+  window.print();
+}
+function renderPrintButton(){
+  const bar = document.getElementById('nx-filter-bar'); if(!bar) return;
+  if(bar.querySelector('#nxf-print-btn')) return;
+  const clear = bar.querySelector('#nxf-clear');
+  const btn = document.createElement('button');
+  btn.id = 'nxf-print-btn';
+  btn.textContent = '🖨 PDF';
+  btn.style.cssText = 'background:transparent;border:1px solid var(--border);color:var(--cream);padding:3px 10px;cursor:pointer;font-family:inherit;font-size:inherit;margin-right:6px';
+  btn.onclick = exportDashboardPdf;
+  btn.title = 'Print the current page as PDF (Ctrl+P)';
+  if(clear && clear.parentNode) clear.parentNode.insertBefore(btn, clear);
+}
+const __prevInitFb2 = window.initFilterBar;
+if(typeof __prevInitFb2 === 'function'){
+  window.initFilterBar = function(data){
+    __prevInitFb2(data);
+    setTimeout(renderPrintButton, 30);
+  };
 }
 
 // ── DEEP-DIVE ANALYSIS HELPERS ─────────────────────────────

@@ -724,7 +724,9 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
     _postSkuFlatten() {
       const sku = this.data.sku;
       if (!sku || !sku.files) return;
-      const flat = [];
+      // Dedupe by normalized product name across every sheet of every file.
+      // If multiple rows match, prefer the one that has a valid cost.
+      const byName = new Map();
       for (const f of sku.files) {
         for (const r of (f.rows || [])) {
           const name = r['Product Name'] || r['Product name'] || r['product_name'] || r['Product'] || r['Item Name'];
@@ -733,19 +735,24 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
           if (!name) continue;
           const nameStr = String(name).trim();
           if (!nameStr || /^#(REF|NAME|DIV|VALUE)/.test(nameStr)) continue;
-          flat.push({
+          const entry = {
             name: nameStr,
             normalized: this._normalizeProductName(nameStr),
             cost: isFinite(cost) ? cost : null,
             selling: isFinite(sell) ? sell : null,
             hasCost: isFinite(cost) && cost > 0,
-            _source: f.name
-          });
+            _source: f.name,
+            _sheet: f.sheet
+          };
+          const key = entry.normalized;
+          const existing = byName.get(key);
+          if (!existing || (!existing.hasCost && entry.hasCost)) byName.set(key, entry);
         }
       }
+      const flat = Array.from(byName.values()).sort((a,b) => a.name.localeCompare(b.name));
       this.data.skuMaster = { rows: flat };
       const withCost = flat.filter(r => r.hasCost).length;
-      this.log(`  flatten sku: ${flat.length} products, ${withCost} with cost (${flat.length - withCost} missing)`);
+      this.log(`  flatten sku: ${flat.length} unique products, ${withCost} with cost (${flat.length - withCost} missing)`);
     },
 
     _parseMoney(v) {
@@ -919,8 +926,37 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
         cogs:       grab(/COGS/i),
         grossProfit:grab(/Gross\s*Profit/i),
         ebitda:     grab(/EBITDA/i),
-        commission: grab(/Commission/i)
+        commission: grab(/Commission/i),
+        discount:   grab(/^(Less:\s*)?(Website\s*)?Discount/i),
+        gst:        grab(/^(Less:\s*)?GST/i),
+        fdIncome:   grab(/FD\s*Interest|Interest\s*Income/i),
+        otherExp:   grab(/Other\s*Expenses/i),
+        directorSalary: grab(/Director.*Salary/i),
+        salary:     grab(/^Salary\s*Expense|^Salaries/i),
+        kaCharges:  grab(/KA\s*Professional|Karan\s*Aujla/i),
+        photoshoot: grab(/Photoshoot/i),
+        ads:        grab(/^Advertisement|^Ads?\b/i),
+        rent:       grab(/Office\s*Rent|^Rent\b/i),
+        gateway:    grab(/Payment\s*Gateway/i),
+        logistics:  grab(/^Logistics|^Shipping\s*Expense/i),
+        travel:     grab(/^Travel/i),
+        professional: grab(/Professional\s*Fees/i),
+        utilities:  grab(/^Utilities|^Internet\b|^Electricity/i)
       };
+      // Filter zero-everywhere lines so Financials → Operating Expenses only
+      // shows lines that actually exist in this period.
+      for (const k of Object.keys(data)) {
+        const r = data[k];
+        if (!r) { delete data[k]; continue; }
+        const allZero = !isFinite(r.jan) && !isFinite(r.feb) && !isFinite(r.mar) && !isFinite(r.ytd);
+        const sumZero = (r.jan||0) === 0 && (r.feb||0) === 0 && (r.mar||0) === 0 && (r.ytd||0) === 0;
+        if (allZero || sumZero) delete data[k];
+      }
+      // Ensure the big 6 always exist (even if zero) so downstream renderers
+      // that expect them don't break.
+      for (const k of ['gross','net','cogs','grossProfit','ebitda','commission']) {
+        if (!data[k]) data[k] = { jan:0, feb:0, mar:0, ytd:0 };
+      }
       data.jan = data.gross.jan; data.feb = data.gross.feb;
       data.mar = data.gross.mar; data.ytd = data.gross.ytd;
       return data;

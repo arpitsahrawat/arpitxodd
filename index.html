@@ -3796,10 +3796,19 @@ function escapeHTML(s){
 }
 function monthOf(v){
   if(v==null||v==='') return null;
-  const d = new Date(v);
+  const s = String(v).trim();
+  const dmy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if(dmy){
+    const day = Number(dmy[1]);
+    const month = Number(dmy[2]);
+    let year = Number(dmy[3]); if(year<100) year += 2000;
+    if(month>=1 && month<=12 && day>=1 && day<=31) return `${year}-${String(month).padStart(2,'0')}`;
+  }
+  const iso = s.match(/^(\d{4})[-\/](\d{2})/);
+  if(iso) return `${iso[1]}-${iso[2]}`;
+  const d = new Date(s);
   if(isFinite(d.valueOf())) return d.toISOString().slice(0,7);
-  const m = String(v).match(/(\d{4})-(\d{2})/);
-  return m ? m[0] : null;
+  return null;
 }
 function monthKey(y, m){ return `${y}-${String(m).padStart(2,'0')}`; }
 
@@ -4437,6 +4446,24 @@ function enhanceSalesSection(){
   if(commKey){ for(const r of sO){ const v = toNum(r[commKey]); if(isFinite(v)) commTotal += v; } }
   const totalRev = totKey ? sO.reduce((s,r)=>{ const v = toNum(r[totKey]); return s+(isFinite(v)?v:0); },0) : 0;
 
+  // RTO / refund / cancellation metrics (item #3)
+  const shipKey = findKey(sO[0], [/shipment\s*status|shipping\s*status/i]);
+  const finKey  = findKey(sO[0], [/financial\s*status/i]);
+  const cancelReasonKey = findKey(sO[0], [/cancel.*reason/i]);
+  let rtoCount=0, refunded=0, cancelled=0, delivered=0, pending=0;
+  for(const r of sO){
+    const ship = String(shipKey?r[shipKey]:'').toLowerCase();
+    const fin  = String(finKey?r[finKey]:'').toLowerCase();
+    const cancelReason = String(cancelReasonKey?r[cancelReasonKey]:'').trim();
+    if(/rto|return.*origin/.test(ship)) rtoCount++;
+    if(/refund/.test(fin)) refunded++;
+    if(cancelReason) cancelled++;
+    if(/delivered/.test(ship)) delivered++;
+    if(/pending/.test(ship) && !/in.*transit/.test(ship)) pending++;
+  }
+  const fulfilled = sO.length - rtoCount - refunded - cancelled;
+  const fulfilmentRate = sO.length > 0 ? (fulfilled / sO.length * 100) : null;
+
   const deep = document.getElementById('sales-deep');
   if(!deep) return;
   const renderBucket = (title, obj, fmt) => {
@@ -4463,6 +4490,16 @@ function enhanceSalesSection(){
           Avg discount: <b style="color:var(--cream)">${discountRows?fmtINR(discountTotal/discountRows):'—'}</b><br>
           Commission paid: <b style="color:var(--cream)">${fmtINR(commTotal)}</b><br>
           Commission %: <b style="color:var(--cream)">${totalRev>0?fmtPct(commTotal/totalRev*100):'—'}</b>
+        </div>
+      </div>
+      <div style="background:var(--bg1);border:1px solid var(--border);border-radius:3px;padding:10px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:.07em;margin-bottom:6px">Fulfilment &amp; Returns</div>
+        <div style="font-size:10px;color:var(--muted);line-height:1.7">
+          Delivered: <b style="color:var(--grn)">${fmtNum(delivered)}</b> · Pending: <b style="color:var(--cream)">${fmtNum(pending)}</b><br>
+          RTO: <b style="color:${rtoCount>0?'var(--red)':'var(--cream)'}">${fmtNum(rtoCount)}</b> ${sO.length>0?`(${(rtoCount/sO.length*100).toFixed(1)}%)`:''}<br>
+          Refunded: <b style="color:${refunded>0?'var(--red)':'var(--cream)'}">${fmtNum(refunded)}</b><br>
+          Cancelled: <b style="color:${cancelled>0?'var(--red)':'var(--cream)'}">${fmtNum(cancelled)}</b><br>
+          <b style="color:var(--cream)">Fulfilment rate: ${isFinite(fulfilmentRate)?fulfilmentRate.toFixed(1)+'%':'—'}</b>
         </div>
       </div>
     </div>`;

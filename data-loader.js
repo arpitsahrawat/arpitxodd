@@ -25,7 +25,7 @@
   'use strict';
 
   const NEXUS_LIVE = window.NEXUS_LIVE = {
-    VERSION: '1.1.0',
+    VERSION: '1.2.0',
 
     // ─── CONFIG ───────────────────────────────────────────
     CLIENT_ID: '',
@@ -180,10 +180,10 @@
         e.stopPropagation(); self.hidePanel();
       };
       document.getElementById('nx-dp-copy').onclick   = () => self.copyLogs();
-      document.getElementById('nx-dp-resync').onclick = () => self.forceResync();
-      document.getElementById('nx-dp-auth').onclick   = () => self.connect(false);
+      document.getElementById('nx-dp-resync').onclick = () => { self.loading = false; self.forceResync(); };
+      document.getElementById('nx-dp-auth').onclick   = () => { self.loading = false; self.connect(false); };
       document.getElementById('nx-dp-clear').onclick  = () => self.clearCache();
-      document.getElementById('nx-dp-test').onclick   = () => self.testAllFolders();
+      document.getElementById('nx-dp-test').onclick   = () => { self.loading = false; self.testAllFolders(); };
 
       // Keyboard toggle: backtick
       document.addEventListener('keydown', e => {
@@ -362,11 +362,14 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
         this.lastSync = cached.lastSync ? new Date(cached.lastSync) : null;
         this.log(`Loaded cache from ${this.lastSync ? this.lastSync.toLocaleString() : 'unknown'}`);
         this.applyToUI();
-      } else {
-        this.log('No cached data');
+        return await this.connect(true);
       }
 
-      return await this.connect(true);
+      // First visit: browsers block silent OAuth popups that aren't user-initiated.
+      // Require a click on 🔑 Re-auth instead of hanging this.loading forever.
+      this.warn('No cached data — click 🔑 Re-auth in this panel to sign in to Google Drive');
+      this.showPanel();
+      return false;
     },
 
     _waitFor(cond, ms) {
@@ -476,23 +479,50 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
         }
       }
 
-      // Parse latest MIS
+      this.data = {};
+
+      // MIS keeps its structured parser (month columns, Total sub-columns, YTD).
       const misList = this.files.mis || [];
       const latestMis = misList.find(f => /\.xlsx?$/i.test(f.name));
       if (latestMis) {
         this.log(`▶ Parsing MIS: ${latestMis.name}`);
         try {
           const buf = await this.downloadFile(latestMis.id);
-          this.data = this.parseMIS(buf);
-          this.success('MIS parsed', {
-            jan: this.data.jan,
-            feb: this.data.feb,
-            mar: this.data.mar,
-            ytd: this.data.ytd
-          });
+          const mis = this.parseMIS(buf);
+          mis._file = latestMis.name;
+          this.data.mis = mis;
+          this.data.jan = mis.jan; this.data.feb = mis.feb;
+          this.data.mar = mis.mar; this.data.ytd = mis.ytd;
+          this.success('MIS parsed', { jan: mis.jan, feb: mis.feb, mar: mis.mar, ytd: mis.ytd });
         } catch (e) { this.err('MIS parse failed', String(e)); }
       } else {
         this.warn('No .xlsx file found in MIS folder');
+      }
+
+      // Every other domain folder: pick the latest CSV / XLSX / XLS and parse it
+      // into an array of row objects (sheet_to_json with header row inference).
+      for (const name of names) {
+        if (name === 'mis') continue;
+        const latest = (this.files[name] || []).find(f => /\.(csv|xlsx?)$/i.test(f.name));
+        if (!latest) {
+          this.warn(`  ${name} → no CSV/XLSX file found`);
+          this.data[name] = { rows: [], file: null };
+          continue;
+        }
+        this.log(`▶ Parsing ${name}: ${latest.name}`);
+        try {
+          const buf = await this.downloadFile(latest.id);
+          const wb = XLSX.read(buf, { type: 'array' });
+          const sheetName = wb.SheetNames[0];
+          const ws = wb.Sheets[sheetName];
+          const rows = XLSX.utils.sheet_to_json(ws, { defval: null });
+          this.data[name] = { rows, file: latest.name, sheet: sheetName };
+          this.success(`  ${name} parsed: ${rows.length} rows from "${sheetName}"`,
+            rows.length ? Object.keys(rows[0]).slice(0, 6) : []);
+        } catch (e) {
+          this.err(`  ${name} parse failed`, String(e));
+          this.data[name] = { rows: [], file: latest.name, error: String(e) };
+        }
       }
 
       this.lastSync = new Date();

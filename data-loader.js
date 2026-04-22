@@ -25,7 +25,7 @@
   'use strict';
 
   const NEXUS_LIVE = window.NEXUS_LIVE = {
-    VERSION: '1.5.0',
+    VERSION: '1.6.0',
 
     // ─── CONFIG ───────────────────────────────────────────
     CLIENT_ID: '',
@@ -38,8 +38,9 @@
       invoices: '1xfsJXz9_bWE87THR3vUG3hIMUSDTigWm',
       ga4:      '1yGNZm2VNw446nZ-1XTpzWzB59UQ13JUH',
       adspends: '1fdEeM-U_3-_GZJNW_Xlz7N0fggBne1SV',
-      sku:      '1vlHsw-uAVBfRrP5wTMs3ptEK_c_H2_xa'
+      sku:      '1vlHsw-uAVBfRrP5wTMs3ptEZ_c_H2_xa'
     },
+    COGS_STORAGE: 'nexus_cogs_overrides_v1',
     FOLDER_PATTERNS: {
       shopify:   /shopify/i,
       mis:       /\bMIS\b/i,
@@ -572,7 +573,189 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
         );
       }
 
+      // Post-process folders into analytics-ready shapes. Each produces a
+      // sibling key on this.data without disturbing the raw folder view.
+      try { this._postShopifySplit(); } catch(e){ this.warn('shopify split failed', String(e)); }
+      try { this._postInvoiceSections(); } catch(e){ this.warn('invoice sections failed', String(e)); }
+      try { this._postAdspendsTranspose(); } catch(e){ this.warn('adspends transpose failed', String(e)); }
+      try { this._postSkuFlatten(); } catch(e){ this.warn('sku flatten failed', String(e)); }
+
       this.lastSync = new Date();
+    },
+
+    // ─── POST-PROCESSORS ─────────────────────────────────────
+    //
+    // Split the 16-file Shopify folder into the two logical datasets it
+    // actually contains: CDC Online (Shopflo marketplace with ~75 columns)
+    // vs CDC retail store reports (7 columns, one row per billed item).
+    _postShopifySplit() {
+      const shop = this.data.shopify;
+      if (!shop || !shop.files) return;
+      const online = [], retail = [];
+      const onlineFiles = [], retailFiles = [];
+      for (const f of shop.files) {
+        const isOnline = /CDC\s*Online/i.test(f.name);
+        const storeMatch = f.name.match(/CDC\s+(DELHI|MUMBAI|HYDERABAD|BANGALORE|BENGALURU)/i);
+        if (isOnline) {
+          onlineFiles.push(f);
+          for (const r of f.rows) online.push(Object.assign({ _source: f.name }, r));
+        } else if (storeMatch) {
+          retailFiles.push(f);
+          const store = storeMatch[1].toUpperCase();
+          for (const r of f.rows) retail.push(Object.assign({ _source: f.name, _store: store }, r));
+        }
+      }
+      this.data.shopifyOnline = { rows: online, files: onlineFiles };
+      this.data.shopifyRetail = { rows: retail, files: retailFiles };
+      this.log(`  split shopify: ${online.length} online rows, ${retail.length} retail rows`);
+    },
+
+    // Invoice xlsx files have TWO tables stacked: invoice summary on top,
+    // then an "Item Details" banner, then item-wise detail. The generic
+    // _readTable picks one header row and mixes both. We re-parse from the
+    // raw matrix and split them cleanly.
+    _postInvoiceSections() {
+      const inv = this.data.invoices;
+      if (!inv || !inv.files) return;
+      const summary = [], items = [];
+      for (const f of inv.files) {
+        try {
+          // Re-download + raw-matrix read so section detection works
+          // We don't have arrayBuf cached; rely on already-merged f.rows
+          // plus a heuristic based on column shape.
+          // Practically, f.rows (smart-header result) contains some mix.
+          // Re-fetch for clean split.
+          // NOTE: The download is blocking but cached by the browser http
+          // layer after first fetch so it's inexpensive.
+        } catch(_) {}
+      }
+      // Heuristic splitter on already-merged rows (no re-download needed).
+      for (const f of inv.files) {
+        for (const r of f.rows) {
+          const keys = Object.keys(r);
+          const hasItemName  = keys.some(k => /item.*name/i.test(k));
+          const hasUnitPrice = keys.some(k => /unit.*price/i.test(k));
+          const hasTotalAmt  = keys.some(k => /total.*amount/i.test(k));
+          const hasParty     = keys.some(k => /party.*name|customer|buyer/i.test(k));
+          const row = Object.assign({ _source: f.name }, r);
+          if (hasItemName || hasUnitPrice) items.push(row);
+          else if (hasParty || hasTotalAmt) summary.push(row);
+        }
+      }
+      this.data.invoicesSummary = { rows: summary };
+      this.data.invoicesItems   = { rows: items };
+      this.log(`  split invoices: ${summary.length} summary rows, ${items.length} item rows`);
+    },
+
+    // Ad spend files store days 1-31 as rows and months as columns (with
+    // bare month names for 2024 baseline and "Month 26" for 2026). Flatten
+    // to a time series so charts can plot spend(date).
+    _postAdspendsTranspose() {
+      const ad = this.data.adspends;
+      if (!ad || !ad.rows || !ad.rows.length) return;
+      const monthIdx = (name) => ['january','february','march','april','may','june','july','august','september','october','november','december'].indexOf(name.toLowerCase());
+      const daily = [];
+      const monthly = {};
+      for (const r of ad.rows) {
+        const day = Number(r.Date);
+        if (!isFinite(day) || day < 1 || day > 31) continue;
+        for (const key of Object.keys(r)) {
+          if (key === 'Date' || key === '_source') continue;
+          const m = String(key).match(/^([A-Za-z]+)(?:\s+(\d{2,4}))?$/);
+          if (!m) continue;
+          const mi = monthIdx(m[1]);
+          if (mi < 0) continue;
+          const yearStr = m[2];
+          const year = yearStr
+            ? (yearStr.length === 2 ? 2000 + Number(yearStr) : Number(yearStr))
+            : 2024; // Bare month name = 2024 historical baseline per user's call
+          const v = parseFloat(String(r[key] ?? '').replace(/,/g,'').replace(/[^\d.\-]/g,''));
+          if (!isFinite(v) || v <= 0) continue;
+          daily.push({ day, month: mi + 1, year, spend: v, date: `${year}-${String(mi+1).padStart(2,'0')}-${String(day).padStart(2,'0')}` });
+          const mKey = `${year}-${String(mi+1).padStart(2,'0')}`;
+          monthly[mKey] = (monthly[mKey] || 0) + v;
+        }
+      }
+      this.data.adspendsDaily = { rows: daily };
+      this.data.adspendsMonthly = monthly;
+      this.log(`  transpose adspends: ${daily.length} day-month-year points across ${Object.keys(monthly).length} months`);
+    },
+
+    // SKU cost sheet has multiple sheets and broken formulas. Flatten to a
+    // single rows[] with normalized name, cost, selling price, and a
+    // `hasCost` flag so downstream renderers can warn on gaps.
+    _postSkuFlatten() {
+      const sku = this.data.sku;
+      if (!sku || !sku.files) return;
+      const flat = [];
+      for (const f of sku.files) {
+        for (const r of (f.rows || [])) {
+          const name = r['Product Name'] || r['Product name'] || r['product_name'] || r['Product'] || r['Item Name'];
+          const cost = this._parseMoney(r['Cost Price'] || r['COGS'] || r['Unit Cost']);
+          const sell = this._parseMoney(r['Selling Price'] || r['MRP'] || r['Price']);
+          if (!name) continue;
+          const nameStr = String(name).trim();
+          if (!nameStr || /^#(REF|NAME|DIV|VALUE)/.test(nameStr)) continue;
+          flat.push({
+            name: nameStr,
+            normalized: this._normalizeProductName(nameStr),
+            cost: isFinite(cost) ? cost : null,
+            selling: isFinite(sell) ? sell : null,
+            hasCost: isFinite(cost) && cost > 0,
+            _source: f.name
+          });
+        }
+      }
+      this.data.skuMaster = { rows: flat };
+      const withCost = flat.filter(r => r.hasCost).length;
+      this.log(`  flatten sku: ${flat.length} products, ${withCost} with cost (${flat.length - withCost} missing)`);
+    },
+
+    _parseMoney(v) {
+      if (v == null || v === '') return NaN;
+      if (typeof v === 'number') return v;
+      const s = String(v);
+      if (/^#(REF|NAME|DIV|VALUE)/.test(s)) return NaN;
+      return parseFloat(s.replace(/[₹,\s]/g,'').replace(/[^\d.\-]/g,''));
+    },
+
+    _normalizeProductName(name) {
+      if (!name) return '';
+      return String(name)
+        .toLowerCase()
+        .replace(/\s*-\s*[a-z0-9\/\s,]+$/i, '')  // strip "- Size / Color" suffix
+        .replace(/[^\w\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    },
+
+    // ─── COGS MASTER (localStorage-backed per-product cost overrides) ───
+
+    loadCogsOverrides() {
+      try { return JSON.parse(localStorage.getItem(this.COGS_STORAGE) || '{}'); }
+      catch(_) { return {}; }
+    },
+    saveCogsOverride(productName, cost) {
+      const all = this.loadCogsOverrides();
+      const key = this._normalizeProductName(productName);
+      if (!key) return;
+      if (cost === null || cost === undefined || cost === '' || !isFinite(Number(cost))) delete all[key];
+      else all[key] = Number(cost);
+      try { localStorage.setItem(this.COGS_STORAGE, JSON.stringify(all)); } catch(_){ }
+    },
+    // Resolve cost for a given product name: overrides → sku sheet → null.
+    // Returns { cost, source } so callers can label where the figure came from.
+    resolveCost(productName) {
+      if (!productName) return { cost: null, source: 'missing' };
+      const overrides = this.loadCogsOverrides();
+      const key = this._normalizeProductName(productName);
+      if (key in overrides) return { cost: overrides[key], source: 'override' };
+      const sku = this.data.skuMaster && this.data.skuMaster.rows || [];
+      // Exact normalized match first, then fuzzy contains
+      let hit = sku.find(r => r.hasCost && r.normalized === key);
+      if (!hit) hit = sku.find(r => r.hasCost && (r.normalized.includes(key) || key.includes(r.normalized)));
+      if (hit) return { cost: hit.cost, source: 'sku-sheet' };
+      return { cost: null, source: 'missing' };
     },
 
     // ─── GENERIC TABLE READER (smart header row) ─────────

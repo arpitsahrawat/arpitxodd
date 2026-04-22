@@ -5859,6 +5859,453 @@ window.renderNexus = function(data){
   }, 500);
 };
 
+// ══════════════════════════════════════════════════════════
+//  ADVANCED ANALYTICS MODULES (all-items pass)
+//  A1-A5 forecasting · B1-B6 customer intel · C1-C5 ops ·
+//  D1-D5 finance · E1-E5 marketing growth
+// ══════════════════════════════════════════════════════════
+
+// Shared helpers
+const NX_YEAR_PROGRESS = () => {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 3, 1); // FY starts Apr 1 (Indian)
+  if (now < start) start.setFullYear(start.getFullYear()-1);
+  const end = new Date(start.getFullYear()+1, 2, 31);
+  return (now - start) / (end - start);
+};
+
+// ── A4 GOAL TRACKER ───────────────────────────────────────
+async function renderGoalTracker(){
+  const host = document.getElementById('sec-overview');
+  if(!host) return;
+  const mis = (window.NEXUS_DATA_FILTERED && window.NEXUS_DATA_FILTERED.mis) || {};
+  const ytd = (mis.gross && mis.gross.ytd) || 0;
+  const target = Number(await sbGetSetting('fy_target', 0)) || 30000000; // default 3Cr
+  const progress = NX_YEAR_PROGRESS();
+  const pace = ytd / Math.max(progress, 0.01);
+  const onPace = pace >= target;
+  let wrap = document.getElementById('nx-goal-tracker');
+  if(!wrap){
+    wrap = document.createElement('div'); wrap.id='nx-goal-tracker'; wrap.className='card mb14';
+    const head = host.querySelector('.sec-hd');
+    if(head && head.nextSibling) host.insertBefore(wrap, head.nextSibling); else host.appendChild(wrap);
+  }
+  const pct = target > 0 ? (ytd/target*100) : 0;
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">FY Goal Tracker</div><div class="card-sub">Set target in ⚙ Settings → fy_target</div></div>
+    <div class="g3">
+      <div><div class="kpi-lbl">Target</div><div style="font-family:'Bebas Neue',sans-serif;font-size:24px">${fmtINR(target)}</div><div style="font-size:9px;color:var(--dim)">FY ${new Date().getFullYear()}</div></div>
+      <div><div class="kpi-lbl">YTD Actual</div><div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--cream)">${fmtINR(ytd)}</div><div style="font-size:9px;color:var(--dim)">${fmtPct(pct)} of goal</div></div>
+      <div><div class="kpi-lbl">Projected FY</div><div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:${onPace?'var(--grn)':'var(--red)'}">${fmtINR(pace)}</div><div style="font-size:9px;color:var(--dim)">${onPace?'on pace':'behind pace by '+fmtINR(target-pace)}</div></div>
+    </div>
+    <div style="height:6px;background:rgba(255,255,255,0.08);border-radius:3px;margin:14px 0 6px;overflow:hidden"><div style="width:${Math.min(100,pct)}%;height:100%;background:${onPace?'var(--grn)':'var(--red)'}"></div></div>
+    <div style="font-size:9px;color:var(--dim)">Year progress: ${(progress*100).toFixed(1)}%</div>`;
+}
+
+// ── D1 MARGIN WATERFALL ──────────────────────────────────
+function renderMarginWaterfall(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data || !data.mis) return;
+  const mis = data.mis;
+  const sec = document.getElementById('sec-financials'); if(!sec) return;
+  let wrap = document.getElementById('nx-margin-waterfall');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-margin-waterfall'; wrap.className='card mb14'; sec.appendChild(wrap); }
+  const g = (k) => mis[k] && mis[k].ytd || 0;
+  const steps = [
+    { label:'Gross Sales',  value: g('gross'),  color:'#E8E0D0' },
+    { label:'− GST',        value:-g('gst'),    color:'#F59E0B' },
+    { label:'− Discount',   value:-g('discount'),color:'#F59E0B' },
+    { label:'= Net Sales',  value: g('net'),    color:'#6366F1', isTotal: true },
+    { label:'− COGS',       value:-g('cogs'),   color:'#D42B2B' },
+    { label:'= Gross Profit', value: g('grossProfit'), color:'#10B981', isTotal: true },
+    { label:'− Commission', value:-g('commission'), color:'#D42B2B' },
+    { label:'− Other Expenses', value:-g('otherExp'), color:'#D42B2B' },
+    { label:'− Salaries',   value:-(g('salary')+g('directorSalary')), color:'#D42B2B' },
+    { label:'− Ads',        value:-g('ads'),    color:'#D42B2B' },
+    { label:'− Rent+Utils', value:-(g('rent')+g('utilities')+g('gateway')), color:'#D42B2B' },
+    { label:'= EBITDA',     value: g('ebitda'), color:g('ebitda')>=0?'#10B981':'#D42B2B', isTotal: true }
+  ].filter(s => Math.abs(s.value) > 0);
+  const maxAbs = Math.max(...steps.map(s => Math.abs(s.value)));
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Margin Waterfall · YTD</div><div class="card-sub">Where every rupee of gross sales goes</div></div>
+    <div style="margin-top:10px">
+      ${steps.map(s => `<div style="display:grid;grid-template-columns:150px 1fr 120px;gap:10px;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+        <div style="font-size:10px;color:${s.isTotal?'var(--cream)':'var(--muted)'};font-weight:${s.isTotal?'700':'400'}">${escapeHTML(s.label)}</div>
+        <div style="height:18px;background:rgba(255,255,255,0.04);border-radius:2px;overflow:hidden"><div style="height:100%;width:${Math.abs(s.value)/maxAbs*100}%;background:${s.color};border-radius:2px"></div></div>
+        <div style="text-align:right;font-family:'DM Mono',monospace;font-size:10px;color:${s.value<0?'var(--red)':'var(--cream)'}">${fmtINR(s.value,{signed:true})}</div>
+      </div>`).join('')}
+    </div>`;
+}
+
+// ── D2 UNIT ECONOMICS TABLE ──────────────────────────────
+function renderUnitEcon(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const sec = document.getElementById('sec-financials'); if(!sec) return;
+  const sO = (data.shopifyOnline && data.shopifyOnline.rows) || [];
+  const sR = (data.shopifyRetail && data.shopifyRetail.rows) || [];
+  const iS = (data.invoicesSummary && data.invoicesSummary.rows) || [];
+  const mis = data.mis;
+  const cogsRatio = mis && mis.cogs && mis.gross && mis.gross.ytd>0 ? mis.cogs.ytd/mis.gross.ytd : 0.28;
+  const sumRev = (rows, rx) => rows.reduce((s,r)=>{const k=findKey(r,rx);const v=k?toNum(r[k]):0;return s+(isFinite(v)?v:0);},0);
+  const chan = [
+    { name:'Online', rows:sO, tot:sumRev(sO,[/total\s*order\s*value/i]), orders:sO.length },
+    { name:'Retail', rows:sR, tot:sumRev(sR,[/^price$/i]), orders:sR.length },
+    { name:'B2B',    rows:iS, tot:sumRev(iS,[/total.*amount/i, /^amount$/i]), orders:iS.length }
+  ];
+  let wrap = document.getElementById('nx-unit-econ');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-unit-econ'; wrap.className='card mb14'; sec.appendChild(wrap); }
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Unit Economics by Channel</div><div class="card-sub">Average per-order P&L · COGS from MIS ratio ${fmtPct(cogsRatio*100)}</div></div>
+    <table class="tbl" style="font-size:10px"><thead><tr><th>Channel</th><th>Orders</th><th>Revenue</th><th>AOV</th><th>~COGS/order</th><th>Contribution</th></tr></thead><tbody>
+      ${chan.map(c => {
+        const aov = c.orders > 0 ? c.tot/c.orders : 0;
+        const cogs = aov * cogsRatio;
+        const contrib = aov - cogs;
+        return `<tr><td style="text-align:left">${c.name}</td><td>${fmtNum(c.orders)}</td><td>${fmtINR(c.tot)}</td><td>${fmtINR(aov)}</td><td class="neg">${fmtINR(cogs)}</td><td class="${contrib>=0?'pos':'neg'}">${fmtINR(contrib)}</td></tr>`;
+      }).join('')}
+    </tbody></table>`;
+}
+
+// ── D3 AR AGING (B2B receivables) ─────────────────────────
+function renderARAging(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const inv = (data.invoicesSummary && data.invoicesSummary.rows) || [];
+  if(!inv.length) return;
+  const sec = document.getElementById('sec-b2b'); if(!sec) return;
+  const now = new Date();
+  const buckets = { '0-30':0, '31-60':0, '61-90':0, '90+':0 };
+  const rows = [];
+  const dkf = inv[0] ? findKey(inv[0], [/^date$/i]) : null;
+  const amtf = inv[0] ? findKey(inv[0], [/total.*amount/i, /^amount$/i]) : null;
+  for(const r of inv){
+    const d = dkf ? new Date(r[dkf]) : null;
+    if(!d || !isFinite(d.valueOf())) continue;
+    const amt = amtf ? toNum(r[amtf]) : 0;
+    if(!isFinite(amt) || amt <= 0) continue;
+    const days = Math.floor((now - d)/86400000);
+    const bucket = days<=30?'0-30':days<=60?'31-60':days<=90?'61-90':'90+';
+    buckets[bucket] += amt;
+    if(days > 60) rows.push({ date:d, amount:amt, days, party:r['Party Name']||'—' });
+  }
+  const total = Object.values(buckets).reduce((s,v)=>s+v,0);
+  let wrap = document.getElementById('nx-ar-aging');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-ar-aging'; wrap.className='card mb14'; sec.appendChild(wrap); }
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Receivables Aging</div><div class="card-sub">Invoice age from invoice date · proxy for AR</div></div>
+    <div class="g4">
+      ${Object.entries(buckets).map(([k,v]) => `<div><div class="kpi-lbl">${k} days</div><div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:${k==='90+'?'var(--red)':k==='61-90'?'#F59E0B':'var(--cream)'}">${fmtINR(v)}</div><div style="font-size:9px;color:var(--dim)">${total>0?fmtPct(v/total*100):'—'}</div></div>`).join('')}
+    </div>
+    ${rows.length ? `<div style="margin-top:10px;font-size:10px"><b>Overdue (&gt;60d):</b> ${rows.slice(0,5).map(r=>`<span style="color:var(--red);margin:0 6px 0 0">${escapeHTML(r.party).slice(0,25)} · ${fmtINR(r.amount)} · ${r.days}d</span>`).join('')}</div>` : ''}`;
+}
+
+// ── D4 COMMISSION OPTIMIZER ──────────────────────────────
+function renderCommissionOpt(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const sO = (data.shopifyOnline && data.shopifyOnline.rows) || []; if(!sO.length) return;
+  const sec = document.getElementById('sec-financials'); if(!sec) return;
+  const nameKey = findKey(sO[0], [/^product\s*name$/i]);
+  const commKey = findKey(sO[0], [/merchant\s*earning|merchant\s*commission/i]);
+  const totKey  = findKey(sO[0], [/total\s*order\s*value/i, /total\s*product\s*value/i]);
+  if(!nameKey || !commKey || !totKey) return;
+  const L = window.NEXUS_LIVE;
+  const byProduct = {};
+  for(const r of sO){
+    const n = r[nameKey]; if(!n) continue;
+    const comm = toNum(r[commKey]), tot = toNum(r[totKey]);
+    if(!isFinite(comm) || !isFinite(tot)) continue;
+    byProduct[n] = byProduct[n] || { name:n, rev:0, comm:0, orders:0 };
+    byProduct[n].rev += tot;
+    byProduct[n].comm += Math.abs(comm);
+    byProduct[n].orders++;
+  }
+  const list = Object.values(byProduct).map(p => {
+    const rc = L.resolveCost ? L.resolveCost(p.name) : { cost:null };
+    const unitCost = isFinite(rc.cost) ? rc.cost : null;
+    const aov = p.rev / p.orders;
+    const margin = unitCost != null ? aov - unitCost - (p.comm/p.orders) : null;
+    const commPct = p.rev > 0 ? p.comm/p.rev*100 : 0;
+    return { ...p, aov, unitCost, margin, commPct };
+  }).filter(p => isFinite(p.margin)).sort((a,b) => a.margin - b.margin).slice(0,15);
+  let wrap = document.getElementById('nx-comm-opt');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-comm-opt'; wrap.className='card mb14'; sec.appendChild(wrap); }
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Commission Optimizer</div><div class="card-sub">SKUs ranked by margin after Shopflo commission — negatives at top</div></div>
+    <table class="tbl" style="font-size:10px"><thead><tr><th>#</th><th style="text-align:left">Product</th><th>Orders</th><th>Rev</th><th>AOV</th><th>Cost</th><th>Commission%</th><th>Net margin</th></tr></thead><tbody>
+      ${list.map((p,i) => `<tr><td>${i+1}</td><td style="text-align:left">${escapeHTML(p.name).slice(0,40)}</td><td>${p.orders}</td><td>${fmtINR(p.rev)}</td><td>${fmtINR(p.aov)}</td><td>${fmtINR(p.unitCost)}</td><td class="${p.commPct>15?'neg':''}">${fmtPct(p.commPct)}</td><td class="${p.margin>=0?'pos':'neg'}">${fmtINR(p.margin)}</td></tr>`).join('')}
+    </tbody></table>`;
+}
+
+// ── B3 RFM / Top customers ───────────────────────────────
+function renderRFM(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const sO = (data.shopifyOnline && data.shopifyOnline.rows) || []; if(!sO.length) return;
+  const sec = document.getElementById('sec-products'); if(!sec) return;
+  const dateKey = findKey(sO[0], [/order\s*date/i]);
+  const orderKey = findKey(sO[0], [/^shopify\s*order\s*number$/i, /^unique\s*order\s*number$/i]);
+  const totKey = findKey(sO[0], [/total\s*order\s*value/i]);
+  if(!dateKey || !orderKey) return;
+  // Customer proxy = order-id stem (no customer column in CDC export)
+  const byCust = {};
+  const now = new Date();
+  for(const r of sO){
+    const oid = String(r[orderKey]||''); if(!oid) continue;
+    const stem = oid.replace(/\d+$/,'') || oid.slice(0,10);
+    const d = new Date(r[dateKey]);
+    const t = totKey ? toNum(r[totKey]) : 0;
+    byCust[stem] = byCust[stem] || { id:stem, orders:0, spend:0, last:null };
+    byCust[stem].orders++;
+    if(isFinite(t)) byCust[stem].spend += t;
+    if(isFinite(d.valueOf()) && (!byCust[stem].last || d > byCust[stem].last)) byCust[stem].last = d;
+  }
+  const list = Object.values(byCust).map(c => ({
+    ...c,
+    recency: c.last ? Math.floor((now - c.last)/86400000) : null,
+    frequency: c.orders,
+    monetary: c.spend
+  })).sort((a,b) => b.monetary - a.monetary).slice(0,20);
+  let wrap = document.getElementById('nx-rfm');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-rfm'; wrap.className='card mb14'; sec.appendChild(wrap); }
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Top 20 Customers (RFM proxy)</div><div class="card-sub">Customer key is order-id stem — replace with email/phone when available</div></div>
+    <table class="tbl" style="font-size:10px"><thead><tr><th>#</th><th style="text-align:left">Customer key</th><th>Orders (F)</th><th>Spend (M)</th><th>Last seen (R)</th></tr></thead><tbody>
+      ${list.map((c,i) => `<tr><td>${i+1}</td><td style="text-align:left;font-family:'DM Mono',monospace">${escapeHTML(c.id).slice(0,20)}</td><td>${c.frequency}</td><td>${fmtINR(c.monetary)}</td><td>${c.recency!=null?c.recency+'d':'—'}</td></tr>`).join('')}
+    </tbody></table>`;
+}
+
+// ── B5 SKU LIFECYCLE TAGGING ──────────────────────────────
+function renderSkuLifecycle(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const sO = (data.shopifyOnline && data.shopifyOnline.rows) || [];
+  if(!sO.length) return;
+  const sec = document.getElementById('sec-products'); if(!sec) return;
+  const nameKey = findKey(sO[0], [/^product\s*name$/i]);
+  const dateKey = findKey(sO[0], [/order\s*date/i]);
+  const qtyKey  = findKey(sO[0], [/product\s*quantity/i, /^quantity$/i]);
+  if(!nameKey || !dateKey) return;
+  const now = new Date();
+  const agg = {};
+  for(const r of sO){
+    const n = r[nameKey]; if(!n) continue;
+    const d = new Date(r[dateKey]);
+    const q = qtyKey ? toNum(r[qtyKey]) : 1;
+    agg[n] = agg[n] || { name:n, units:0, first:null, last:null };
+    agg[n].units += isFinite(q)?q:1;
+    if(isFinite(d.valueOf())){
+      if(!agg[n].first || d < agg[n].first) agg[n].first = d;
+      if(!agg[n].last  || d > agg[n].last)  agg[n].last  = d;
+    }
+  }
+  const products = Object.values(agg).map(p => {
+    const ageFromLastDays = p.last ? Math.floor((now - p.last)/86400000) : 999;
+    const ageDays = p.first && p.last ? Math.floor((p.last - p.first)/86400000)+1 : 1;
+    const velocity = p.units / Math.max(ageDays, 1);
+    let tag;
+    if(ageFromLastDays > 60) tag = { label:'DEAD', color:'#D42B2B' };
+    else if(ageFromLastDays > 30) tag = { label:'DECLINE', color:'#F59E0B' };
+    else if(p.units > 20 && velocity > 0.5) tag = { label:'PEAK', color:'#10B981' };
+    else if(velocity > 0.2) tag = { label:'GROWTH', color:'#6366F1' };
+    else if(ageDays < 30) tag = { label:'LAUNCH', color:'#E8E0D0' };
+    else tag = { label:'STABLE', color:'#9CA3AF' };
+    return { ...p, ageFromLastDays, velocity, tag };
+  }).sort((a,b) => b.units - a.units);
+  const byTag = {};
+  for(const p of products){ byTag[p.tag.label] = (byTag[p.tag.label]||0)+1; }
+  let wrap = document.getElementById('nx-lifecycle');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-lifecycle'; wrap.className='card mb14'; sec.appendChild(wrap); }
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">SKU Lifecycle Tagging</div><div class="card-sub">${Object.entries(byTag).map(([k,v])=>`${k}: ${v}`).join(' · ')}</div></div>
+    <table class="tbl" style="font-size:10px"><thead><tr><th style="text-align:left">Product</th><th>Units</th><th>u/day</th><th>Days since last</th><th>Tag</th></tr></thead><tbody>
+      ${products.slice(0,25).map(p => `<tr><td style="text-align:left">${escapeHTML(p.name).slice(0,45)}</td><td>${fmtNum(p.units)}</td><td>${p.velocity.toFixed(2)}</td><td>${p.ageFromLastDays}</td><td><span style="background:${p.tag.color};color:#000;padding:1px 6px;font-size:9px;border-radius:2px">${p.tag.label}</span></td></tr>`).join('')}
+    </tbody></table>`;
+}
+
+// ── A5 REORDER LIST (velocity + lead-time) ───────────────
+function renderReorder(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const sO = (data.shopifyOnline && data.shopifyOnline.rows) || [];
+  if(!sO.length) return;
+  const sec = document.getElementById('sec-products'); if(!sec) return;
+  const nameKey = findKey(sO[0], [/^product\s*name$/i]);
+  const dateKey = findKey(sO[0], [/order\s*date/i]);
+  const qtyKey  = findKey(sO[0], [/product\s*quantity/i]);
+  if(!nameKey) return;
+  const LEAD_DAYS = 30;
+  const TARGET_STOCK_DAYS = 60;
+  const now = new Date();
+  const agg = {};
+  for(const r of sO){
+    const n = r[nameKey]; if(!n) continue;
+    const d = dateKey ? new Date(r[dateKey]) : null;
+    const q = qtyKey ? toNum(r[qtyKey]) : 1;
+    agg[n] = agg[n] || { name:n, units:0, first:null, last:null };
+    agg[n].units += isFinite(q)?q:1;
+    if(d && isFinite(d.valueOf())){
+      if(!agg[n].first || d < agg[n].first) agg[n].first = d;
+      if(!agg[n].last  || d > agg[n].last)  agg[n].last  = d;
+    }
+  }
+  const reorders = Object.values(agg).map(p => {
+    const ageDays = p.first && p.last ? Math.floor((p.last - p.first)/86400000)+1 : 30;
+    const velocity = p.units / Math.max(ageDays, 1);
+    const reorderQty = Math.ceil(velocity * (LEAD_DAYS + TARGET_STOCK_DAYS));
+    const reorderBy = new Date(now.getTime() - LEAD_DAYS*86400000 + TARGET_STOCK_DAYS*86400000);
+    return { ...p, velocity, reorderQty, reorderBy };
+  }).filter(p => p.velocity > 0.05).sort((a,b) => b.velocity - a.velocity).slice(0,15);
+  let wrap = document.getElementById('nx-reorder');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-reorder'; wrap.className='card mb14'; sec.appendChild(wrap); }
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Inventory Reorder Recommendations</div><div class="card-sub">Assumes ${LEAD_DAYS}d lead time + ${TARGET_STOCK_DAYS}d target cover · starting stock not available, so these are REPLENISHMENT quantities</div></div>
+    <table class="tbl" style="font-size:10px"><thead><tr><th style="text-align:left">Product</th><th>u/day</th><th>Reorder qty</th><th>Order by</th></tr></thead><tbody>
+      ${reorders.map(p => `<tr><td style="text-align:left">${escapeHTML(p.name).slice(0,45)}</td><td>${p.velocity.toFixed(2)}</td><td><b style="color:var(--cream)">${p.reorderQty}</b></td><td>${p.reorderBy.toISOString().slice(0,10)}</td></tr>`).join('')}
+    </tbody></table>`;
+}
+
+// ── C1 RTO HEATMAP (state × courier) ─────────────────────
+function renderRtoHeatmap(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const sO = (data.shopifyOnline && data.shopifyOnline.rows) || [];
+  if(!sO.length) return;
+  const sec = document.getElementById('sec-logistics'); if(!sec) return;
+  const stateKey = findKey(sO[0], [/shipping.*state|ship.*state/i]);
+  const courKey  = findKey(sO[0], [/courier\s*name/i]);
+  const shipKey  = findKey(sO[0], [/shipment\s*status|shipping\s*status/i]);
+  if(!courKey || !shipKey) return;
+  const totalsByCour = {};
+  const rtoByCour = {};
+  for(const r of sO){
+    const c = r[courKey] || 'Unknown';
+    totalsByCour[c] = (totalsByCour[c]||0)+1;
+    if(/rto|return/i.test(String(r[shipKey]||''))) rtoByCour[c] = (rtoByCour[c]||0)+1;
+  }
+  const courList = Object.entries(totalsByCour).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  let wrap = document.getElementById('nx-rto-heatmap');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-rto-heatmap'; wrap.className='card mb14'; sec.appendChild(wrap); }
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Courier Reliability</div><div class="card-sub">RTO rate by courier (state breakdown requires shipping address parsing)</div></div>
+    <table class="tbl" style="font-size:10px"><thead><tr><th style="text-align:left">Courier</th><th>Shipments</th><th>RTO</th><th>RTO %</th></tr></thead><tbody>
+      ${courList.map(([c,total]) => {
+        const rto = rtoByCour[c] || 0;
+        const pct = total > 0 ? rto/total*100 : 0;
+        return `<tr><td style="text-align:left">${escapeHTML(c)}</td><td>${total}</td><td>${rto}</td><td class="${pct>10?'neg':pct>5?'':'pos'}">${fmtPct(pct)}</td></tr>`;
+      }).join('')}
+    </tbody></table>`;
+}
+
+// ── C2 DELIVERY SLA TRACKER (logistics) ───────────────────
+function renderSLATracker(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const log = (data.logistics && data.logistics.rows) || [];
+  if(!log.length) return;
+  const sec = document.getElementById('sec-logistics'); if(!sec) return;
+  const pickKey = findKey(log[0], [/pickup.*date/i]);
+  const delKey  = findKey(log[0], [/delivery.*date|delivered.*at/i]);
+  if(!pickKey) return;
+  const diffs = [];
+  for(const r of log){
+    const p = new Date(r[pickKey]);
+    const d = delKey ? new Date(r[delKey]) : null;
+    if(!isFinite(p.valueOf())) continue;
+    if(d && isFinite(d.valueOf())){
+      const days = Math.floor((d-p)/86400000);
+      if(days >= 0 && days < 30) diffs.push(days);
+    }
+  }
+  if(!diffs.length) return;
+  diffs.sort((a,b)=>a-b);
+  const avg = diffs.reduce((s,v)=>s+v,0)/diffs.length;
+  const median = diffs[Math.floor(diffs.length/2)];
+  const p95 = diffs[Math.floor(diffs.length*0.95)];
+  let wrap = document.getElementById('nx-sla');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-sla'; wrap.className='card mb14'; sec.appendChild(wrap); }
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Delivery SLA</div><div class="card-sub">Pickup → Delivery transit time, ${diffs.length} shipments with both dates</div></div>
+    <div class="g4" style="margin-top:10px">
+      <div><div class="kpi-lbl">Avg</div><div style="font-family:'Bebas Neue',sans-serif;font-size:24px">${avg.toFixed(1)}d</div></div>
+      <div><div class="kpi-lbl">Median</div><div style="font-family:'Bebas Neue',sans-serif;font-size:24px">${median}d</div></div>
+      <div><div class="kpi-lbl">P95</div><div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:${p95>7?'var(--red)':'var(--cream)'}">${p95}d</div></div>
+      <div><div class="kpi-lbl">Shipments</div><div style="font-family:'Bebas Neue',sans-serif;font-size:24px">${diffs.length}</div></div>
+    </div>`;
+}
+
+// ── E3 COHORT LTV PROJECTION ─────────────────────────────
+function renderCohortLTV(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const sO = (data.shopifyOnline && data.shopifyOnline.rows) || []; if(!sO.length) return;
+  const sec = document.getElementById('sec-marketing'); if(!sec) return;
+  const dateKey = findKey(sO[0], [/order\s*date/i]);
+  const orderKey = findKey(sO[0], [/^shopify\s*order\s*number$/i, /unique\s*order\s*number/i]);
+  const totKey = findKey(sO[0], [/total\s*order\s*value/i]);
+  if(!dateKey || !orderKey) return;
+  const byCust = {};
+  for(const r of sO){
+    const oid = String(r[orderKey]||''); if(!oid) continue;
+    const stem = oid.replace(/\d+$/,'') || oid.slice(0,10);
+    const d = new Date(r[dateKey]);
+    const t = totKey ? toNum(r[totKey]) : 0;
+    byCust[stem] = byCust[stem] || { id:stem, first:d, spend:0, orders:0 };
+    if(isFinite(d.valueOf()) && d < byCust[stem].first) byCust[stem].first = d;
+    if(isFinite(t)) byCust[stem].spend += t;
+    byCust[stem].orders++;
+  }
+  const byCohort = {};
+  for(const c of Object.values(byCust)){
+    if(!c.first || !isFinite(c.first.valueOf())) continue;
+    const m = c.first.toISOString().slice(0,7);
+    byCohort[m] = byCohort[m] || { month:m, custs:0, totalSpend:0, repeats:0 };
+    byCohort[m].custs++;
+    byCohort[m].totalSpend += c.spend;
+    if(c.orders >= 2) byCohort[m].repeats++;
+  }
+  const cohorts = Object.values(byCohort).sort((a,b)=>a.month.localeCompare(b.month));
+  let wrap = document.getElementById('nx-cohort-ltv');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-cohort-ltv'; wrap.className='card mb14'; sec.appendChild(wrap); }
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Cohort LTV</div><div class="card-sub">Customer proxy = order-id stem · repeat rate = ≥2 orders</div></div>
+    <table class="tbl" style="font-size:10px"><thead><tr><th>Cohort</th><th>Customers</th><th>Total spend</th><th>Avg LTV</th><th>Repeat rate</th></tr></thead><tbody>
+      ${cohorts.map(c => `<tr><td>${c.month}</td><td>${c.custs}</td><td>${fmtINR(c.totalSpend)}</td><td>${fmtINR(c.totalSpend/c.custs)}</td><td class="${c.repeats/c.custs>0.2?'pos':''}">${fmtPct(c.repeats/c.custs*100)}</td></tr>`).join('')}
+    </tbody></table>`;
+}
+
+// ── E4 CHANNEL DECAY TRACKER ─────────────────────────────
+function renderChannelDecay(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const ga = (data.ga4 && data.ga4.rows) || []; if(!ga.length) return;
+  const sec = document.getElementById('sec-marketing'); if(!sec) return;
+  const srcKey = findKey(ga[0], [/session.*source.*medium/i, /source.*medium/i]);
+  const monthKey = findKey(ga[0], [/^month$/i]);
+  const sessKey = findKey(ga[0], [/^sessions$/i]);
+  if(!srcKey || !monthKey || !sessKey) return;
+  const byMonth = {};
+  for(const r of ga){
+    const src = r[srcKey]; const m = String(r[monthKey]||''); const s = toNum(r[sessKey]);
+    if(!src || !m || !isFinite(s)) continue;
+    byMonth[src] = byMonth[src] || {};
+    byMonth[src][m] = (byMonth[src][m]||0) + s;
+  }
+  const rows = Object.entries(byMonth).map(([src, months]) => {
+    const keys = Object.keys(months).sort();
+    const last = keys[keys.length-1], prev = keys[keys.length-2];
+    const lastV = months[last] || 0, prevV = months[prev] || 0;
+    const delta = prevV > 0 ? (lastV-prevV)/prevV*100 : null;
+    const total = Object.values(months).reduce((s,v)=>s+v,0);
+    return { src, total, last:lastV, prev:prevV, delta };
+  }).filter(r => r.total > 20).sort((a,b)=>b.total-a.total).slice(0,12);
+  let wrap = document.getElementById('nx-chan-decay');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-chan-decay'; wrap.className='card mb14'; sec.appendChild(wrap); }
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Channel Decay · MoM sessions</div><div class="card-sub">Sources with &gt;20 total sessions, latest vs prior month</div></div>
+    <table class="tbl" style="font-size:10px"><thead><tr><th style="text-align:left">Source / Medium</th><th>Total sessions</th><th>Prior mo</th><th>Latest mo</th><th>Δ</th></tr></thead><tbody>
+      ${rows.map(r => `<tr><td style="text-align:left">${escapeHTML(r.src).slice(0,30)}</td><td>${fmtNum(r.total)}</td><td>${fmtNum(r.prev)}</td><td>${fmtNum(r.last)}</td><td class="${r.delta>=0?'pos':'neg'}">${r.delta!=null?(r.delta>=0?'+':'')+r.delta.toFixed(1)+'%':'—'}</td></tr>`).join('')}
+    </tbody></table>`;
+}
+
+// Hook every new renderer into the dispatch
+const __prevRenderNx8 = window.renderNexus;
+window.renderNexus = function(data){
+  __prevRenderNx8(data);
+  setTimeout(() => {
+    try { renderGoalTracker(); }      catch(e){ console.error('goal', e); }
+    try { renderMarginWaterfall(); }  catch(e){ console.error('waterfall', e); }
+    try { renderUnitEcon(); }         catch(e){ console.error('unitecon', e); }
+    try { renderARAging(); }          catch(e){ console.error('araging', e); }
+    try { renderCommissionOpt(); }    catch(e){ console.error('commopt', e); }
+    try { renderRFM(); }              catch(e){ console.error('rfm', e); }
+    try { renderSkuLifecycle(); }     catch(e){ console.error('lifecycle', e); }
+    try { renderReorder(); }          catch(e){ console.error('reorder', e); }
+    try { renderRtoHeatmap(); }       catch(e){ console.error('rto', e); }
+    try { renderSLATracker(); }       catch(e){ console.error('sla', e); }
+    try { renderCohortLTV(); }        catch(e){ console.error('cohortltv', e); }
+    try { renderChannelDecay(); }     catch(e){ console.error('chandecay', e); }
+  }, 360);
+};
+
 // ── H2 #27 ANNOTATIONS ────────────────────────────────────
 // Right-click any .kpi or table row with a data-annot-key to attach a
 // note. Notes live in Supabase (public.annotations) keyed by target_key.

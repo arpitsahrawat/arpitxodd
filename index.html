@@ -4996,8 +4996,10 @@ function buildCharts(){
 const __prevRenderNexus = window.renderNexus;
 window.renderNexus = function(data){
   __prevRenderNexus(data);
-  setTimeout(buildCharts, 40);
-  setTimeout(renderAnomalies, 50);
+  // Debounce charts + anomalies (item #8) so a burst of filter changes
+  // doesn't trigger 16 chart destroy/creates per keystroke.
+  if(window.__nxChartsTimer) clearTimeout(window.__nxChartsTimer);
+  window.__nxChartsTimer = setTimeout(() => { try{buildCharts();}catch(e){console.error('buildCharts',e);} try{renderAnomalies();}catch(e){console.error('renderAnomalies',e);} }, 200);
 };
 
 // ── ANOMALY STRIP (auto-generated findings for Overview) ───

@@ -544,6 +544,9 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
     },
 
     async syncAll() {
+      // Snapshot of previous parse so incremental sync can reuse unchanged
+      // file rows keyed by (file name, modifiedTime).
+      this._prevData = this.data || {};
       this.files = {};
       const names = Object.keys(this.FOLDERS);
       for (const name of names) {
@@ -583,6 +586,11 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
       // so cross-file analytics (e.g. Jan + Feb + Mar CDC reports merged) are
       // possible. Each row gets a `_source` tag identifying the file it came
       // from, and the folder exposes both per-file arrays and a merged one.
+      //
+      // INCREMENTAL SYNC (#6): if this folder already had parsed per-file
+      // rows in `prevFiles`, any file whose modifiedTime matches an existing
+      // entry is reused instead of re-downloaded. 5× faster typical resync.
+      const prevFolderCache = this._prevData || {};
       for (const name of names) {
         if (name === 'mis') continue;
         const all = (this.files[name] || []).filter(f => /\.(csv|xlsx?)$/i.test(f.name));
@@ -591,21 +599,32 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
           this.data[name] = { rows: [], files: [], file: null };
           continue;
         }
+        const prevFiles = (prevFolderCache[name] && prevFolderCache[name].files) || [];
+        const prevByName = new Map(prevFiles.map(f => [f.name, f]));
         const perFile = [];
         const merged = [];
+        let reused = 0, fresh = 0;
         for (const f of all) {
+          const hit = prevByName.get(f.name);
+          if (hit && hit.modifiedTime === f.modifiedTime && Array.isArray(hit.rows)) {
+            perFile.push(hit);
+            for (const r of hit.rows) merged.push(Object.assign({ _source: f.name }, r));
+            reused++;
+            continue;
+          }
           try {
             const buf = await this.downloadFile(f.id);
             const parsed = this._readTable(buf);
             perFile.push({ name: f.name, rows: parsed.rows, sheet: parsed.sheet, headerRow: parsed.headerRow, modifiedTime: f.modifiedTime });
             for (const r of parsed.rows) merged.push(Object.assign({ _source: f.name }, r));
+            fresh++;
           } catch (e) {
             this.warn(`  ${name} parse failed for ${f.name}`, String(e));
           }
         }
         this.data[name] = { rows: merged, files: perFile, file: perFile[0] ? perFile[0].name : null };
         this.success(
-          `  ${name} parsed: ${merged.length} rows across ${perFile.length}/${all.length} files`,
+          `  ${name} → ${merged.length} rows · ${fresh} downloaded, ${reused} reused from cache`,
           merged.length ? Object.keys(merged[0]).filter(k=>k!=='_source').slice(0, 8) : []
         );
       }
@@ -1008,9 +1027,23 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
     // shape as loadCache() or null on miss.
     async loadSnapshot() {
       if (!this.SUPABASE_URL || !this.SUPABASE_BUCKET) return null;
+      const t = Date.now();
+      const base = `${this.SUPABASE_URL}/storage/v1/object/public/${this.SUPABASE_BUCKET}`;
+      // Prefer gzipped snapshot (smaller → faster transfer)
       try {
-        const url = `${this.SUPABASE_URL}/storage/v1/object/public/${this.SUPABASE_BUCKET}/${this.SUPABASE_SNAPSHOT}?t=${Date.now()}`;
-        const r = await fetch(url);
+        const rGz = await fetch(`${base}/${this.SUPABASE_SNAPSHOT}.gz?t=${t}`);
+        if (rGz.ok) {
+          const blob = await rGz.blob();
+          const text = await this._gunzip(blob);
+          if (text) {
+            const parsed = JSON.parse(text);
+            if (parsed.lastSync) return parsed;
+          }
+        }
+      } catch (_) {}
+      // Fall back to uncompressed
+      try {
+        const r = await fetch(`${base}/${this.SUPABASE_SNAPSHOT}?t=${t}`);
         if (!r.ok) { this.log(`Supabase snapshot ${r.status} — skipping fast path`); return null; }
         const blob = await r.json();
         if (!blob.lastSync) return null;
@@ -1019,6 +1052,19 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
         this.warn('Supabase snapshot fetch failed', String(e));
         return null;
       }
+    },
+
+    // Helper: gzip a string using native CompressionStream. Returns a Blob.
+    async _gzip(str) {
+      if (typeof CompressionStream === 'undefined') return null;
+      const stream = new Response(new Blob([str])).body.pipeThrough(new CompressionStream('gzip'));
+      const buf = await new Response(stream).arrayBuffer();
+      return new Blob([buf], { type: 'application/octet-stream' });
+    },
+    async _gunzip(blob) {
+      if (typeof DecompressionStream === 'undefined') return null;
+      const stream = blob.stream().pipeThrough(new DecompressionStream('gzip'));
+      return await new Response(stream).text();
     },
 
     async uploadSnapshot() {
@@ -1031,23 +1077,31 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
           data: this.data
         };
         const body = JSON.stringify(payload);
-        const url = `${this.SUPABASE_URL}/storage/v1/object/${this.SUPABASE_BUCKET}/${this.SUPABASE_SNAPSHOT}`;
+        // Try gzip first (item #7); fall back to raw JSON if CompressionStream
+        // unavailable or browser-side gzip fails. Store .gz for the compressed
+        // path and .json for raw so the fetcher can pick the smaller one.
+        const gz = await this._gzip(body).catch(() => null);
+        const useGz = gz && gz.size < body.length;
+        const path = useGz ? this.SUPABASE_SNAPSHOT + '.gz' : this.SUPABASE_SNAPSHOT;
+        const url = `${this.SUPABASE_URL}/storage/v1/object/${this.SUPABASE_BUCKET}/${path}`;
         const r = await fetch(url, {
           method: 'POST',
           headers: {
             'Authorization': 'Bearer ' + this.SUPABASE_KEY,
-            'Content-Type': 'application/json',
+            'Content-Type': useGz ? 'application/octet-stream' : 'application/json',
             'x-upsert': 'true',
             'cache-control': 'max-age=0'
           },
-          body
+          body: useGz ? gz : body
         });
         if (!r.ok) {
           const t = await r.text();
           this.warn(`Supabase snapshot upload ${r.status}: ${t.slice(0,160)}`);
           return false;
         }
-        this.success(`▲ Snapshot uploaded to Supabase (${(body.length/1024).toFixed(1)} KB)`);
+        const uploadedKB = (useGz ? gz.size : body.length) / 1024;
+        const rawKB = body.length / 1024;
+        this.success(`▲ Snapshot uploaded ${useGz?'(gzipped)':''} ${uploadedKB.toFixed(1)} KB${useGz?` (from ${rawKB.toFixed(1)} KB, ${(100*(1-uploadedKB/rawKB)).toFixed(0)}% smaller)`:''}`);
         return true;
       } catch (e) {
         this.warn('Supabase snapshot upload failed', String(e));

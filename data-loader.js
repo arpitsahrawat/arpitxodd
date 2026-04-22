@@ -25,7 +25,7 @@
   'use strict';
 
   const NEXUS_LIVE = window.NEXUS_LIVE = {
-    VERSION: '1.3.0',
+    VERSION: '1.4.0',
 
     // ─── CONFIG ───────────────────────────────────────────
     CLIENT_ID: '',
@@ -542,7 +542,8 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
       }
 
       // Every other domain folder: pick the latest CSV / XLSX / XLS and parse it
-      // into an array of row objects (sheet_to_json with header row inference).
+      // with smart-header detection so GA4 (# comment rows) and Invoices
+      // (title banner in row 0) produce usable column names.
       for (const name of names) {
         if (name === 'mis') continue;
         const latest = (this.files[name] || []).find(f => /\.(csv|xlsx?)$/i.test(f.name));
@@ -554,13 +555,12 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
         this.log(`▶ Parsing ${name}: ${latest.name}`);
         try {
           const buf = await this.downloadFile(latest.id);
-          const wb = XLSX.read(buf, { type: 'array' });
-          const sheetName = wb.SheetNames[0];
-          const ws = wb.Sheets[sheetName];
-          const rows = XLSX.utils.sheet_to_json(ws, { defval: null });
-          this.data[name] = { rows, file: latest.name, sheet: sheetName };
-          this.success(`  ${name} parsed: ${rows.length} rows from "${sheetName}"`,
-            rows.length ? Object.keys(rows[0]).slice(0, 6) : []);
+          const parsed = this._readTable(buf);
+          this.data[name] = { rows: parsed.rows, file: latest.name, sheet: parsed.sheet, headerRow: parsed.headerRow };
+          this.success(
+            `  ${name} parsed: ${parsed.rows.length} rows (header row ${parsed.headerRow}) from "${parsed.sheet}"`,
+            parsed.rows.length ? Object.keys(parsed.rows[0]).slice(0, 6) : []
+          );
         } catch (e) {
           this.err(`  ${name} parse failed`, String(e));
           this.data[name] = { rows: [], file: latest.name, error: String(e) };
@@ -568,6 +568,48 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
       }
 
       this.lastSync = new Date();
+    },
+
+    // ─── GENERIC TABLE READER (smart header row) ─────────
+    //
+    // XLSX.sheet_to_json with default settings uses row 0 as the header.
+    // That breaks on files where row 0 is a banner/title (Invoices) or a
+    // run of '# --- comment' lines (GA4 exports). This scans the first
+    // ~12 rows and picks the one that looks most like a header: the most
+    // non-empty, non-__EMPTY cells, with no leading '#'.
+    _readTable(arrayBuf) {
+      if (!window.XLSX) throw new Error('SheetJS not loaded');
+      const wb = XLSX.read(arrayBuf, { type: 'array' });
+      const sheet = wb.SheetNames[0];
+      const ws = wb.Sheets[sheet];
+      const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+
+      let headerRow = 0, best = -1;
+      const maxScan = Math.min(12, raw.length);
+      for (let i = 0; i < maxScan; i++) {
+        const row = raw[i] || [];
+        if (!row.length) continue;
+        if (typeof row[0] === 'string' && /^\s*#/.test(row[0])) continue;
+        const score = row.filter(c =>
+          c != null && String(c).trim() !== '' && !/^__EMPTY/.test(String(c))
+        ).length;
+        if (score > best) { best = score; headerRow = i; }
+      }
+
+      const headerCells = raw[headerRow] || [];
+      const headers = headerCells.map((h, j) => {
+        const s = h == null ? '' : String(h).trim();
+        return s && !/^__EMPTY/.test(s) ? s : `col${j}`;
+      });
+      const rows = [];
+      for (let i = headerRow + 1; i < raw.length; i++) {
+        const r = raw[i];
+        if (!r || r.every(c => c == null || String(c).trim() === '')) continue;
+        const obj = {};
+        for (let j = 0; j < headers.length; j++) obj[headers[j]] = r[j];
+        rows.push(obj);
+      }
+      return { rows, sheet, headerRow };
     },
 
     // ─── MIS PARSER ───────────────────────────────────────

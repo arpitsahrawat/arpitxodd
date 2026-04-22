@@ -4950,24 +4950,63 @@ window.go = function(el, id){
   if(id === 'pipeline'){setTimeout(buildPipelineCharts, 150);}
 };
 
-// ── NEXUS LIVE DATA HYDRATION ──
-// Called by data-loader.js whenever a sync completes. Overwrites the
-// hardcoded YTD KPIs on the Overview and every Drive Hub folder card with
-// the just-synced values. Defensive: if a field is missing we leave the
-// existing DOM alone rather than wipe the dashboard.
-function fmtINR(n){
+// ═══════════════════════════════════════════════════════════════════
+//  NEXUS LIVE DATA HYDRATION
+//  Called by data-loader.js after every successful Drive sync.
+//  Walks each dashboard section and replaces hardcoded demo values with
+//  derived live metrics. Every sub-renderer is defensive: missing data
+//  leaves the existing DOM untouched rather than blanking the dashboard.
+// ═══════════════════════════════════════════════════════════════════
+
+function fmtINR(n, opts){
+  opts = opts || {};
   if(n==null||!isFinite(n)) return '—';
-  const abs=Math.abs(n), sign=n<0?'−':(n>0?'+':'');
-  if(abs>=1e7) return sign+'₹'+(abs/1e7).toFixed(2)+'Cr';
-  if(abs>=1e5) return sign+'₹'+(abs/1e5).toFixed(1)+'L';
-  if(abs>=1e3) return sign+'₹'+(abs/1e3).toFixed(1)+'K';
+  const abs=Math.abs(n);
+  const sign = n<0 ? '−' : (opts.signed && n>0 ? '+' : '');
+  if(opts.raw)   return sign+'₹'+abs.toLocaleString('en-IN',{maximumFractionDigits:0});
+  if(abs>=1e7)  return sign+'₹'+(abs/1e7).toFixed(2)+'Cr';
+  if(abs>=1e5)  return sign+'₹'+(abs/1e5).toFixed(2)+'L';
+  if(abs>=1e3)  return sign+'₹'+(abs/1e3).toFixed(1)+'K';
   return sign+'₹'+abs.toFixed(0);
 }
+function fmtPct(p){ return (isFinite(p)?p.toFixed(1):'—')+'%'; }
+function toNum(v){
+  if(typeof v==='number') return v;
+  if(v==null) return NaN;
+  const n = parseFloat(String(v).replace(/,/g,'').replace(/[^\d.\-]/g,''));
+  return isFinite(n)?n:NaN;
+}
+function findKey(row, patterns){
+  if(!row) return null;
+  const keys = Object.keys(row);
+  for(const p of patterns){
+    const k = keys.find(k => p.test(k));
+    if(k) return k;
+  }
+  return null;
+}
+
 window.renderNexus = function(data){
   if(!data) return;
-  const files = (window.NEXUS_LIVE && window.NEXUS_LIVE.files) || {};
+  try { renderDriveHub(data); }   catch(e){ console.error('renderDriveHub', e); }
+  try { renderFreshness(data); }  catch(e){ console.error('renderFreshness', e); }
+  try { renderOverview(data); }   catch(e){ console.error('renderOverview', e); }
+  try { renderPnL(data); }        catch(e){ console.error('renderPnL', e); }
+  try { renderChannels(data); }   catch(e){ console.error('renderChannels', e); }
+  try { renderShopify(data); }    catch(e){ console.error('renderShopify', e); }
+  try { renderB2B(data); }        catch(e){ console.error('renderB2B', e); }
+  try { renderBudget(data); }     catch(e){ console.error('renderBudget', e); }
+  try { renderOps(data); }        catch(e){ console.error('renderOps', e); }
+  try { renderGA4(data); }        catch(e){ console.error('renderGA4', e); }
+  try { renderProducts(data); }   catch(e){ console.error('renderProducts', e); }
+  try { renderGeography(data); }  catch(e){ console.error('renderGeography', e); }
+  try { renderProjections(data); }catch(e){ console.error('renderProjections', e); }
+  try { renderAIInsights(data); } catch(e){ console.error('renderAIInsights', e); }
+};
 
-  // Drive Hub folder cards
+// ── DRIVE HUB ────────────────────────────────────────────────
+function renderDriveHub(data){
+  const files = (window.NEXUS_LIVE && window.NEXUS_LIVE.files) || {};
   document.querySelectorAll('#driveFolderGrid .fsc[data-drive-folder]').forEach(card=>{
     const key = card.getAttribute('data-drive-folder');
     const list = files[key] || [];
@@ -4996,41 +5035,589 @@ window.renderNexus = function(data){
     badgeEl.innerHTML = '✓ Live';
     card.classList.add('has');
   });
+}
 
-  // Overview YTD KPIs from MIS parse
+// ── HEADER FRESHNESS PILL ───────────────────────────────────
+// Injects a small "Last sync: hh:mm" pill next to the page title so the
+// user has at-a-glance confidence the numbers aren't stale.
+function renderFreshness(){
+  const live = window.NEXUS_LIVE;
+  if(!live || !live.lastSync) return;
+  let pill = document.getElementById('nx-freshness');
+  if(!pill){
+    const mount = document.querySelector('.tb-r') || document.querySelector('.tb') || document.querySelector('.topbar');
+    if(!mount) return;
+    pill = document.createElement('span');
+    pill.id = 'nx-freshness';
+    pill.style.cssText = 'font-family:\'DM Mono\',monospace;font-size:9px;color:var(--grn);'+
+      'border:1px solid rgba(74,222,128,.35);padding:3px 8px;border-radius:3px;letter-spacing:.05em;'+
+      'margin-left:8px;cursor:pointer;user-select:none';
+    pill.title = 'Click to force resync';
+    pill.onclick = () => window.NEXUS_LIVE && window.NEXUS_LIVE.forceResync && window.NEXUS_LIVE.forceResync();
+    mount.appendChild(pill);
+  }
+  const t = live.lastSync;
+  const hh = String(t.getHours()).padStart(2,'0');
+  const mm = String(t.getMinutes()).padStart(2,'0');
+  const foldersOk = Object.keys(live.files||{}).filter(k=>(live.files[k]||[]).length>0).length;
+  const foldersAll = Object.keys(live.FOLDERS||{}).length;
+  pill.textContent = `● LIVE · ${hh}:${mm} · ${foldersOk}/${foldersAll}`;
+}
+
+// ── OVERVIEW ────────────────────────────────────────────────
+function renderOverview(data){
   const mis = data.mis;
-  if(mis){
-    const gross=mis.gross?.ytd, net=mis.net?.ytd, cogs=mis.cogs?.ytd,
-          gp=mis.grossProfit?.ytd, eb=mis.ebitda?.ytd;
-    const setVal=(k,txt,cls)=>{
-      const v=document.querySelector(`#sec-overview .kpi[data-kpi="${k}"] .kpi-val`);
-      if(!v) return;
-      v.textContent=txt;
-      if(cls){ v.classList.remove('pos','neg'); if(cls) v.classList.add(cls); }
-    };
-    if(isFinite(gross)) setVal('gross', fmtINR(gross).replace(/^\+/,''));
-    if(isFinite(net))   setVal('net',   fmtINR(net).replace(/^\+/,''), net>=0?'pos':'neg');
-    if(isFinite(cogs))  setVal('cogs',  fmtINR(cogs).replace(/^\+/,''), 'neg');
-    if(isFinite(gp))    setVal('grossProfit', fmtINR(gp).replace(/^\+/,''));
-    if(isFinite(eb))    setVal('ebitda', fmtINR(eb), eb>=0?'pos':'neg');
+  if(!mis) return;
+  const gross=mis.gross&&mis.gross.ytd, net=mis.net&&mis.net.ytd, cogs=mis.cogs&&mis.cogs.ytd,
+        gp=mis.grossProfit&&mis.grossProfit.ytd, eb=mis.ebitda&&mis.ebitda.ytd;
+  const setVal=(k,txt,cls)=>{
+    const v=document.querySelector(`#sec-overview .kpi[data-kpi="${k}"] .kpi-val`);
+    if(!v) return;
+    v.textContent=txt;
+    if(cls!==undefined){ v.classList.remove('pos','neg'); if(cls) v.classList.add(cls); }
+  };
+  if(isFinite(gross)) setVal('gross', fmtINR(gross));
+  if(isFinite(net))   setVal('net',   fmtINR(net), net>=0?'pos':'neg');
+  if(isFinite(cogs))  setVal('cogs',  fmtINR(cogs), 'neg');
+  if(isFinite(gp))    setVal('grossProfit', fmtINR(gp));
+  if(isFinite(eb))    setVal('ebitda', fmtINR(eb,{signed:true}), eb>=0?'pos':'neg');
 
-    // Foot taglines derived from live ratios
-    const footCogs = document.querySelector('#sec-overview .kpi[data-kpi="cogs"] .kpi-foot .tag');
-    if(footCogs && isFinite(cogs) && isFinite(gross) && gross>0){
-      footCogs.textContent = (cogs/gross*100).toFixed(1)+'%';
+  const footCogs = document.querySelector('#sec-overview .kpi[data-kpi="cogs"] .kpi-foot .tag');
+  if(footCogs && isFinite(cogs) && isFinite(gross) && gross>0) footCogs.textContent = fmtPct(cogs/gross*100);
+  const footGP = document.querySelector('#sec-overview .kpi[data-kpi="grossProfit"] .kpi-foot .tag');
+  if(footGP && isFinite(gp) && isFinite(net) && net>0) footGP.textContent = fmtPct(gp/net*100);
+  const footEb = document.querySelector('#sec-overview .kpi[data-kpi="ebitda"] .kpi-foot .tag');
+  if(footEb && isFinite(eb) && isFinite(net) && net>0){
+    const pct = eb/net*100;
+    footEb.textContent = (pct>=0?'+':'')+pct.toFixed(1)+'%';
+    footEb.className = 'tag '+(pct>=0?'t-up':'t-dn');
+  }
+
+  // Monthly Jan/Feb EBITDA tiles on the overview side panel
+  const jE=mis.ebitda&&mis.ebitda.jan, fE=mis.ebitda&&mis.ebitda.feb;
+  const jN=mis.net&&mis.net.jan,      fN=mis.net&&mis.net.feb;
+  const side = document.querySelectorAll('#sec-overview .g21 > div:nth-child(2) > div');
+  if(side.length>=3){
+    if(isFinite(jE)){
+      const valEl = side[0].querySelector('div:nth-child(2)');
+      const subEl = side[0].querySelector('div:nth-child(3)');
+      if(valEl){ valEl.textContent = fmtINR(jE,{signed:true}).replace('+',''); valEl.style.color = jE<0?'var(--red)':'var(--grn)'; }
+      if(subEl && isFinite(jN) && jN>0) subEl.textContent = fmtPct(jE/jN*100)+' · Jan margin';
     }
-    const footGP = document.querySelector('#sec-overview .kpi[data-kpi="grossProfit"] .kpi-foot .tag');
-    if(footGP && isFinite(gp) && isFinite(net) && net>0){
-      footGP.textContent = (gp/net*100).toFixed(1)+'%';
+    if(isFinite(fE)){
+      const valEl = side[1].querySelector('div:nth-child(2)');
+      const subEl = side[1].querySelector('div:nth-child(3)');
+      if(valEl){ valEl.textContent = fmtINR(fE,{signed:true}).replace('+',''); valEl.style.color = fE<0?'var(--red)':'var(--grn)'; }
+      if(subEl && isFinite(fN) && fN>0) subEl.textContent = fmtPct(fE/fN*100)+' · Feb margin';
     }
-    const footEb = document.querySelector('#sec-overview .kpi[data-kpi="ebitda"] .kpi-foot .tag');
-    if(footEb && isFinite(eb) && isFinite(net) && net>0){
-      const pct = (eb/net*100);
-      footEb.textContent = (pct>=0?'+':'')+pct.toFixed(1)+'%';
-      footEb.className = 'tag '+(pct>=0?'t-up':'t-dn');
+    if(isFinite(eb)){
+      const valEl = side[2].querySelector('div:nth-child(2)');
+      if(valEl) valEl.textContent = fmtINR(eb,{signed:true});
     }
   }
-};
+}
+
+// ── P&L STATEMENT ──────────────────────────────────────────
+function renderPnL(data){
+  const mis = data.mis;
+  if(!mis) return;
+  const mk = (col, val, negate) => {
+    const n = Number(val);
+    if(!isFinite(n)) return null;
+    const signed = negate ? -Math.abs(n) : n;
+    return fmtINR(signed, {raw:true});
+  };
+
+  // Summary KPIs at top
+  const setK = (idx, txt, cls) => {
+    const kpis = document.querySelectorAll('#sec-pnl .kpi');
+    if(!kpis[idx]) return;
+    const v = kpis[idx].querySelector('.kpi-val');
+    if(v){ v.textContent = txt; if(cls!==undefined){ v.classList.remove('pos','neg'); if(cls) v.classList.add(cls); } }
+  };
+  const jE=mis.ebitda&&mis.ebitda.jan, fE=mis.ebitda&&mis.ebitda.feb;
+  const jN=mis.net&&mis.net.jan,     fN=mis.net&&mis.net.feb;
+  const jGP=mis.grossProfit&&mis.grossProfit.jan, fGP=mis.grossProfit&&mis.grossProfit.feb;
+  if(isFinite(jE)) setK(0, fmtINR(jE,{signed:true}), jE<0?'neg':'pos');
+  if(isFinite(fE)) setK(1, fmtINR(fE,{signed:true}), fE<0?'neg':'pos');
+  if(isFinite(jGP)&&isFinite(jN)&&isFinite(fGP)&&isFinite(fN) && jN>0 && fN>0){
+    const avg = ((jGP/jN)+(fGP/fN))/2*100;
+    setK(2, avg.toFixed(1)+'%');
+    const foot = document.querySelectorAll('#sec-pnl .kpi')[2];
+    if(foot){
+      const f = foot.querySelector('.kpi-foot');
+      if(f) f.textContent = `Jan ${fmtPct(jGP/jN*100)} · Feb ${fmtPct(fGP/fN*100)}`;
+    }
+  }
+
+  // Income Statement table rows — match by drill() tag so any reordering
+  // in the DOM doesn't break the mapping.
+  const setRow = (drillKey, jan, feb, ytd, opts) => {
+    const tr = document.querySelector(`#sec-pnl .tbl tbody tr[onclick*="'${drillKey}'"]`);
+    if(!tr) return;
+    const tds = tr.querySelectorAll('td');
+    if(tds.length < 4) return;
+    const nj = Number(jan), nf = Number(feb), ny = Number(ytd);
+    const neg = opts && opts.negative;
+    const paren = (v) => {
+      if(!isFinite(v)) return '—';
+      const abs = Math.abs(v);
+      const s = '₹'+abs.toLocaleString('en-IN',{maximumFractionDigits:0});
+      return neg ? `(${s})` : s;
+    };
+    tds[1].textContent = paren(nj);
+    tds[2].textContent = paren(nf);
+    tds[3].textContent = paren(ny);
+  };
+  setRow('gross-sales', mis.gross&&mis.gross.jan, mis.gross&&mis.gross.feb, mis.gross&&mis.gross.ytd);
+  setRow('net-sales',   mis.net&&mis.net.jan,     mis.net&&mis.net.feb,     mis.net&&mis.net.ytd);
+  setRow('cogs',        mis.cogs&&mis.cogs.jan,   mis.cogs&&mis.cogs.feb,   mis.cogs&&mis.cogs.ytd,  {negative:true});
+  setRow('gross-profit',mis.grossProfit&&mis.grossProfit.jan, mis.grossProfit&&mis.grossProfit.feb, mis.grossProfit&&mis.grossProfit.ytd);
+  setRow('commission',  mis.commission&&mis.commission.jan,   mis.commission&&mis.commission.feb,   mis.commission&&mis.commission.ytd, {negative:true});
+  setRow('ebitda',      jE, fE, mis.ebitda&&mis.ebitda.ytd);
+}
+
+// ── CHANNELS ────────────────────────────────────────────────
+// Derives channel mix from the shopify CSV's "Channel type" column when
+// present. Falls back to leaving demo data untouched.
+function renderChannels(data){
+  const shop = data.shopify;
+  if(!shop || !shop.rows || !shop.rows.length) return;
+  const chKey = findKey(shop.rows[0], [/^channel\s*type$/i, /^channel$/i, /channel.*type/i]);
+  if(!chKey) return;
+  const mix = {};
+  for(const r of shop.rows){
+    const c = r[chKey];
+    if(c==null || String(c).trim()==='') continue;
+    mix[c] = (mix[c]||0) + 1;
+  }
+  const entries = Object.entries(mix).sort((a,b)=>b[1]-a[1]);
+  if(!entries.length) return;
+  const total = entries.reduce((s,[,v])=>s+v,0);
+  const kpis = document.querySelectorAll('#sec-channels .kpi');
+  for(let i=0;i<Math.min(4,entries.length,kpis.length);i++){
+    const lbl = kpis[i].querySelector('.kpi-lbl');
+    const val = kpis[i].querySelector('.kpi-val');
+    const foot = kpis[i].querySelector('.kpi-foot');
+    if(lbl) lbl.textContent = entries[i][0];
+    if(val) val.textContent = entries[i][1] + ' orders';
+    if(foot) foot.textContent = (entries[i][1]/total*100).toFixed(1)+'% share';
+  }
+}
+
+// ── SHOPIFY B2C ─────────────────────────────────────────────
+function renderShopify(data){
+  const shop = data.shopify;
+  if(!shop || !shop.rows || !shop.rows.length) return;
+  const rows = shop.rows;
+  const dateKey  = findKey(rows[0], [/order\s*date/i, /^date$/i]);
+  const totalKey = findKey(rows[0], [/total$/i, /net\s*amount/i, /gross\s*amount/i, /amount$/i, /mrp/i, /price/i]);
+
+  const month = (s) => {
+    if(!s) return null;
+    const d = new Date(s);
+    if(isFinite(d.valueOf())) return d.toISOString().slice(0,7);
+    const m = String(s).match(/(\d{4})-(\d{2})/);
+    return m ? m[1]+'-'+m[2] : null;
+  };
+
+  const byMonth = {};
+  for(const r of rows){
+    const m = dateKey ? month(r[dateKey]) : null;
+    const key = m || '_all';
+    byMonth[key] = byMonth[key] || { count:0, sum:0 };
+    byMonth[key].count++;
+    if(totalKey){
+      const v = toNum(r[totalKey]);
+      if(isFinite(v)) byMonth[key].sum += v;
+    }
+  }
+  const months = Object.keys(byMonth).filter(k=>k!=='_all').sort();
+  const last = months.slice(-1)[0] || '_all';
+  const prev = months.slice(-2,-1)[0];
+
+  const kpis = document.querySelectorAll('#sec-shopify .kpi');
+  if(kpis[0] && prev){
+    const d = byMonth[prev];
+    kpis[0].querySelector('.kpi-lbl').textContent = prev + ' Revenue';
+    kpis[0].querySelector('.kpi-val').textContent = d.sum>0 ? fmtINR(d.sum) : d.count+' orders';
+    const aov = d.sum/Math.max(d.count,1);
+    kpis[0].querySelector('.kpi-foot').innerHTML = `${d.count} orders · AOV ${isFinite(aov)&&aov>0?fmtINR(aov):'—'}`;
+  }
+  if(kpis[1] && last){
+    const d = byMonth[last];
+    kpis[1].querySelector('.kpi-lbl').textContent = last + ' Revenue';
+    kpis[1].querySelector('.kpi-val').textContent = d.sum>0 ? fmtINR(d.sum) : d.count+' orders';
+    const aov = d.sum/Math.max(d.count,1);
+    kpis[1].querySelector('.kpi-foot').innerHTML = `${d.count} orders · AOV ${isFinite(aov)&&aov>0?fmtINR(aov):'—'}`;
+  }
+  if(kpis[2]){
+    kpis[2].querySelector('.kpi-lbl').textContent = 'Total Orders';
+    kpis[2].querySelector('.kpi-val').textContent = rows.length.toLocaleString('en-IN');
+    kpis[2].querySelector('.kpi-foot').textContent = months.length + ' months · ' + (shop.file||'').slice(0,28);
+  }
+  if(kpis[3] && totalKey){
+    const total = rows.reduce((s,r)=>{const v=toNum(r[totalKey]);return s+(isFinite(v)?v:0);},0);
+    kpis[3].querySelector('.kpi-lbl').textContent = 'Total Revenue';
+    kpis[3].querySelector('.kpi-val').textContent = total>0 ? fmtINR(total) : '—';
+    const aov = total/Math.max(rows.length,1);
+    kpis[3].querySelector('.kpi-foot').textContent = `AOV ${isFinite(aov)&&aov>0?fmtINR(aov):'—'}`;
+  }
+}
+
+// ── B2B PARTNERS (from Invoices) ───────────────────────────
+function renderB2B(data){
+  const inv = data.invoices;
+  if(!inv || !inv.rows || !inv.rows.length) return;
+  const rows = inv.rows;
+  const partyKey  = findKey(rows[0], [/^party/i, /^customer/i, /^name$/i, /buyer/i, /client/i]);
+  const amountKey = findKey(rows[0], [/total\s*amount/i, /gross\s*amount/i, /invoice\s*value/i, /net\s*amount/i, /amount$/i, /value$/i]);
+  if(!partyKey) return;
+  const agg = {};
+  for(const r of rows){
+    const p = r[partyKey];
+    if(p==null || String(p).trim()==='') continue;
+    const name = String(p).trim();
+    agg[name] = agg[name] || { count:0, sum:0 };
+    agg[name].count++;
+    if(amountKey){
+      const v = toNum(r[amountKey]);
+      if(isFinite(v)) agg[name].sum += v;
+    }
+  }
+  const entries = Object.entries(agg).sort((a,b)=>(b[1].sum||b[1].count)-(a[1].sum||a[1].count));
+  if(!entries.length) return;
+  const kpis = document.querySelectorAll('#sec-b2b .kpi');
+  const totalSum = entries.reduce((s,[,v])=>s+(v.sum||0),0);
+  const totalCount = entries.reduce((s,[,v])=>s+v.count,0);
+  if(kpis[0]){
+    kpis[0].querySelector('.kpi-lbl').textContent = 'Invoice Total';
+    kpis[0].querySelector('.kpi-val').textContent = totalSum>0 ? fmtINR(totalSum) : totalCount+' invoices';
+    kpis[0].querySelector('.kpi-foot').textContent = entries.length + ' parties';
+  }
+  if(kpis[1] && entries[0]){
+    kpis[1].querySelector('.kpi-lbl').textContent = 'Top Partner';
+    kpis[1].querySelector('.kpi-val').textContent = entries[0][0].slice(0,18);
+    kpis[1].querySelector('.kpi-foot').textContent = (entries[0][1].sum>0 ? fmtINR(entries[0][1].sum)+' · ' : '') + entries[0][1].count+' inv';
+  }
+  if(kpis[2]){
+    kpis[2].querySelector('.kpi-lbl').textContent = 'Invoice Count';
+    kpis[2].querySelector('.kpi-val').textContent = totalCount.toString();
+    kpis[2].querySelector('.kpi-foot').textContent = inv.file ? inv.file.slice(0,28) : '';
+  }
+  if(kpis[3] && totalSum>0 && entries[0] && entries[0][1].sum>0){
+    const pct = entries[0][1].sum/totalSum*100;
+    kpis[3].querySelector('.kpi-lbl').textContent = 'Concentration';
+    const v = kpis[3].querySelector('.kpi-val');
+    v.textContent = fmtPct(pct);
+    v.classList.toggle('neg', pct>30);
+    v.classList.toggle('pos', pct<=30);
+    kpis[3].querySelector('.kpi-foot').textContent = pct>30 ? 'Top partner share — risk ⚠' : 'Top partner share';
+  }
+
+  // Rebuild partner intelligence cards (first 6)
+  const pcards = document.querySelectorAll('#sec-b2b .pcard');
+  for(let i=0;i<Math.min(6,pcards.length);i++){
+    const card = pcards[i];
+    const item = entries[i];
+    if(!item){ card.style.display='none'; continue; }
+    const nm = card.querySelector('.pcard-name');
+    const ms = card.querySelectorAll('.pcard-m > div');
+    if(nm) nm.textContent = item[0];
+    if(ms[0]){
+      ms[0].querySelector('.pm-l').textContent = item[1].sum>0 ? 'Gross' : 'Count';
+      ms[0].querySelector('.pm-v').textContent = item[1].sum>0 ? fmtINR(item[1].sum) : item[1].count;
+    }
+    if(ms[1]){
+      ms[1].querySelector('.pm-l').textContent = 'Invoices';
+      ms[1].querySelector('.pm-v').textContent = item[1].count;
+    }
+    if(ms[2] && totalSum>0){
+      ms[2].querySelector('.pm-l').textContent = 'Share';
+      ms[2].querySelector('.pm-v').textContent = fmtPct(item[1].sum/totalSum*100);
+    }
+  }
+}
+
+// ── BUDGET VS ACTUAL (Ad Spends) ────────────────────────────
+function renderBudget(data){
+  const ad = data.adspends;
+  if(!ad || !ad.rows || !ad.rows.length) return;
+  const rows = ad.rows;
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const totals = {};
+  for(const m of months){
+    const k = findKey(rows[0], [new RegExp('^'+m+'$','i')]);
+    if(!k) continue;
+    let t = 0;
+    for(const r of rows){
+      const v = toNum(r[k]);
+      if(isFinite(v)) t += v;
+    }
+    totals[m] = t;
+  }
+  const used = Object.entries(totals).filter(([,v])=>v>0);
+  if(!used.length) return;
+  const kpis = document.querySelectorAll('#sec-budget .kpi');
+  const ytdSpend = used.reduce((s,[,v])=>s+v,0);
+  if(kpis[0]){
+    kpis[0].querySelector('.kpi-lbl').textContent = 'YTD Ad Spend';
+    kpis[0].querySelector('.kpi-val').textContent = fmtINR(ytdSpend);
+    kpis[0].querySelector('.kpi-foot').textContent = used.length + ' months';
+  }
+  // Map MIS net to compute ROAS if possible
+  const mis = data.mis;
+  if(mis && mis.net && isFinite(mis.net.ytd) && mis.net.ytd>0 && kpis[1]){
+    const roas = mis.net.ytd / ytdSpend;
+    kpis[1].querySelector('.kpi-lbl').textContent = 'ROAS (YTD)';
+    kpis[1].querySelector('.kpi-val').textContent = roas.toFixed(2)+'×';
+    kpis[1].querySelector('.kpi-foot').textContent = 'Net sales ÷ ad spend';
+  }
+  if(kpis[2]){
+    const latest = used.slice(-1)[0];
+    kpis[2].querySelector('.kpi-lbl').textContent = latest[0]+' Spend';
+    kpis[2].querySelector('.kpi-val').textContent = fmtINR(latest[1]);
+    kpis[2].querySelector('.kpi-foot').textContent = 'Most recent';
+  }
+  if(kpis[3]){
+    const avg = ytdSpend/used.length;
+    kpis[3].querySelector('.kpi-lbl').textContent = 'Avg Monthly';
+    kpis[3].querySelector('.kpi-val').textContent = fmtINR(avg);
+    kpis[3].querySelector('.kpi-foot').textContent = 'Spend cadence';
+  }
+}
+
+// ── OPS / LOGISTICS ────────────────────────────────────────
+function renderOps(data){
+  const log = data.logistics;
+  if(!log || !log.rows) return;
+  const rows = log.rows;
+  const kpis = document.querySelectorAll('#sec-ops .kpi');
+  if(kpis[0]){
+    kpis[0].querySelector('.kpi-lbl').textContent = 'Shipments';
+    kpis[0].querySelector('.kpi-val').textContent = rows.length.toLocaleString('en-IN');
+    kpis[0].querySelector('.kpi-foot').textContent = log.file ? log.file.slice(0,28) : '';
+  }
+  if(kpis[1] && rows.length){
+    const originKey = findKey(rows[0], [/origin/i, /pickup.*center/i, /source/i]);
+    if(originKey){
+      const by = {};
+      for(const r of rows){ const o = r[originKey]; if(o) by[o] = (by[o]||0)+1; }
+      const top = Object.entries(by).sort((a,b)=>b[1]-a[1])[0];
+      if(top){
+        kpis[1].querySelector('.kpi-lbl').textContent = 'Top Origin';
+        kpis[1].querySelector('.kpi-val').textContent = String(top[0]).slice(0,14);
+        kpis[1].querySelector('.kpi-foot').textContent = top[1] + ' shipments';
+      }
+    }
+  }
+}
+
+// ── GA4 TRAFFIC ────────────────────────────────────────────
+function renderGA4(data){
+  const ga = data.ga4;
+  if(!ga || !ga.rows || !ga.rows.length) return;
+  const rows = ga.rows;
+  const srcKey = findKey(rows[0], [/session\s*source/i, /source/i, /medium/i]);
+  const sessKey = findKey(rows[0], [/^sessions$/i, /session/i, /users/i]);
+  if(!srcKey) return;
+  const by = {};
+  for(const r of rows){
+    const s = r[srcKey]; if(!s) continue;
+    const key = String(s).trim();
+    const v = sessKey ? toNum(r[sessKey]) : 1;
+    by[key] = (by[key]||0) + (isFinite(v)?v:1);
+  }
+  const entries = Object.entries(by).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  if(!entries.length) return;
+  // Hydrate the traffic-source block on overview if it's empty or demo
+  const card = document.querySelector('#sec-overview #c-src');
+  if(card){
+    const container = card.closest('.card');
+    if(container){
+      let summary = container.querySelector('.nx-ga4-summary');
+      if(!summary){
+        summary = document.createElement('div');
+        summary.className = 'nx-ga4-summary';
+        summary.style.cssText='margin-top:10px;font-size:10px;color:var(--muted);font-family:\'DM Mono\',monospace';
+        container.appendChild(summary);
+      }
+      const total = entries.reduce((s,[,v])=>s+v,0);
+      summary.innerHTML = 'Top sources: ' + entries.map(([k,v])=>
+        `<span style="color:var(--cream)">${k}</span> ${(v/total*100).toFixed(0)}%`
+      ).join(' · ');
+    }
+  }
+}
+
+// ── PRODUCTS / SKU ─────────────────────────────────────────
+// Uses the shopify CSV if it has a product/title column. Otherwise the
+// SKU master file's first few rows as a fallback list.
+function renderProducts(data){
+  const shop = data.shopify;
+  if(!shop || !shop.rows || !shop.rows.length) return;
+  const rows = shop.rows;
+  const nameKey = findKey(rows[0], [/product.*name/i, /item.*name/i, /^title$/i, /sku.*name/i, /^product$/i, /vendor.*id/i]);
+  const revKey  = findKey(rows[0], [/net\s*amount/i, /total$/i, /amount$/i, /gross$/i, /price/i]);
+  if(!nameKey) return;
+  const agg = {};
+  for(const r of rows){
+    const n = r[nameKey]; if(!n) continue;
+    const key = String(n).trim();
+    agg[key] = agg[key] || { rev:0, count:0 };
+    agg[key].count++;
+    if(revKey){
+      const v = toNum(r[revKey]);
+      if(isFinite(v)) agg[key].rev += v;
+    }
+  }
+  const entries = Object.entries(agg).sort((a,b)=>(b[1].rev||b[1].count)-(a[1].rev||a[1].count)).slice(0,10);
+  // Populate first ranking table (Jan)
+  const ranks = document.querySelectorAll('#sec-products .card:first-of-type .rank');
+  for(let i=1;i<Math.min(ranks.length, entries.length+1);i++){
+    const r = ranks[i];
+    const item = entries[i-1]; if(!item) break;
+    const rname = r.querySelector('.rname');
+    const rrev = r.querySelector('.rrev');
+    const rtag = r.querySelector('.rtag');
+    if(rname) rname.textContent = item[0].slice(0,40);
+    if(rrev) rrev.textContent = item[1].rev>0 ? fmtINR(item[1].rev) : item[1].count+'×';
+    if(rtag) rtag.textContent = item[1].count+' ord';
+  }
+}
+
+// ── GEOGRAPHY ──────────────────────────────────────────────
+function renderGeography(data){
+  const shop = data.shopify;
+  if(!shop || !shop.rows || !shop.rows.length) return;
+  const rows = shop.rows;
+  const stateKey = findKey(rows[0], [/^state$/i, /ship.*state/i, /billing.*state/i]);
+  if(!stateKey) return;
+  const by = {};
+  for(const r of rows){
+    const s = r[stateKey]; if(!s) continue;
+    by[String(s).trim()] = (by[String(s).trim()]||0)+1;
+  }
+  const entries = Object.entries(by).sort((a,b)=>b[1]-a[1]);
+  if(!entries.length) return;
+  const kpis = document.querySelectorAll('#sec-geography .kpi');
+  if(kpis[0] && entries[0]){
+    kpis[0].querySelector('.kpi-lbl').textContent = 'Top State';
+    kpis[0].querySelector('.kpi-val').textContent = entries[0][0].slice(0,12);
+    kpis[0].querySelector('.kpi-foot').textContent = entries[0][1] + ' orders';
+  }
+  if(kpis[1]){
+    kpis[1].querySelector('.kpi-lbl').textContent = 'States Covered';
+    kpis[1].querySelector('.kpi-val').textContent = entries.length;
+    kpis[1].querySelector('.kpi-foot').textContent = 'Unique destinations';
+  }
+}
+
+// ── PROJECTIONS ────────────────────────────────────────────
+// Simple run-rate projection: if Jan+Feb average is X, extrapolate to 12.
+function renderProjections(data){
+  const mis = data.mis;
+  if(!mis || !isFinite(mis.gross && mis.gross.ytd)) return;
+  const months = [mis.gross.jan, mis.gross.feb, mis.gross.mar].filter(v=>isFinite(v)&&v>0);
+  if(!months.length) return;
+  const avg = months.reduce((s,v)=>s+v,0)/months.length;
+  const run12 = avg*12;
+  const kpis = document.querySelectorAll('#sec-projections .kpi');
+  if(kpis[0]){
+    kpis[0].querySelector('.kpi-lbl').textContent = 'Run-rate FY';
+    kpis[0].querySelector('.kpi-val').textContent = fmtINR(run12);
+    kpis[0].querySelector('.kpi-foot').textContent = `Based on ${months.length}-mo avg ${fmtINR(avg)}`;
+  }
+  if(kpis[1]){
+    kpis[1].querySelector('.kpi-lbl').textContent = 'Monthly Avg';
+    kpis[1].querySelector('.kpi-val').textContent = fmtINR(avg);
+    kpis[1].querySelector('.kpi-foot').textContent = 'Rolling mean';
+  }
+  if(kpis[2] && months.length>=2){
+    const mom = (months[months.length-1]/months[months.length-2]-1)*100;
+    kpis[2].querySelector('.kpi-lbl').textContent = 'MoM Growth';
+    const v = kpis[2].querySelector('.kpi-val');
+    v.textContent = (mom>=0?'+':'')+mom.toFixed(1)+'%';
+    v.classList.toggle('pos', mom>=0);
+    v.classList.toggle('neg', mom<0);
+    kpis[2].querySelector('.kpi-foot').textContent = 'Latest vs prior';
+  }
+}
+
+// ── AI INSIGHTS (generated from metrics) ───────────────────
+// Emits data-driven findings based on live numbers so the user has a
+// short narrative of what the data actually says.
+function renderAIInsights(data){
+  const mis = data.mis;
+  const mount = document.querySelector('#sec-suggestions');
+  if(!mount || !mis) return;
+  const insights = [];
+  const pctMoM = (a,b) => (isFinite(a)&&isFinite(b)&&b>0) ? ((a/b-1)*100) : null;
+  const p = pctMoM(mis.gross && mis.gross.feb, mis.gross && mis.gross.jan);
+  if(p!=null) insights.push({
+    cls: p>=0?'sug-op':'sug-cr',
+    title: `Feb ${p>=0?'+':''}${p.toFixed(0)}% vs Jan`,
+    body: `Gross sales moved from ${fmtINR(mis.gross.jan)} to ${fmtINR(mis.gross.feb)}. ${p>=30?'Momentum is strong — lock in the cause.':p<0?'Contraction — investigate channel drop-offs.':'Steady growth.'}`
+  });
+  const janEbit = mis.ebitda && mis.ebitda.jan;
+  if(isFinite(janEbit) && janEbit<0){
+    insights.push({
+      cls: 'sug-cr',
+      title: `Jan EBITDA negative: ${fmtINR(janEbit,{signed:true})}`,
+      body: `Commissions ${fmtINR(mis.commission&&mis.commission.jan)} + COGS ${fmtINR(mis.cogs&&mis.cogs.jan)} pushed operating result below zero. Revisit commission bands and one-off Jan costs.`
+    });
+  }
+  const shop = data.shopify;
+  if(shop && shop.rows && shop.rows.length){
+    insights.push({
+      cls: 'sug-hi',
+      title: `Shopify: ${shop.rows.length} orders in latest export`,
+      body: `File: ${shop.file}. Use the Shopify B2C page for AOV / channel / state mix.`
+    });
+  }
+  const ad = data.adspends;
+  if(ad && ad.rows && ad.rows.length && mis && mis.net && isFinite(mis.net.ytd)){
+    const months = ['January','February','March','April','May','June'];
+    let spend = 0;
+    for(const m of months){
+      const k = findKey(ad.rows[0], [new RegExp('^'+m+'$','i')]);
+      if(k) for(const r of ad.rows){ const v=toNum(r[k]); if(isFinite(v)) spend+=v; }
+    }
+    if(spend>0){
+      const roas = mis.net.ytd/spend;
+      insights.push({
+        cls: roas<2?'sug-cr':roas<4?'sug-hi':'sug-op',
+        title: `ROAS ${roas.toFixed(2)}× on ${fmtINR(spend)} ad spend`,
+        body: `${fmtINR(mis.net.ytd)} net sales ÷ ${fmtINR(spend)} spend. ${roas<2?'Below breakeven-plus-margin on most categories.':'Efficient — scale cautiously.'}`
+      });
+    }
+  }
+  const inv = data.invoices;
+  if(inv && inv.rows && inv.rows.length){
+    insights.push({
+      cls: 'sug-hi',
+      title: `${inv.rows.length} B2B invoice rows parsed`,
+      body: `See B2B Partners page for concentration and top-party breakdown.`
+    });
+  }
+
+  if(!insights.length) return;
+  let host = document.getElementById('nx-live-insights');
+  if(!host){
+    host = document.createElement('div');
+    host.id = 'nx-live-insights';
+    host.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:14px';
+    // Insert right after the header inside sec-suggestions
+    const head = mount.querySelector('.sec-hd');
+    if(head && head.nextSibling) mount.insertBefore(host, head.nextSibling); else mount.appendChild(host);
+  }
+  host.innerHTML = insights.map(i => `
+    <div class="card" style="padding:11px 13px;border-left:3px solid ${i.cls==='sug-cr'?'var(--red)':i.cls==='sug-hi'?'#F59E0B':'#10B981'}">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:.06em;margin-bottom:4px">${i.title}</div>
+      <div style="font-size:10px;color:var(--muted);line-height:1.45">${i.body}</div>
+    </div>
+  `).join('');
+}
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>

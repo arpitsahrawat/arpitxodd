@@ -365,20 +365,19 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
       }
       this.success(`CLIENT_ID OK (${this.CLIENT_ID.slice(0,12)}…)`);
 
-      // Cached data for instant render
+      // Cached data for instant render — paint the dashboard with whatever
+      // we last synced, but DO NOT hit the network. Sync only happens on
+      // an explicit 🔄 Force resync or 🔑 Re-auth click.
       const cached = this.loadCache();
       if (cached) {
         this.data = cached.data;
         this.files = cached.files || {};
         this.lastSync = cached.lastSync ? new Date(cached.lastSync) : null;
-        this.log(`Loaded cache from ${this.lastSync ? this.lastSync.toLocaleString() : 'unknown'}`);
+        this.log(`Loaded cache from ${this.lastSync ? this.lastSync.toLocaleString() : 'unknown'} — click 🔄 Force resync to refresh`);
         this.applyToUI();
-        return await this.connect(true);
+      } else {
+        this.warn('No cached data — click 🔑 Re-auth in this panel to sign in to Google Drive');
       }
-
-      // First visit: browsers block silent OAuth popups that aren't user-initiated.
-      // Require a click on 🔑 Re-auth instead of hanging this.loading forever.
-      this.warn('No cached data — click 🔑 Re-auth in this panel to sign in to Google Drive');
       this.showPanel();
       return false;
     },

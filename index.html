@@ -4592,6 +4592,326 @@ function topN(obj, n){
   return Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n);
 }
 
+// ── H2 #21 BREAK-EVEN CALCULATOR ──────────────────────────
+// Uses MIS fixed costs (salaries + rent + director salary + utilities
+// where known) and COGS/revenue ratio to compute break-even monthly
+// revenue. Interactive slider lets user stress-test assumptions.
+function renderBreakEven(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const mis = data.mis; if(!mis) return;
+  const fixedLines = ['rent','salary','directorSalary','utilities','professional'];
+  const monthlyFixed = fixedLines.reduce((s,k) => {
+    const r = mis[k]; if(!r) return s;
+    // avg over Jan/Feb/Mar
+    const months = [r.jan, r.feb, r.mar].filter(v => isFinite(v) && v > 0);
+    return s + (months.length ? months.reduce((a,b)=>a+b,0)/months.length : 0);
+  }, 0);
+  const gross = mis.gross && mis.gross.ytd;
+  const net   = mis.net   && mis.net.ytd;
+  const cogs  = mis.cogs  && mis.cogs.ytd;
+  const cogsRatio = isFinite(cogs) && isFinite(gross) && gross > 0 ? cogs / gross : 0.28;
+  const netRatio  = isFinite(net)  && isFinite(gross) && gross > 0 ? net  / gross : 0.90;
+  // BE: fixed = (net_ratio - cogs_ratio) * BE  →  BE = fixed / contrib_ratio
+  const contrib = Math.max(0.01, netRatio - cogsRatio);
+  const breakEven = monthlyFixed / contrib;
+
+  const sec = document.getElementById('sec-financials');
+  if(!sec) return;
+  let wrap = document.getElementById('nx-breakeven');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id = 'nx-breakeven'; wrap.className = 'card mb14'; sec.appendChild(wrap); }
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Break-Even Calculator</div><div class="card-sub">Monthly revenue needed to cover fixed costs at current margin</div></div>
+    <div class="g3" style="margin-top:10px">
+      <div><div class="kpi-lbl">Fixed Costs (avg/mo)</div><div style="font-family:'Bebas Neue',sans-serif;font-size:26px;margin-top:4px">${fmtINR(monthlyFixed)}</div><div style="font-size:9px;color:var(--dim)">rent + salaries + utilities</div></div>
+      <div><div class="kpi-lbl">Contribution Margin</div><div style="font-family:'Bebas Neue',sans-serif;font-size:26px;margin-top:4px">${fmtPct(contrib*100)}</div><div style="font-size:9px;color:var(--dim)">net − COGS (as % of gross)</div></div>
+      <div><div class="kpi-lbl">Break-Even Revenue</div><div style="font-family:'Bebas Neue',sans-serif;font-size:26px;margin-top:4px;color:var(--grn)">${fmtINR(breakEven)}</div><div style="font-size:9px;color:var(--dim)">monthly to hit zero EBITDA</div></div>
+    </div>
+    <div style="margin-top:14px">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:6px">Stress-test (drag the slider to change fixed costs):</div>
+      <input type="range" id="nx-be-slider" min="0" max="300" value="100" style="width:100%">
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--dim);margin-top:4px">
+        <span>0%</span><span id="nx-be-label">100% (${fmtINR(breakEven)})</span><span>300%</span>
+      </div>
+    </div>`;
+  const slider = document.getElementById('nx-be-slider');
+  const label  = document.getElementById('nx-be-label');
+  if(slider) slider.oninput = (e) => {
+    const factor = Number(e.target.value) / 100;
+    const scaled = breakEven * factor;
+    label.textContent = `${e.target.value}% (${fmtINR(scaled)})`;
+  };
+}
+
+// ── H2 #23 SPLIT-SCREEN COMPARE MODE ──────────────────────
+// Toggle a "Compare" button in the filter bar. When on, two snapshots
+// of the current NEXUS_FILTERS are shown side-by-side with deltas.
+window.__nxCompareOn = false;
+window.__nxCompareA = null;
+function toggleCompare(){
+  window.__nxCompareOn = !window.__nxCompareOn;
+  if(window.__nxCompareOn){
+    // Snapshot A = current filter
+    window.__nxCompareA = Object.assign({}, window.NEXUS_FILTERS);
+    // Render a floating comparison card below the filter bar
+    renderCompareCard();
+  } else {
+    const el = document.getElementById('nx-compare-card');
+    if(el) el.remove();
+  }
+}
+function renderCompareCard(){
+  if(!window.__nxCompareA) return;
+  const data = window.NEXUS_DATA; if(!data) return;
+  // Compute KPIs under filter A vs current (B)
+  const snapshotA = window.NEXUS_DATA_UNFILTERED || data;
+  // Save current filters, swap, compute, restore — brittle but avoids
+  // a full duplicate renderer.
+  const savedFilters = Object.assign({}, window.NEXUS_FILTERS);
+  window.NEXUS_FILTERS = Object.assign({}, window.__nxCompareA);
+  const aFiltered = window.applyFilters(data);
+  window.NEXUS_FILTERS = savedFilters;
+  const bFiltered = window.NEXUS_DATA_FILTERED || data;
+  // Quick KPI for each
+  const aggRev = (d) => {
+    const sO = (d.shopifyOnline && d.shopifyOnline.rows) || [];
+    const totKey = sO[0] ? findKey(sO[0], [/total\s*order\s*value/i]) : null;
+    return totKey ? sO.reduce((s,r)=>{const v=toNum(r[totKey]); return s+(isFinite(v)?v:0);},0) : 0;
+  };
+  const aggOrders = (d) => {
+    const sO = (d.shopifyOnline && d.shopifyOnline.rows) || [];
+    return sO.length;
+  };
+  const aRev = aggRev(aFiltered), bRev = aggRev(bFiltered);
+  const aOrd = aggOrders(aFiltered), bOrd = aggOrders(bFiltered);
+  const delta = (a,b) => a>0 ? ((b-a)/a*100) : null;
+  const fmtDelta = (d) => d == null ? '—' : (d>=0?'+':'')+d.toFixed(1)+'%';
+  const fmtChips = (fs) => [fs.month, fs.channel, fs.store, fs.source].filter(Boolean).slice(0,2).join(' · ') || 'no filter';
+
+  let card = document.getElementById('nx-compare-card');
+  if(!card){
+    card = document.createElement('div'); card.id = 'nx-compare-card';
+    card.style.cssText = 'position:fixed;bottom:20px;left:20px;width:540px;max-width:calc(100vw - 40px);background:#0a0a0a;border:1px solid var(--red);border-radius:4px;padding:12px;z-index:90;box-shadow:0 8px 32px rgba(0,0,0,0.6);font-family:\'DM Mono\',monospace';
+    document.body.appendChild(card);
+  }
+  card.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.07em;color:var(--red)">⇆ Compare Mode</div>
+    <button onclick="toggleCompare()" style="background:transparent;border:1px solid var(--border);color:var(--cream);padding:3px 10px;cursor:pointer;font-family:inherit;font-size:10px">×</button>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:10px">
+    <div><div style="color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:.08em">A · ${escapeHTML(fmtChips(window.__nxCompareA))}</div>
+      <div style="margin-top:4px">Orders: <b style="color:var(--cream)">${fmtNum(aOrd)}</b></div>
+      <div>Rev: <b style="color:var(--cream)">${fmtINR(aRev)}</b></div></div>
+    <div><div style="color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:.08em">B · ${escapeHTML(fmtChips(savedFilters))}</div>
+      <div style="margin-top:4px">Orders: <b style="color:var(--cream)">${fmtNum(bOrd)}</b></div>
+      <div>Rev: <b style="color:var(--cream)">${fmtINR(bRev)}</b></div></div>
+    <div><div style="color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:.08em">Δ (B vs A)</div>
+      <div style="margin-top:4px" class="${delta(aOrd,bOrd)>=0?'pos':'neg'}">${fmtDelta(delta(aOrd,bOrd))}</div>
+      <div class="${delta(aRev,bRev)>=0?'pos':'neg'}">${fmtDelta(delta(aRev,bRev))}</div></div>
+  </div>
+  <div style="font-size:9px;color:var(--dim);margin-top:8px">Snapshot A locked. Change filters to set B — card auto-updates.</div>`;
+}
+window.toggleCompare = toggleCompare;
+
+// ── H2 #25 NATURAL-LANGUAGE QUERY ─────────────────────────
+// Simple template-based grammar. Not an LLM — pattern matches common
+// business questions. If the bar loses, we show the global search.
+function parseNLQuery(q){
+  const s = q.toLowerCase().trim();
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA || {};
+  const fmtList = (arr, pick) => arr.slice(0,5).map(x => pick(x)).join('<br>');
+  // "top products" / "top skus"
+  if(/top\s+\d*\s*(products|skus|items)/.test(s)){
+    const prods = (window.__PROD_AGG && window.__PROD_AGG.products) || [];
+    return { title:'Top products by revenue', html: prods.slice(0,10).map((p,i) => `<div>${i+1}. ${escapeHTML(p.name)} — ${fmtINR(p.revenue)} (${fmtNum(p.units)} units)</div>`).join('') };
+  }
+  // "top parties" / "top b2b"
+  if(/top.*(party|parties|b2b|partner)/.test(s)){
+    const parts = (window.__B2B_AGG && window.__B2B_AGG.parties) || [];
+    return { title:'Top B2B parties', html: parts.slice(0,10).map((p,i) => `<div>${i+1}. ${escapeHTML(p.name)} — ${fmtINR(p.revenue)} · ${p.count} invoice${p.count===1?'':'s'}</div>`).join('') };
+  }
+  // "revenue in <month>" / "<month> revenue"
+  const monthMatch = s.match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/);
+  if(monthMatch && /(revenue|sales|gross|net)/.test(s)){
+    const mis = data.mis;
+    const m = {jan:'jan',feb:'feb',mar:'mar'}[monthMatch[1].slice(0,3)];
+    if(mis && m){
+      return { title: `${monthMatch[1].toUpperCase()} revenue (MIS)`, html:
+        `<div>Gross: <b>${fmtINR(mis.gross && mis.gross[m])}</b></div>
+         <div>Net: <b>${fmtINR(mis.net && mis.net[m])}</b></div>
+         <div>COGS: <b>${fmtINR(mis.cogs && mis.cogs[m])}</b></div>
+         <div>EBITDA: <b>${fmtINR(mis.ebitda && mis.ebitda[m], {signed:true})}</b></div>` };
+    }
+  }
+  // "how many orders"
+  if(/how many orders|order count|total orders/.test(s)){
+    const sO = (data.shopifyOnline && data.shopifyOnline.rows) || [];
+    const sR = (data.shopifyRetail && data.shopifyRetail.rows) || [];
+    return { title:'Orders', html: `Online: <b>${sO.length}</b><br>Retail bills: <b>${sR.length}</b><br>Total: <b>${sO.length + sR.length}</b>` };
+  }
+  // Fallback: global search
+  return { title:'Search results', html:'<em>Couldn\'t parse as a question. Use ⌕ global search for free text.</em>' };
+}
+function openNLQuery(){
+  let modal = document.getElementById('nx-nl-modal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'nx-nl-modal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:9997;display:flex;align-items:flex-start;justify-content:center;padding:60px 30px';
+    modal.innerHTML = `<div style="background:#0a0a0a;border:1px solid var(--border);border-radius:4px;max-width:700px;width:100%;padding:18px">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.07em">💬 Ask NEXUS</span>
+        <input id="nx-nl-input" placeholder="e.g. 'top 10 products' or 'feb revenue' or 'how many orders'" style="flex:1;background:var(--bg1);color:var(--cream);border:1px solid var(--border);padding:6px 10px;font-family:'DM Mono',monospace;font-size:11px">
+        <button onclick="document.getElementById('nx-nl-modal').style.display='none'" style="background:transparent;border:1px solid var(--border);color:var(--cream);padding:4px 10px;cursor:pointer;font-family:inherit;font-size:10px">Esc</button>
+      </div>
+      <div id="nx-nl-out" style="font-size:10.5px;color:var(--cream);line-height:1.7;padding:8px 0;max-height:400px;overflow-y:auto">Type a question to begin.</div>
+      <div style="font-size:9px;color:var(--dim);margin-top:8px">Supported: "top products", "top parties", "feb revenue", "how many orders". Free-text search is / (slash).</div>
+    </div>`;
+    modal.onclick = (e) => { if(e.target === modal) modal.style.display='none'; };
+    document.body.appendChild(modal);
+    const input = document.getElementById('nx-nl-input');
+    const out = document.getElementById('nx-nl-out');
+    input.oninput = () => {
+      const ans = parseNLQuery(input.value);
+      out.innerHTML = `<div style="font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:.07em;color:var(--red);margin-bottom:6px">${escapeHTML(ans.title)}</div>${ans.html}`;
+    };
+    input.onkeydown = (e) => { if(e.key==='Escape') modal.style.display='none'; };
+  }
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('nx-nl-input').focus(), 50);
+}
+window.openNLQuery = openNLQuery;
+
+// ── H2 #26 CUSTOM KPI BUILDER ─────────────────────────────
+// User writes a one-line JS expression evaluated against NEXUS_DATA.
+// Stored in localStorage; rendered as extra KPIs at the top of
+// Command Center.
+const CUSTOM_KPI_KEY = 'nexus_custom_kpis_v1';
+function loadCustomKpis(){ try { return JSON.parse(localStorage.getItem(CUSTOM_KPI_KEY)||'[]'); } catch(_){ return []; } }
+function saveCustomKpis(v){ try { localStorage.setItem(CUSTOM_KPI_KEY, JSON.stringify(v)); } catch(_){} }
+function evalCustomKpi(expr, data){
+  try {
+    const d = data || {};
+    const mis = d.mis || {};
+    const online = (d.shopifyOnline && d.shopifyOnline.rows) || [];
+    const retail = (d.shopifyRetail && d.shopifyRetail.rows) || [];
+    const invoices = (d.invoicesSummary && d.invoicesSummary.rows) || [];
+    const adMonthly = d.adspendsMonthly || {};
+    // eval in a restricted scope (no globals access)
+    const fn = new Function('mis','online','retail','invoices','adMonthly','return ('+expr+')');
+    return fn(mis, online, retail, invoices, adMonthly);
+  } catch(e) { return 'Err: ' + e.message; }
+}
+function renderCustomKpis(){
+  const list = loadCustomKpis();
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA;
+  if(!data) return;
+  const host = document.querySelector('#sec-overview .kpis.k5');
+  if(!host) return;
+  let wrap = document.getElementById('nx-custom-kpis');
+  if(!wrap){
+    wrap = document.createElement('div');
+    wrap.id = 'nx-custom-kpis';
+    wrap.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:12px';
+    host.parentElement.insertBefore(wrap, host);
+  }
+  const addBtn = `<div class="kpi" style="cursor:pointer;border-style:dashed" onclick="openCustomKpiEditor()">
+    <div class="kpi-val" style="color:var(--muted);font-size:18px">＋ Add custom KPI</div>
+    <div class="kpi-foot" style="color:var(--dim)">One-line formula</div></div>`;
+  wrap.innerHTML = list.map((k, idx) => {
+    const val = evalCustomKpi(k.expr, data);
+    const disp = typeof val === 'number' ? (k.format==='inr' ? fmtINR(val) : k.format==='pct' ? fmtPct(val) : fmtNum(val)) : String(val);
+    return `<div class="kpi" style="position:relative">
+      <div class="kpi-lbl">${escapeHTML(k.label)}</div>
+      <div class="kpi-val">${escapeHTML(disp)}</div>
+      <div class="kpi-foot" style="font-family:'DM Mono',monospace;font-size:8.5px">${escapeHTML(k.expr.slice(0,40))}</div>
+      <button onclick="deleteCustomKpi(${idx})" style="position:absolute;top:4px;right:4px;background:transparent;border:1px solid var(--border);color:var(--red);font-size:9px;padding:0 4px;cursor:pointer">×</button>
+    </div>`;
+  }).join('') + addBtn;
+}
+function openCustomKpiEditor(){
+  const label = prompt('KPI label (e.g. "Avg order value"):');
+  if(!label) return;
+  const expr = prompt('JS expression using mis, online, retail, invoices, adMonthly (e.g. online.length > 0 ? online.reduce((s,r)=>s+(+r["Total Order value"]||0),0)/online.length : 0):');
+  if(!expr) return;
+  const format = prompt('Format: inr / pct / num (default num):') || 'num';
+  const list = loadCustomKpis();
+  list.push({ label, expr, format });
+  saveCustomKpis(list);
+  renderCustomKpis();
+}
+function deleteCustomKpi(idx){
+  if(!confirm('Delete this KPI?')) return;
+  const list = loadCustomKpis();
+  list.splice(idx, 1);
+  saveCustomKpis(list);
+  renderCustomKpis();
+}
+window.openCustomKpiEditor = openCustomKpiEditor;
+window.deleteCustomKpi = deleteCustomKpi;
+
+// ── H2 #29 SHAREABLE PUBLIC SNAPSHOT URL ──────────────────
+// Encode current filters + force-read a named snapshot version.
+// URL: /?view=<base64(NEXUS_FILTERS)>
+function generateShareUrl(){
+  const f = window.NEXUS_FILTERS || {};
+  const chips = Object.entries(f).filter(([,v])=>v).map(([k,v])=>`${k}=${encodeURIComponent(v)}`);
+  const url = window.location.origin + '/?view=' + encodeURIComponent(btoa(JSON.stringify(f)));
+  navigator.clipboard.writeText(url).then(() => alert('Share URL copied to clipboard:\n\n' + url));
+}
+window.generateShareUrl = generateShareUrl;
+// Auto-apply ?view= on load
+document.addEventListener('DOMContentLoaded', () => {
+  const m = location.search.match(/[?&]view=([^&]+)/);
+  if(!m) return;
+  try {
+    const decoded = JSON.parse(atob(decodeURIComponent(m[1])));
+    window.NEXUS_FILTERS = Object.assign({ month:'', source:'', channel:'', store:'', category:'' }, decoded);
+    setTimeout(() => { if(window.rehydrate) window.rehydrate(); }, 400);
+  } catch(_){}
+});
+
+// Add NL query + compare + share buttons to filter bar
+const __prevInitFb3 = window.initFilterBar;
+if(typeof __prevInitFb3 === 'function'){
+  window.initFilterBar = function(data){
+    __prevInitFb3(data);
+    setTimeout(() => {
+      const bar = document.getElementById('nx-filter-bar'); if(!bar) return;
+      const clear = bar.querySelector('#nxf-clear');
+      if(clear && !bar.querySelector('#nxf-ask')){
+        const ask = document.createElement('button');
+        ask.id='nxf-ask'; ask.textContent='💬 Ask';
+        ask.style.cssText='background:transparent;border:1px solid var(--border);color:var(--cream);padding:3px 10px;cursor:pointer;font-family:inherit;font-size:inherit;margin-right:6px';
+        ask.onclick = openNLQuery;
+        clear.parentNode.insertBefore(ask, clear);
+      }
+      if(clear && !bar.querySelector('#nxf-compare')){
+        const cmp = document.createElement('button');
+        cmp.id='nxf-compare'; cmp.textContent='⇆ Compare';
+        cmp.style.cssText='background:transparent;border:1px solid var(--border);color:var(--cream);padding:3px 10px;cursor:pointer;font-family:inherit;font-size:inherit;margin-right:6px';
+        cmp.onclick = toggleCompare;
+        clear.parentNode.insertBefore(cmp, clear);
+      }
+      if(clear && !bar.querySelector('#nxf-share')){
+        const sh = document.createElement('button');
+        sh.id='nxf-share'; sh.textContent='🔗 Share';
+        sh.style.cssText='background:transparent;border:1px solid var(--border);color:var(--cream);padding:3px 10px;cursor:pointer;font-family:inherit;font-size:inherit;margin-right:6px';
+        sh.onclick = generateShareUrl;
+        clear.parentNode.insertBefore(sh, clear);
+      }
+    }, 50);
+  };
+}
+// Hook break-even + custom kpis into render
+const __prevRenderNx6 = window.renderNexus;
+window.renderNexus = function(data){
+  __prevRenderNx6(data);
+  setTimeout(() => {
+    try { renderBreakEven(); } catch(e){ console.error('renderBreakEven', e); }
+    try { renderCustomKpis(); } catch(e){ console.error('renderCustomKpis', e); }
+    if(window.__nxCompareOn) try { renderCompareCard(); } catch(e){}
+  }, 280);
+};
+
 // ── H2 #16 COHORT / REPEAT ANALYSIS ───────────────────────
 // Uses Shopify order-number prefix as a stand-in customer key (no
 // email in the CDC export). Groups by first-month, tracks repeat

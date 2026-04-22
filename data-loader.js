@@ -25,11 +25,12 @@
   'use strict';
 
   const NEXUS_LIVE = window.NEXUS_LIVE = {
-    VERSION: '1.2.0',
+    VERSION: '1.3.0',
 
     // ─── CONFIG ───────────────────────────────────────────
     CLIENT_ID: '',
     SCOPES: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file',
+    PARENT_FOLDER: '1aVLGpFyTtlDXw7SSDW1cQZTGbry7gpRm',
     FOLDERS: {
       shopify:  '1iaI7piRK88G5tgeCWRGqcpPA2CNZCawn',
       mis:      '1WUbA7SP11QPL7lgsMKemi1uo2KywV4WU',
@@ -38,6 +39,15 @@
       ga4:      '1yGNZm2VNw446nZ-1XTpzWzB59UQ13JUH',
       adspends: '1fdEeM-U_3-_GZJNW_Xlz7N0fggBne1SV',
       sku:      '1vlHsw-uAVBfRrP5wTMs3ptEK_c_H2_xa'
+    },
+    FOLDER_PATTERNS: {
+      shopify:   /shopify/i,
+      mis:       /\bMIS\b/i,
+      logistics: /logist/i,
+      invoices:  /invoice/i,
+      ga4:       /\bGA4\b|analytics/i,
+      adspends:  /ad\s*spend/i,
+      sku:       /\bSKU\b|inventory/i
     },
     STORAGE_KEY: 'nexus_drive_cache_v1',
 
@@ -397,6 +407,7 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
         this.tokenExpiry = Date.now() + (tok.expires_in * 1000) - 60000;
         this.success(`Token acquired, valid ${tok.expires_in}s`);
 
+        await this._resolveFolders();
         await this.syncAll();
         this.connected = true;
         this.saveCache();
@@ -439,6 +450,37 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
     },
 
     // ─── DRIVE API ────────────────────────────────────────
+
+    async _resolveFolders() {
+      if (!this.PARENT_FOLDER) return;
+      try {
+        const q = encodeURIComponent(
+          `'${this.PARENT_FOLDER}' in parents and ` +
+          `mimeType = 'application/vnd.google-apps.folder' and trashed = false`
+        );
+        const fields = encodeURIComponent('files(id,name)');
+        const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&pageSize=100`;
+        const r = await fetch(url, { headers: { Authorization: 'Bearer ' + this.token } });
+        if (!r.ok) {
+          this.warn(`Parent folder resolve failed (HTTP ${r.status}), using hardcoded IDs`);
+          return;
+        }
+        const j = await r.json();
+        const subs = j.files || [];
+        this.log(`Discovered ${subs.length} subfolders under parent`, subs.map(f => f.name));
+        for (const [key, pattern] of Object.entries(this.FOLDER_PATTERNS)) {
+          const match = subs.find(f => pattern.test(f.name));
+          if (match && this.FOLDERS[key] !== match.id) {
+            this.log(`  resolve ${key} → "${match.name}"`, match.id);
+            this.FOLDERS[key] = match.id;
+          } else if (!match) {
+            this.warn(`  resolve ${key}: no subfolder matches ${pattern}`);
+          }
+        }
+      } catch (e) {
+        this.warn('Parent folder resolve failed', String(e));
+      }
+    },
 
     async listFolder(folderId) {
       const q = encodeURIComponent(`'${folderId}' in parents and trashed = false`);

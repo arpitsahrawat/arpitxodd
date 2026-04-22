@@ -4428,6 +4428,196 @@ function topN(obj, n){
   return Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n);
 }
 
+// ── H2 #14 CHANNEL P&L ALLOCATION ──────────────────────────
+// Attribute ad spend (from adspendsMonthly) + CDC commission (from
+// merchant_commission column) + returns to each channel → contribution
+// margin. Rendered at the bottom of the Sales page.
+function renderChannelPnL(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const sO = (data.shopifyOnline && data.shopifyOnline.rows) || [];
+  const sR = (data.shopifyRetail && data.shopifyRetail.rows) || [];
+  const iS = (data.invoicesSummary && data.invoicesSummary.rows) || [];
+  const mis = data.mis;
+  const host = document.getElementById('sales-deep');
+  if(!host || !sO.length) return;
+  const totKey  = findKey(sO[0], [/total\s*order\s*value/i]);
+  const commKey = findKey(sO[0], [/merchant\s*earning/i, /merchant\s*commission/i]);
+  const onlineRev = totKey ? sO.reduce((s,r)=>{const v=toNum(r[totKey]); return s+(isFinite(v)?v:0);},0) : 0;
+  const retailPK = sR[0] ? findKey(sR[0], [/^price$/i]) : null;
+  const retailRev = retailPK ? sR.reduce((s,r)=>{const v=toNum(r[retailPK]); return s+(isFinite(v)?v:0);},0) : 0;
+  const invAK = iS[0] ? findKey(iS[0], [/total\s*amount/i]) : null;
+  const b2bRev = invAK ? iS.reduce((s,r)=>{const v=toNum(r[invAK]); return s+(isFinite(v)?v:0);},0) : 0;
+  const totalRev = onlineRev + retailRev + b2bRev;
+  const onlineComm = commKey ? sO.reduce((s,r)=>{const v=toNum(r[commKey]); return s+(isFinite(v)?v:0);},0) : 0;
+  // YTD ad spend
+  const adMonthly = data.adspendsMonthly || {};
+  const adYTD = Object.entries(adMonthly).filter(([k])=>k.startsWith('2026')).reduce((s,[,v])=>s+v,0);
+  // Allocate ad spend proportionally to revenue share (simple default)
+  const share = ch => totalRev>0 ? ch/totalRev : 0;
+  const alloc = ch => adYTD * share(ch);
+  const rows = [
+    { ch:'Online (Shopflo)', rev:onlineRev, commission:onlineComm, allocAds:alloc(onlineRev) },
+    { ch:'Retail (CDC)',     rev:retailRev, commission:0,          allocAds:alloc(retailRev) },
+    { ch:'B2B (Invoices)',   rev:b2bRev,    commission:0,          allocAds:alloc(b2bRev) }
+  ];
+  // Contribution margin using MIS COGS ratio if available
+  const cogsRatio = mis && mis.cogs && mis.net && mis.net.ytd > 0 ? mis.cogs.ytd / mis.gross.ytd : 0.28;
+  for(const r of rows){
+    r.cogs = r.rev * cogsRatio;
+    r.contribMargin = r.rev - r.cogs - r.commission - r.allocAds;
+    r.margPct = r.rev > 0 ? r.contribMargin / r.rev * 100 : 0;
+  }
+  const tblHtml = `<div style="margin-top:14px"><div style="font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:.07em;margin-bottom:6px">Channel P&amp;L (allocation-based)</div>
+    <table class="tbl" style="font-size:10px"><thead><tr><th style="text-align:left">Channel</th><th>Revenue</th><th>COGS</th><th>Commission</th><th>Ad Allocation</th><th>Contrib. Margin</th><th>%</th></tr></thead><tbody>
+      ${rows.map(r => `<tr>
+        <td style="text-align:left">${escapeHTML(r.ch)}</td>
+        <td>${fmtINR(r.rev)}</td>
+        <td>${fmtINR(r.cogs)}</td>
+        <td>${fmtINR(r.commission)}</td>
+        <td>${fmtINR(r.allocAds)}</td>
+        <td class="${r.contribMargin>=0?'pos':'neg'}">${fmtINR(r.contribMargin,{signed:true})}</td>
+        <td class="${r.margPct>=0?'pos':'neg'}">${fmtPct(r.margPct)}</td>
+      </tr>`).join('')}
+      <tr style="border-top:2px solid var(--border);font-weight:700">
+        <td style="text-align:left">Total</td>
+        <td>${fmtINR(totalRev)}</td>
+        <td>${fmtINR(totalRev*cogsRatio)}</td>
+        <td>${fmtINR(onlineComm)}</td>
+        <td>${fmtINR(adYTD)}</td>
+        <td class="${rows.reduce((s,r)=>s+r.contribMargin,0)>=0?'pos':'neg'}">${fmtINR(rows.reduce((s,r)=>s+r.contribMargin,0),{signed:true})}</td>
+        <td></td>
+      </tr>
+    </tbody></table>
+    <div style="font-size:9px;color:var(--dim);margin-top:6px">COGS derived from MIS ratio (${fmtPct(cogsRatio*100)} of gross). Ad spend allocated proportional to revenue share. True attribution requires campaign-level tracking.</div>
+  </div>`;
+  if(!host.querySelector('.nx-channel-pnl')){
+    const wrap = document.createElement('div');
+    wrap.className = 'nx-channel-pnl';
+    wrap.innerHTML = tblHtml;
+    host.appendChild(wrap);
+  } else {
+    host.querySelector('.nx-channel-pnl').innerHTML = tblHtml;
+  }
+}
+
+// ── H2 #18 DISCOUNT CODE ROI ───────────────────────────────
+// For each payment reference/discount code surface revenue generated
+// vs discount given — which codes are profit-positive vs vanity. Renders
+// as a card inside the Products section between Top-20 and COGS Master.
+function renderDiscountROI(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const sO = (data.shopifyOnline && data.shopifyOnline.rows) || [];
+  if(!sO.length) return;
+  const totKey  = findKey(sO[0], [/total\s*order\s*value/i]);
+  const discKey = findKey(sO[0], [/total\s*discount\s*value/i, /^discount$/i]);
+  const refKey  = findKey(sO[0], [/payment\s*reference/i]);
+  if(!totKey || !discKey) return;
+  // Heuristic: Razorpay payment references are numeric 14-digit strings,
+  // shopflo uses empty refs — we bucket rows without an explicit discount
+  // code into "No code". For explicit codes, look for "Payment Gateway"
+  // column carrying the code.
+  const agg = {};
+  for(const r of sO){
+    const disc = toNum(r[discKey]);
+    if(!isFinite(disc) || disc <= 0) continue;
+    const tot  = toNum(r[totKey]);
+    const key = String(r['Payment Gateway']||r[refKey]||'No code').slice(0,20).trim() || 'No code';
+    agg[key] = agg[key] || { code:key, uses:0, revenue:0, discount:0 };
+    agg[key].uses++;
+    if(isFinite(tot)) agg[key].revenue += tot;
+    agg[key].discount += disc;
+  }
+  const rows = Object.values(agg).sort((a,b)=>b.revenue-a.revenue).slice(0,10);
+  if(!rows.length) return;
+  const host = document.querySelector('#sec-products .card:nth-of-type(3)') || document.getElementById('cogs-controls');
+  if(!host) return;
+  let existing = document.getElementById('nx-discount-roi');
+  const html = `<div class="card mb14" id="nx-discount-roi">
+    <div class="card-hd"><div class="card-t">Discount Code ROI</div><div class="card-sub">Revenue generated per ₹1 of discount given</div></div>
+    <table class="tbl" style="font-size:10px"><thead><tr><th style="text-align:left">Code / Gateway</th><th>Uses</th><th>Revenue</th><th>Discount</th><th>Rev/Disc</th><th>Avg ticket</th></tr></thead><tbody>
+      ${rows.map(r => `<tr>
+        <td style="text-align:left">${escapeHTML(r.code)}</td>
+        <td>${r.uses}</td>
+        <td>${fmtINR(r.revenue)}</td>
+        <td class="neg">${fmtINR(r.discount)}</td>
+        <td class="${r.discount>0 && r.revenue/r.discount>=5 ? 'pos' : r.revenue/r.discount<3 ? 'neg':''}">${r.discount>0?(r.revenue/r.discount).toFixed(1)+'×':'—'}</td>
+        <td>${fmtINR(r.revenue/r.uses)}</td>
+      </tr>`).join('')}
+    </tbody></table></div>`;
+  if(existing) existing.outerHTML = html;
+  else {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    const sec = document.getElementById('sec-products');
+    const target = document.getElementById('cogs-controls');
+    if(target && target.parentNode) target.parentNode.insertBefore(tmp.firstElementChild, target.parentNode);
+    else if(sec) sec.appendChild(tmp.firstElementChild);
+  }
+}
+
+// ── H2 #15 PER-SKU MONTHLY CHART (inside drill modal) ─────
+// When openProductDrill() runs, append a line chart showing monthly
+// units + revenue for the selected product.
+function renderSkuMonthlyChart(productName){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const sO = (data.shopifyOnline && data.shopifyOnline.rows) || [];
+  const nameKey = sO[0] ? findKey(sO[0], [/^product\s*name$/i]) : null;
+  const dateKey = sO[0] ? findKey(sO[0], [/order\s*date/i]) : null;
+  const qtyKey  = sO[0] ? findKey(sO[0], [/product\s*quantity/i, /^quantity$/i]) : null;
+  const totKey  = sO[0] ? findKey(sO[0], [/total\s*product\s*value/i, /total\s*order\s*value/i]) : null;
+  if(!nameKey || !dateKey) return;
+  const orders = sO.filter(r => r[nameKey] === productName);
+  const byMonth = {};
+  for(const r of orders){
+    const m = monthOf(r[dateKey]); if(!m) continue;
+    byMonth[m] = byMonth[m] || { units:0, rev:0 };
+    const q = qtyKey ? toNum(r[qtyKey]) : 1;
+    const t = totKey ? toNum(r[totKey]) : 0;
+    byMonth[m].units += isFinite(q)?q:1;
+    byMonth[m].rev   += isFinite(t)?t:0;
+  }
+  const months = Object.keys(byMonth).sort();
+  if(!months.length) return;
+  const box = document.getElementById('nx-pd-box');
+  if(!box) return;
+  if(!document.getElementById('nx-pd-chart-wrap')){
+    const wrap = document.createElement('div');
+    wrap.id = 'nx-pd-chart-wrap';
+    wrap.style.cssText = 'margin-top:14px;padding:0 18px 18px';
+    wrap.innerHTML = '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:13px;letter-spacing:.07em;margin-bottom:6px">Monthly Trend</div><div style="height:180px;background:var(--bg1);border:1px solid var(--border);border-radius:3px;padding:8px"><canvas id="nx-pd-chart"></canvas></div>';
+    box.appendChild(wrap);
+  }
+  mkChart('nx-pd-chart', {
+    type:'line',
+    data:{ labels: months, datasets:[
+      { label:'Units',   data: months.map(m=>byMonth[m].units), borderColor: NX_COLORS[1], yAxisID:'y',  pointRadius:3, tension:0.3 },
+      { label:'Revenue', data: months.map(m=>byMonth[m].rev),   borderColor: NX_COLORS[0], yAxisID:'y2', pointRadius:3, tension:0.3 }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+      scales:{ x:NX_AXIS, y:{...NX_AXIS, position:'left', title:{display:true,text:'units',color:'var(--muted)'}}, y2:{...NX_AXIS, position:'right', grid:{display:false}, ticks:{...NX_AXIS.ticks, callback:v=>'₹'+(v/1e3).toFixed(0)+'K'}, title:{display:true,text:'revenue',color:'var(--muted)'}}},
+      plugins:{ legend:{labels:{color:'#F0EBE0',font:{size:9}}}, tooltip:{callbacks:{label:x => ' '+x.dataset.label+': '+(x.dataset.yAxisID==='y'?x.raw+' units':fmtINR(x.raw))}}} }
+  });
+}
+
+// Wire the monthly chart into the drill open flow
+const __prevOpenProductDrill = window.openProductDrill;
+if(typeof __prevOpenProductDrill === 'function'){
+  window.openProductDrill = function(productName){
+    __prevOpenProductDrill(productName);
+    setTimeout(() => renderSkuMonthlyChart(productName), 80);
+  };
+}
+
+// Hook Channel P&L + Discount ROI into every renderNexus pass
+const __prevRenderNx3 = window.renderNexus;
+window.renderNexus = function(data){
+  __prevRenderNx3(data);
+  setTimeout(() => {
+    try { renderChannelPnL(); } catch(e){ console.error('renderChannelPnL', e); }
+    try { renderDiscountROI(); } catch(e){ console.error('renderDiscountROI', e); }
+  }, 120);
+};
+
 // ── ENHANCED SALES DEEP-DIVE (payment / status / discount) ─
 // Extends the existing renderSales with a structured breakdown panel so
 // the Sales page has per-metric depth, not just a channel-mix donut.

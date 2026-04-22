@@ -914,11 +914,11 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
       <span class="ins" onclick="drill('rto')"><span class="ins-dot" style="background:var(--grn)"></span>100% Low RTO on all Shopify orders</span>
     </div>
     <div class="kpis k5">
-      <div class="kpi" onclick="drill('gross-sales')"><div class="kpi-bar" style="background:var(--cream)"></div><div class="kpi-lbl">YTD Gross Sales</div><div class="kpi-val">&#8377;56.7L</div><div class="kpi-foot"><span class="tag t-neu">Jan+Feb</span></div><span class="kpi-hint">Click &rarr;</span></div>
-      <div class="kpi" onclick="drill('net-sales')"><div class="kpi-bar" style="background:var(--grn)"></div><div class="kpi-lbl">YTD Net Sales</div><div class="kpi-val pos">&#8377;51.6L</div><div class="kpi-foot"><span class="tag t-up">Post GST</span></div><span class="kpi-hint">&rarr;</span></div>
-      <div class="kpi" onclick="drill('cogs')"><div class="kpi-bar" style="background:var(--red)"></div><div class="kpi-lbl">YTD COGS</div><div class="kpi-val neg">&#8377;16.1L</div><div class="kpi-foot"><span class="tag t-dn">28.5%</span>of gross</div><span class="kpi-hint">&rarr;</span></div>
-      <div class="kpi" onclick="drill('gross-profit')"><div class="kpi-bar" style="background:var(--cream)"></div><div class="kpi-lbl">Gross Profit</div><div class="kpi-val">&#8377;35.5L</div><div class="kpi-foot"><span class="tag t-neu">68.8%</span>margin</div><span class="kpi-hint">&rarr;</span></div>
-      <div class="kpi" onclick="drill('ebitda')"><div class="kpi-bar" style="background:var(--grn)"></div><div class="kpi-lbl">YTD EBITDA</div><div class="kpi-val pos">+&#8377;3.8L</div><div class="kpi-foot"><span class="tag t-up">+7.3%</span></div><span class="kpi-hint">&rarr;</span></div>
+      <div class="kpi" data-kpi="gross" onclick="drill('gross-sales')"><div class="kpi-bar" style="background:var(--cream)"></div><div class="kpi-lbl">YTD Gross Sales</div><div class="kpi-val">&#8377;56.7L</div><div class="kpi-foot"><span class="tag t-neu">Jan+Feb</span></div><span class="kpi-hint">Click &rarr;</span></div>
+      <div class="kpi" data-kpi="net" onclick="drill('net-sales')"><div class="kpi-bar" style="background:var(--grn)"></div><div class="kpi-lbl">YTD Net Sales</div><div class="kpi-val pos">&#8377;51.6L</div><div class="kpi-foot"><span class="tag t-up">Post GST</span></div><span class="kpi-hint">&rarr;</span></div>
+      <div class="kpi" data-kpi="cogs" onclick="drill('cogs')"><div class="kpi-bar" style="background:var(--red)"></div><div class="kpi-lbl">YTD COGS</div><div class="kpi-val neg">&#8377;16.1L</div><div class="kpi-foot"><span class="tag t-dn">28.5%</span>of gross</div><span class="kpi-hint">&rarr;</span></div>
+      <div class="kpi" data-kpi="grossProfit" onclick="drill('gross-profit')"><div class="kpi-bar" style="background:var(--cream)"></div><div class="kpi-lbl">Gross Profit</div><div class="kpi-val">&#8377;35.5L</div><div class="kpi-foot"><span class="tag t-neu">68.8%</span>margin</div><span class="kpi-hint">&rarr;</span></div>
+      <div class="kpi" data-kpi="ebitda" onclick="drill('ebitda')"><div class="kpi-bar" style="background:var(--grn)"></div><div class="kpi-lbl">YTD EBITDA</div><div class="kpi-val pos">+&#8377;3.8L</div><div class="kpi-foot"><span class="tag t-up">+7.3%</span></div><span class="kpi-hint">&rarr;</span></div>
     </div>
     <div class="g21">
       <div class="card click" onclick="drill('revenue-bridge')">
@@ -2260,14 +2260,14 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
           <a href="https://drive.google.com/drive/folders/1aVLGpFyTtlDXw7SSDW1cQZTGbry7gpRm" target="_blank" class="btn">&#x2601; Open Drive</a>
         </div>
       </div>
-      <div class="fol-status-grid">
-        <div class="fsc has" onclick="openUp()"><div class="fsc-name">&#x1F4E6; 01 &mdash; Shopify Exports</div><div class="fsc-count">1 file loaded</div><div class="fsc-latest">MIS-OddNot_Even (Jan-Feb)</div><div class="fsc-badge ok">&#x2713; Active</div></div>
-        <div class="fsc has" onclick="openUp()"><div class="fsc-name">&#x1F4CA; 02 &mdash; MIS Reports</div><div class="fsc-count">1 file loaded</div><div class="fsc-latest">MIS-OddNot_Even-16-04-26</div><div class="fsc-badge ok">&#x2713; Active</div></div>
-        <div class="fsc" onclick="openUp()"><div class="fsc-name">&#x1F69A; 03 &mdash; Logistics Dumps</div><div class="fsc-count">No files yet</div><div class="fsc-latest">&mdash;</div><div class="fsc-badge need">&#x2191; Upload needed</div></div>
-        <div class="fsc" onclick="openUp()"><div class="fsc-name">&#x1F9FE; 04 &mdash; Invoices &amp; B2B</div><div class="fsc-count">No files yet</div><div class="fsc-latest">&mdash;</div><div class="fsc-badge need">&#x2191; Upload needed</div></div>
-        <div class="fsc" onclick="openUp()"><div class="fsc-name">&#x1F4C8; 05 &mdash; GA4 &amp; Analytics</div><div class="fsc-count">No files yet</div><div class="fsc-latest">&mdash;</div><div class="fsc-badge need">&#x2191; Upload needed</div></div>
-        <div class="fsc" onclick="openUp()"><div class="fsc-name">&#x1F4B0; 06 &mdash; Ad Spends</div><div class="fsc-count">No files yet</div><div class="fsc-latest">&mdash;</div><div class="fsc-badge need">&#x2191; Upload needed</div></div>
-        <div class="fsc has" onclick="openUp()"><div class="fsc-name">&#x1F3F7;&#xFE0F; 07 &mdash; SKU &amp; Inventory</div><div class="fsc-count">1 file linked</div><div class="fsc-latest">Odd SKU Cost Sheet - Arpit</div><div class="fsc-badge ok">&#x2713; Linked</div></div>
+      <div class="fol-status-grid" id="driveFolderGrid">
+        <div class="fsc" data-drive-folder="shopify"  onclick="openUp()"><div class="fsc-name">&#x1F4E6; 01 &mdash; Shopify Exports</div><div class="fsc-count">&mdash;</div><div class="fsc-latest">awaiting sync</div><div class="fsc-badge need">&#x2191; Sync</div></div>
+        <div class="fsc" data-drive-folder="mis"      onclick="openUp()"><div class="fsc-name">&#x1F4CA; 02 &mdash; MIS Reports</div><div class="fsc-count">&mdash;</div><div class="fsc-latest">awaiting sync</div><div class="fsc-badge need">&#x2191; Sync</div></div>
+        <div class="fsc" data-drive-folder="logistics"onclick="openUp()"><div class="fsc-name">&#x1F69A; 03 &mdash; Logistics Dumps</div><div class="fsc-count">&mdash;</div><div class="fsc-latest">awaiting sync</div><div class="fsc-badge need">&#x2191; Sync</div></div>
+        <div class="fsc" data-drive-folder="invoices" onclick="openUp()"><div class="fsc-name">&#x1F9FE; 04 &mdash; Invoices &amp; B2B</div><div class="fsc-count">&mdash;</div><div class="fsc-latest">awaiting sync</div><div class="fsc-badge need">&#x2191; Sync</div></div>
+        <div class="fsc" data-drive-folder="ga4"      onclick="openUp()"><div class="fsc-name">&#x1F4C8; 05 &mdash; GA4 &amp; Analytics</div><div class="fsc-count">&mdash;</div><div class="fsc-latest">awaiting sync</div><div class="fsc-badge need">&#x2191; Sync</div></div>
+        <div class="fsc" data-drive-folder="adspends" onclick="openUp()"><div class="fsc-name">&#x1F4B0; 06 &mdash; Ad Spends</div><div class="fsc-count">&mdash;</div><div class="fsc-latest">awaiting sync</div><div class="fsc-badge need">&#x2191; Sync</div></div>
+        <div class="fsc" data-drive-folder="sku"      onclick="openUp()"><div class="fsc-name">&#x1F3F7;&#xFE0F; 07 &mdash; SKU &amp; Inventory</div><div class="fsc-count">&mdash;</div><div class="fsc-latest">awaiting sync</div><div class="fsc-badge need">&#x2191; Sync</div></div>
       </div>
     </div>
     <div class="ds">
@@ -4950,6 +4950,87 @@ window.go = function(el, id){
   if(id === 'pipeline'){setTimeout(buildPipelineCharts, 150);}
 };
 
+// ── NEXUS LIVE DATA HYDRATION ──
+// Called by data-loader.js whenever a sync completes. Overwrites the
+// hardcoded YTD KPIs on the Overview and every Drive Hub folder card with
+// the just-synced values. Defensive: if a field is missing we leave the
+// existing DOM alone rather than wipe the dashboard.
+function fmtINR(n){
+  if(n==null||!isFinite(n)) return '—';
+  const abs=Math.abs(n), sign=n<0?'−':(n>0?'+':'');
+  if(abs>=1e7) return sign+'₹'+(abs/1e7).toFixed(2)+'Cr';
+  if(abs>=1e5) return sign+'₹'+(abs/1e5).toFixed(1)+'L';
+  if(abs>=1e3) return sign+'₹'+(abs/1e3).toFixed(1)+'K';
+  return sign+'₹'+abs.toFixed(0);
+}
+window.renderNexus = function(data){
+  if(!data) return;
+  const files = (window.NEXUS_LIVE && window.NEXUS_LIVE.files) || {};
+
+  // Drive Hub folder cards
+  document.querySelectorAll('#driveFolderGrid .fsc[data-drive-folder]').forEach(card=>{
+    const key = card.getAttribute('data-drive-folder');
+    const list = files[key] || [];
+    const parsed = data[key];
+    const countEl  = card.querySelector('.fsc-count');
+    const latestEl = card.querySelector('.fsc-latest');
+    const badgeEl  = card.querySelector('.fsc-badge');
+    if(list.length===0){
+      countEl.textContent  = 'no files';
+      latestEl.textContent = '—';
+      badgeEl.className    = 'fsc-badge need';
+      badgeEl.innerHTML    = '↑ Upload needed';
+      card.classList.remove('has');
+      return;
+    }
+    countEl.textContent = list.length + (list.length===1?' file loaded':' files loaded');
+    const latestName = list[0].name;
+    if(parsed && parsed.rows){
+      latestEl.textContent = latestName + ' · ' + parsed.rows.length + ' rows';
+    }else if(key==='mis' && data.mis && data.mis._file){
+      latestEl.textContent = data.mis._file + ' · parsed';
+    }else{
+      latestEl.textContent = latestName;
+    }
+    badgeEl.className = 'fsc-badge ok';
+    badgeEl.innerHTML = '✓ Live';
+    card.classList.add('has');
+  });
+
+  // Overview YTD KPIs from MIS parse
+  const mis = data.mis;
+  if(mis){
+    const gross=mis.gross?.ytd, net=mis.net?.ytd, cogs=mis.cogs?.ytd,
+          gp=mis.grossProfit?.ytd, eb=mis.ebitda?.ytd;
+    const setVal=(k,txt,cls)=>{
+      const v=document.querySelector(`#sec-overview .kpi[data-kpi="${k}"] .kpi-val`);
+      if(!v) return;
+      v.textContent=txt;
+      if(cls){ v.classList.remove('pos','neg'); if(cls) v.classList.add(cls); }
+    };
+    if(isFinite(gross)) setVal('gross', fmtINR(gross).replace(/^\+/,''));
+    if(isFinite(net))   setVal('net',   fmtINR(net).replace(/^\+/,''), net>=0?'pos':'neg');
+    if(isFinite(cogs))  setVal('cogs',  fmtINR(cogs).replace(/^\+/,''), 'neg');
+    if(isFinite(gp))    setVal('grossProfit', fmtINR(gp).replace(/^\+/,''));
+    if(isFinite(eb))    setVal('ebitda', fmtINR(eb), eb>=0?'pos':'neg');
+
+    // Foot taglines derived from live ratios
+    const footCogs = document.querySelector('#sec-overview .kpi[data-kpi="cogs"] .kpi-foot .tag');
+    if(footCogs && isFinite(cogs) && isFinite(gross) && gross>0){
+      footCogs.textContent = (cogs/gross*100).toFixed(1)+'%';
+    }
+    const footGP = document.querySelector('#sec-overview .kpi[data-kpi="grossProfit"] .kpi-foot .tag');
+    if(footGP && isFinite(gp) && isFinite(net) && net>0){
+      footGP.textContent = (gp/net*100).toFixed(1)+'%';
+    }
+    const footEb = document.querySelector('#sec-overview .kpi[data-kpi="ebitda"] .kpi-foot .tag');
+    if(footEb && isFinite(eb) && isFinite(net) && net>0){
+      const pct = (eb/net*100);
+      footEb.textContent = (pct>=0?'+':'')+pct.toFixed(1)+'%';
+      footEb.className = 'tag '+(pct>=0?'t-up':'t-dn');
+    }
+  }
+};
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>

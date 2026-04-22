@@ -3932,6 +3932,12 @@ function kpi(label, value, foot, tone){
 }
 function setKpis(hostId, kpis){
   const el = document.getElementById(hostId); if(!el) return;
+  const allEmpty = !kpis.length || kpis.every(k => k.value==null || k.value==='—' || (typeof k.value==='string' && /^[—-]+$/.test(k.value.trim())));
+  if(allEmpty){
+    const msg = kpis[0] && kpis[0].foot ? kpis[0].foot : 'No data — click 🔄 Force resync';
+    el.innerHTML = `<div class="kpi" style="grid-column:1/-1;padding:18px;text-align:center"><div class="kpi-lbl" style="color:var(--muted)">${escapeHTML(kpis[0]&&kpis[0].label||'No data')}</div><div class="kpi-val" style="font-size:14px;color:var(--dim);margin-top:6px">${escapeHTML(msg)}</div></div>`;
+    return;
+  }
   el.innerHTML = kpis.map(k => kpi(k.label, k.value, k.foot, k.tone)).join('');
 }
 
@@ -4756,7 +4762,7 @@ function buildCharts(){
     mkChart('c-sales-mix', {
       type:'doughnut',
       data:{ labels:['Online','Retail','B2B'], datasets:[{ data:[sagg.onlineRev, sagg.retailRev, sagg.b2bRev], backgroundColor:[NX_COLORS[0], NX_COLORS[3], NX_COLORS[1]], borderColor:'#000', borderWidth:2 }]},
-      options:{ responsive:true, maintainAspectRatio:false, cutout:'64%', plugins:{ legend:{display:false}, tooltip:{callbacks:{label:x=>' '+x.label+': ₹'+Math.round(x.raw).toLocaleString('en-IN')}} } }
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'64%', plugins:{ legend:{display:false}, tooltip:{callbacks:{label:x=>' '+x.label+': '+fmtINR(x.raw)}} } }
     });
     const leg = document.getElementById('sales-mix-legend');
     if(leg){
@@ -4793,7 +4799,7 @@ function buildCharts(){
         {label:'Retail', data:allMonths.map(m=>retailByM[m]||0), backgroundColor:NX_COLORS[3]},
         {label:'B2B',    data:allMonths.map(m=>b2bByM[m]||0),    backgroundColor:NX_COLORS[1]}
       ]},
-      options:{ responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true,...NX_AXIS}, y:{stacked:true, ...NX_AXIS, ticks:{...NX_AXIS.ticks, callback:v=>'₹'+(v/1e5).toFixed(1)+'L'}}}, plugins:{legend:{labels:{color:'#F0EBE0',font:{size:10}}}, tooltip:{callbacks:{label:x=>' '+x.dataset.label+': ₹'+Math.round(x.raw).toLocaleString('en-IN')}}} }
+      options:{ responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true,...NX_AXIS}, y:{stacked:true, ...NX_AXIS, ticks:{...NX_AXIS.ticks, callback:v=>'₹'+(v/1e5).toFixed(1)+'L'}}}, plugins:{legend:{labels:{color:'#F0EBE0',font:{size:10}}}, tooltip:{callbacks:{label:x=>' '+x.dataset.label+': '+fmtINR(x.raw)}}} }
     });
   }
 
@@ -4882,7 +4888,7 @@ function buildCharts(){
     mkChart('c-b2b-mix', {
       type:'doughnut',
       data:{ labels, datasets:[{ data: values, backgroundColor: NX_COLORS, borderColor:'#000', borderWidth:2 }]},
-      options:{ responsive:true, maintainAspectRatio:false, cutout:'62%', plugins:{legend:{labels:{color:'#F0EBE0',font:{size:10}}, position:'bottom'}, tooltip:{callbacks:{label:x=>' '+x.label+': ₹'+Math.round(x.raw).toLocaleString('en-IN')}}} }
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'62%', plugins:{legend:{labels:{color:'#F0EBE0',font:{size:10}}, position:'bottom'}, tooltip:{callbacks:{label:x=>' '+x.label+': '+fmtINR(x.raw)}}} }
     });
   }
 
@@ -5100,6 +5106,88 @@ function renderExplorer(data){
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+#nx-loading{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(10,10,10,0.92);z-index:9999;display:none;align-items:center;justify-content:center;flex-direction:column;font-family:'DM Mono',monospace}
+#nx-loading.show{display:flex}
+#nx-loading .nx-l-box{background:#0a0a0a;border:1px solid var(--border);border-radius:4px;padding:22px 28px;min-width:340px;max-width:500px;box-shadow:0 20px 60px rgba(0,0,0,0.6)}
+#nx-loading .nx-l-t{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.08em;color:var(--red);margin-bottom:10px}
+#nx-loading .nx-l-bar{height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;margin-bottom:10px}
+#nx-loading .nx-l-fill{height:100%;background:var(--red);width:0%;transition:width .25s ease}
+#nx-loading .nx-l-msg{font-size:10px;color:var(--cream);line-height:1.5}
+#nx-loading .nx-l-sub{font-size:9px;color:var(--muted);margin-top:6px}
+@media (max-width:720px){
+  #nx-filter-bar{flex-direction:column;align-items:stretch;gap:6px;padding:6px 12px}
+  #nx-filter-bar label{font-size:9px}
+  #nx-filter-bar > *{flex:none}
+  #nx-filter-bar.nx-fb-collapsed > *:not(#nx-fb-toggle){display:none}
+  #nx-fb-toggle{display:flex !important}
+}
+#nx-fb-toggle{display:none}
+</style>
+<div id="nx-loading"><div class="nx-l-box">
+  <div class="nx-l-t">⏳ Syncing from Google Drive</div>
+  <div class="nx-l-bar"><div class="nx-l-fill" id="nx-l-fill"></div></div>
+  <div class="nx-l-msg" id="nx-l-msg">Starting…</div>
+  <div class="nx-l-sub" id="nx-l-sub">Press Esc to cancel</div>
+</div></div>
+<script>
+  // #9 Loading overlay — shown during manual sync, updates progress from
+  // data-loader's log stream. Dismiss on Esc or success.
+  window.nxShowLoading = function(msg){
+    const el = document.getElementById('nx-loading'); if(!el) return;
+    el.classList.add('show');
+    document.getElementById('nx-l-msg').textContent = msg || 'Starting…';
+    document.getElementById('nx-l-fill').style.width = '5%';
+  };
+  window.nxUpdateLoading = function(msg, pct){
+    document.getElementById('nx-l-msg').textContent = msg;
+    if(isFinite(pct)) document.getElementById('nx-l-fill').style.width = Math.max(5, Math.min(100, pct))+'%';
+  };
+  window.nxHideLoading = function(){
+    const el = document.getElementById('nx-loading'); if(!el) return;
+    document.getElementById('nx-l-fill').style.width = '100%';
+    setTimeout(() => el.classList.remove('show'), 300);
+  };
+  document.addEventListener('keydown', (e) => { if(e.key === 'Escape') window.nxHideLoading(); });
+
+  // #12 Scroll restore per section — remember the scroll offset when
+  // leaving a page, re-apply on return.
+  window.__nxScrollByPage = {};
+  const __nxPrevGo = window.go;
+  window.go = function(el, id){
+    const main = document.querySelector('main');
+    const prevActive = document.querySelector('.sb-item.active');
+    if(prevActive && main){
+      const prevId = (prevActive.getAttribute('onclick')||'').match(/go\(this,'(\w+)'\)/);
+      if(prevId) window.__nxScrollByPage[prevId[1]] = main.scrollTop;
+    }
+    if(__nxPrevGo) __nxPrevGo(el, id);
+    if(main) main.scrollTop = window.__nxScrollByPage[id] || 0;
+  };
+
+  // #11 Mobile filter-bar collapse — insert a toggle button once the bar
+  // exists, start collapsed on small viewports.
+  const __nxEnsureFbToggle = () => {
+    const bar = document.getElementById('nx-filter-bar'); if(!bar) return;
+    if(document.getElementById('nx-fb-toggle')) return;
+    const btn = document.createElement('button');
+    btn.id = 'nx-fb-toggle';
+    btn.textContent = '☰ Filters';
+    btn.style.cssText = 'background:transparent;border:1px solid var(--border);color:var(--cream);padding:4px 10px;cursor:pointer;font-family:inherit;font-size:inherit';
+    btn.onclick = () => bar.classList.toggle('nx-fb-collapsed');
+    bar.insertBefore(btn, bar.firstChild);
+    if(window.innerWidth < 720) bar.classList.add('nx-fb-collapsed');
+  };
+  // Wrap initFilterBar once defined to always inject the toggle
+  const __nxInstallFbWrap = setInterval(() => {
+    if(typeof window.initFilterBar === 'function' && !window.__nxFbWrapped){
+      window.__nxFbWrapped = true;
+      const orig = window.initFilterBar;
+      window.initFilterBar = function(data){ orig(data); setTimeout(__nxEnsureFbToggle, 20); };
+      clearInterval(__nxInstallFbWrap);
+    }
+  }, 200);
+</script>
 <script src="./data-loader.js"></script>
 <script>
   window.NEXUS_LIVE.CLIENT_ID = '286201536539-tof11in4qc3arb7tpl76b72dr5sbvdhb.apps.googleusercontent.com';

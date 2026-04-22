@@ -435,6 +435,7 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
       if (!this.CLIENT_ID) { this.err('Cannot connect: CLIENT_ID empty'); return false; }
       if (this.loading) { this.warn('Already loading, skipping'); return false; }
       this.loading = true;
+      if (typeof window.nxShowLoading === 'function') window.nxShowLoading('Requesting OAuth token…');
       try {
         this.log('▶ Requesting OAuth token…');
         await this._ensureTokenClient();
@@ -455,7 +456,11 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
       } catch (e) {
         this.err('Connect failed', { error: String(e), stack: e && e.stack });
         return false;
-      } finally { this.loading = false; this._renderPanel(); }
+      } finally {
+        this.loading = false;
+        this._renderPanel();
+        if (typeof window.nxHideLoading === 'function') window.nxHideLoading();
+      }
     },
 
     _ensureTokenClient() {
@@ -591,7 +596,13 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
       // rows in `prevFiles`, any file whose modifiedTime matches an existing
       // entry is reused instead of re-downloaded. 5× faster typical resync.
       const prevFolderCache = this._prevData || {};
+      let doneFolders = 0;
+      const totalFolders = names.length;
       for (const name of names) {
+        if (typeof window.nxUpdateLoading === 'function') {
+          window.nxUpdateLoading(`Folder ${doneFolders+1}/${totalFolders} · ${name}`, (doneFolders/totalFolders)*90);
+        }
+        doneFolders++;
         if (name === 'mis') continue;
         const all = (this.files[name] || []).filter(f => /\.(csv|xlsx?)$/i.test(f.name));
         if (!all.length) {

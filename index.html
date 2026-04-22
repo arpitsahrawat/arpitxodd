@@ -870,6 +870,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
     <div class="sb-sec">Operations</div>
     <div class="sb-item" onclick="go(this,'logistics')"><span class="sb-ico">&#x2699;</span>Logistics</div>
     <div class="sb-sec">Data</div>
+    <div class="sb-item" onclick="go(this,'metrics')"><span class="sb-ico">&#x26B9;</span>Metrics Library<span class="sb-bdg hot">40+</span></div>
     <div class="sb-item" onclick="go(this,'datahub')"><span class="sb-ico">&#x2601;</span>Data Hub</div>
     <div class="sb-item" onclick="openUp()"><span class="sb-ico">&#x2191;</span>Upload Files</div>
   </nav>
@@ -1086,6 +1087,12 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
     <div class="card"><div class="card-hd"><div class="card-t">Waybill Log</div></div><div id="log-table"></div></div>
   </div>
 
+    <!-- METRICS LIBRARY -->
+  <div class="sec" id="sec-metrics">
+    <div class="sec-hd"><div class="sec-hd-title">METRICS LIBRARY</div><div class="sec-hd-line"></div><div class="sec-hd-sub">40+ computed KPIs grouped by business question &middot; all live</div></div>
+    <div id="metrics-grid"></div>
+  </div>
+
   <!-- DATA HUB (Drive + Explorer + Data Quality) -->
   <div class="sec" id="sec-datahub">
     <div class="sec-hd"><div class="sec-hd-title">DATA HUB</div><div class="sec-hd-line"></div><div class="sec-hd-sub">Drive sync &middot; parsed-row browser &middot; data quality</div></div>
@@ -1117,7 +1124,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
 
 <script>
 // ── NAV ──
-const pgNames={overview:'COMMAND CENTER',financials:'FINANCIALS · P&L',sales:'SALES · ALL CHANNELS',products:'PRODUCTS & SKU',b2b:'B2B PARTNERS',retail:'RETAIL STORES',marketing:'MARKETING & ROAS',logistics:'LOGISTICS',datahub:'DATA HUB'};
+const pgNames={overview:'COMMAND CENTER',financials:'FINANCIALS · P&L',sales:'SALES · ALL CHANNELS',products:'PRODUCTS & SKU',b2b:'B2B PARTNERS',retail:'RETAIL STORES',marketing:'MARKETING & ROAS',logistics:'LOGISTICS',metrics:'METRICS LIBRARY',datahub:'DATA HUB'};
 function go(el,id){
   document.querySelectorAll('.sb-item').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
@@ -5857,6 +5864,171 @@ window.renderNexus = function(data){
     try { evaluateAlerts(); } catch(e){}
     try { runEtlScripts(); } catch(e){}
   }, 500);
+};
+
+// ── METRICS LIBRARY (40+ KPIs) ────────────────────────────
+function renderMetricsLibrary(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const host = document.getElementById('metrics-grid'); if(!host) return;
+  const mis = data.mis || {};
+  const sO = (data.shopifyOnline && data.shopifyOnline.rows) || [];
+  const sR = (data.shopifyRetail && data.shopifyRetail.rows) || [];
+  const iS = (data.invoicesSummary && data.invoicesSummary.rows) || [];
+  const ga = (data.ga4 && data.ga4.rows) || [];
+  const sku = (data.skuMaster && data.skuMaster.rows) || [];
+  const log = (data.logistics && data.logistics.rows) || [];
+  const adMonthly = data.adspendsMonthly || {};
+  const adDaily = (data.adspendsDaily && data.adspendsDaily.rows) || [];
+  const L = window.NEXUS_LIVE;
+
+  // Helpers
+  const sum = (rows, rx) => rows.reduce((s,r)=>{const k=rows[0]?findKey(rows[0],rx):null;const v=k?toNum(r[k]):0;return s+(isFinite(v)?v:0);},0);
+  const gr = (k) => (mis[k] && mis[k].ytd) || 0;
+  const spendYtd = Object.entries(adMonthly).filter(([k])=>k.startsWith('2026')).reduce((s,[,v])=>s+v,0);
+  const spend2024 = Object.entries(adMonthly).filter(([k])=>k.startsWith('2024')).reduce((s,[,v])=>s+v,0);
+  const onlineRev = sO[0] ? sum(sO, [/total\s*order\s*value/i]) : 0;
+  const retailRev = sR[0] ? sum(sR, [/^price$/i]) : 0;
+  const b2bRev = iS[0] ? sum(iS, [/total.*amount/i, /^amount$/i]) : 0;
+  const totalOnline = sO.length, totalRetail = sR.length, totalB2B = iS.length;
+  const totalOrders = totalOnline + totalRetail + totalB2B;
+  const commPaid = sO[0] && findKey(sO[0], [/merchant\s*earning|commission/i]) ? Math.abs(sum(sO, [/merchant\s*earning|commission/i])) : 0;
+  const discountTotal = sO[0] && findKey(sO[0], [/total\s*discount\s*value/i]) ? sum(sO, [/total\s*discount\s*value/i]) : 0;
+  // RTO / refund
+  let rtoCount=0, refunded=0, cancelled=0;
+  if(sO[0]){
+    const sk = findKey(sO[0],[/shipment\s*status/i]);
+    const fk = findKey(sO[0],[/financial\s*status/i]);
+    const ck = findKey(sO[0],[/cancel.*reason/i]);
+    for(const r of sO){
+      if(sk && /rto|return/i.test(String(r[sk]||''))) rtoCount++;
+      if(fk && /refund/i.test(String(r[fk]||''))) refunded++;
+      if(ck && String(r[ck]||'').trim()) cancelled++;
+    }
+  }
+  // GA4 aggregates
+  const gaSessions = ga.reduce((s,r)=>s+(toNum(r.Sessions)||0),0);
+  const gaEngaged = ga.reduce((s,r)=>s+(toNum(r['Engaged sessions'])||0),0);
+  const gaEvents = ga.reduce((s,r)=>s+(toNum(r['Event count'])||0),0);
+  let organicS=0, paidS=0, directS=0;
+  for(const r of ga){
+    const s = String(r['Session source / medium']||'').toLowerCase();
+    const v = toNum(r.Sessions)||0;
+    if(/organic/.test(s)) organicS += v;
+    else if(/cpc|paid/.test(s)) paidS += v;
+    else if(/\(direct\)/.test(s)) directS += v;
+  }
+  // Unique customers (order-id stems)
+  const stems = new Set();
+  const orderKey = sO[0] ? findKey(sO[0], [/^shopify\s*order\s*number$/i, /unique\s*order\s*number/i]) : null;
+  if(orderKey){
+    for(const r of sO){
+      const oid = String(r[orderKey]||''); if(!oid) continue;
+      stems.add(oid.replace(/\d+$/,'') || oid.slice(0,10));
+    }
+  }
+  const uniqueCusts = stems.size;
+  // B2B concentration (HHI)
+  const parties = {};
+  if(iS[0] && findKey(iS[0], [/party.*name/i])){
+    const pk = findKey(iS[0], [/party.*name/i]);
+    const ak = findKey(iS[0], [/total.*amount/i, /^amount$/i]);
+    for(const r of iS){ const p = r[pk]; if(!p) continue; parties[p] = (parties[p]||0) + (ak?toNum(r[ak])||0:0); }
+  }
+  const partyTotal = Object.values(parties).reduce((s,v)=>s+v,0);
+  const hhi = partyTotal > 0 ? Object.values(parties).reduce((s,v) => s + Math.pow(v/partyTotal*100, 2), 0) : 0;
+  // SKU concentration
+  let top5ShopifyRev = 0, totalShopifyRev = 0;
+  if(sO[0]){
+    const nk = findKey(sO[0], [/^product\s*name$/i]);
+    const tk = findKey(sO[0], [/total\s*order\s*value/i]);
+    if(nk && tk){
+      const byN = {};
+      for(const r of sO){ const n=r[nk]; if(!n) continue; byN[n] = (byN[n]||0) + (toNum(r[tk])||0); }
+      const sorted = Object.values(byN).sort((a,b)=>b-a);
+      top5ShopifyRev = sorted.slice(0,5).reduce((s,v)=>s+v,0);
+      totalShopifyRev = sorted.reduce((s,v)=>s+v,0);
+    }
+  }
+  // COGS coverage
+  const skuWithCost = sku.filter(r => r.hasCost).length;
+  const skuTotal = sku.length;
+
+  const metrics = [
+    // Profitability
+    { group:'Profitability', label:'YTD Gross Sales', value: fmtINR(gr('gross')) },
+    { group:'Profitability', label:'YTD Net Sales',   value: fmtINR(gr('net')) },
+    { group:'Profitability', label:'YTD COGS',        value: fmtINR(gr('cogs')) },
+    { group:'Profitability', label:'Gross Margin %',  value: gr('net')>0?fmtPct(gr('grossProfit')/gr('net')*100):'—' },
+    { group:'Profitability', label:'Net Margin %',    value: gr('gross')>0?fmtPct(gr('ebitda')/gr('gross')*100):'—', tone: gr('ebitda')>=0?'pos':'neg' },
+    { group:'Profitability', label:'EBITDA',          value: fmtINR(gr('ebitda'),{signed:true}), tone: gr('ebitda')>=0?'pos':'neg' },
+    { group:'Profitability', label:'Contribution / Order', value: totalOrders>0?fmtINR((gr('grossProfit'))/totalOrders):'—' },
+    // Costs
+    { group:'Cost structure', label:'Commission paid', value: fmtINR(commPaid) },
+    { group:'Cost structure', label:'Commission / Gross', value: gr('gross')>0?fmtPct(commPaid/gr('gross')*100):'—' },
+    { group:'Cost structure', label:'Ad spend YTD',   value: fmtINR(spendYtd) },
+    { group:'Cost structure', label:'2024 benchmark spend', value: fmtINR(spend2024) },
+    { group:'Cost structure', label:'Ad spend / Net', value: gr('net')>0?fmtPct(spendYtd/gr('net')*100):'—' },
+    { group:'Cost structure', label:'Discount given', value: fmtINR(discountTotal) },
+    { group:'Cost structure', label:'Discount / Rev', value: onlineRev>0?fmtPct(discountTotal/onlineRev*100):'—' },
+    // Channel
+    { group:'Channel mix', label:'Online revenue', value: fmtINR(onlineRev), foot: totalOnline+' orders' },
+    { group:'Channel mix', label:'Retail revenue', value: fmtINR(retailRev), foot: totalRetail+' bills' },
+    { group:'Channel mix', label:'B2B revenue',    value: fmtINR(b2bRev),    foot: totalB2B+' invoices' },
+    { group:'Channel mix', label:'B2B concentration (HHI)', value: hhi.toFixed(0), foot: 'lower = better', tone: hhi>2500?'neg':hhi>1500?'':'pos' },
+    { group:'Channel mix', label:'Top-5 SKU share', value: totalShopifyRev>0?fmtPct(top5ShopifyRev/totalShopifyRev*100):'—' },
+    // Marketing
+    { group:'Marketing', label:'ROAS (YTD)',   value: spendYtd>0?(gr('net')/spendYtd).toFixed(2)+'×':'—', tone: spendYtd>0 && gr('net')/spendYtd>=4?'pos':gr('net')/spendYtd<2?'neg':'' },
+    { group:'Marketing', label:'CAC (proxy)',  value: totalOnline>0?fmtINR(spendYtd/totalOnline):'—', foot: 'spend ÷ online orders' },
+    { group:'Marketing', label:'Unique customers', value: fmtNum(uniqueCusts) },
+    { group:'Marketing', label:'Repeat rate',     value: uniqueCusts>0?fmtPct((totalOnline-uniqueCusts)/totalOnline*100):'—' },
+    // Traffic
+    { group:'Traffic', label:'GA4 sessions', value: fmtNum(gaSessions) },
+    { group:'Traffic', label:'Engaged sessions', value: fmtNum(gaEngaged), foot: gaSessions>0?fmtPct(gaEngaged/gaSessions*100):'' },
+    { group:'Traffic', label:'Events / session', value: gaSessions>0?(gaEvents/gaSessions).toFixed(2):'—' },
+    { group:'Traffic', label:'Organic / Total', value: gaSessions>0?fmtPct(organicS/gaSessions*100):'—' },
+    { group:'Traffic', label:'Paid / Total',    value: gaSessions>0?fmtPct(paidS/gaSessions*100):'—' },
+    { group:'Traffic', label:'Direct / Total',  value: gaSessions>0?fmtPct(directS/gaSessions*100):'—' },
+    { group:'Traffic', label:'Orders / 1000 sessions', value: gaSessions>0?((totalOnline/gaSessions)*1000).toFixed(2):'—', foot: 'conv rate proxy' },
+    // Operations
+    { group:'Operations', label:'RTO orders', value: fmtNum(rtoCount), tone: totalOnline>0 && rtoCount/totalOnline>0.1?'neg':'' },
+    { group:'Operations', label:'RTO rate', value: totalOnline>0?fmtPct(rtoCount/totalOnline*100):'—' },
+    { group:'Operations', label:'Refunded', value: fmtNum(refunded) },
+    { group:'Operations', label:'Cancelled', value: fmtNum(cancelled) },
+    { group:'Operations', label:'Fulfilment rate', value: totalOnline>0?fmtPct((totalOnline-rtoCount-refunded-cancelled)/totalOnline*100):'—' },
+    { group:'Operations', label:'Shipments tracked', value: fmtNum(log.length) },
+    // Catalog
+    { group:'Catalog', label:'Total SKUs',       value: fmtNum(skuTotal) },
+    { group:'Catalog', label:'SKUs with cost',   value: fmtNum(skuWithCost), foot: skuTotal>0?fmtPct(skuWithCost/skuTotal*100):'—', tone: skuWithCost===skuTotal?'pos':'' },
+    { group:'Catalog', label:'Online SKUs sold', value: sO[0] && findKey(sO[0],[/^product\s*name$/i]) ? fmtNum(new Set(sO.map(r=>r[findKey(sO[0],[/^product\s*name$/i])])).size) : '—' },
+    { group:'Catalog', label:'Retail SKUs sold', value: sR[0] && findKey(sR[0],[/style.*name/i]) ? fmtNum(new Set(sR.map(r=>r[findKey(sR[0],[/style.*name/i])])).size) : '—' },
+    // Orders
+    { group:'Orders', label:'Online AOV', value: totalOnline>0?fmtINR(onlineRev/totalOnline):'—' },
+    { group:'Orders', label:'Retail AOB', value: totalRetail>0?fmtINR(retailRev/totalRetail):'—' },
+    { group:'Orders', label:'B2B avg invoice', value: totalB2B>0?fmtINR(b2bRev/totalB2B):'—' },
+    { group:'Orders', label:'Total orders', value: fmtNum(totalOrders) },
+    { group:'Orders', label:'Top 1 party share', value: (()=>{ const top = Math.max(...Object.values(parties),0); return partyTotal>0?fmtPct(top/partyTotal*100):'—'; })(), tone: (()=>{ const top = Math.max(...Object.values(parties),0); return top/partyTotal>0.3?'neg':''; })() }
+  ];
+
+  // Render grouped
+  const groups = {};
+  for(const m of metrics){ (groups[m.group] = groups[m.group] || []).push(m); }
+  host.innerHTML = Object.entries(groups).map(([g, ms]) => `
+    <div class="card mb14">
+      <div class="card-hd"><div class="card-t">${escapeHTML(g)}</div><div class="card-sub">${ms.length} metrics</div></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:8px">
+        ${ms.map(m => `<div style="background:var(--bg1);border:1px solid var(--border);border-radius:3px;padding:10px">
+          <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em">${escapeHTML(m.label)}</div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;margin-top:4px;color:${m.tone==='pos'?'var(--grn)':m.tone==='neg'?'var(--red)':'var(--cream)'}">${m.value}</div>
+          ${m.foot?`<div style="font-size:9px;color:var(--muted);margin-top:2px">${escapeHTML(m.foot)}</div>`:''}
+        </div>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+const __prevRenderNx9 = window.renderNexus;
+window.renderNexus = function(data){
+  __prevRenderNx9(data);
+  setTimeout(() => { try { renderMetricsLibrary(); } catch(e){ console.error('metricslib',e); } }, 400);
 };
 
 // ══════════════════════════════════════════════════════════

@@ -5608,6 +5608,257 @@ if(typeof __initFilterBar === 'function'){
   };
 }
 
+// ══════════════════════════════════════════════════════════
+// SETTINGS PANEL · ALERTS · ETL · CHAT
+// Code for H3 items 30, 34, 35, 40, 43 plus mobile (#39) polish.
+// Items requiring external credentials surface a config form; once
+// the user pastes them, the feature activates.
+// ══════════════════════════════════════════════════════════
+
+async function sbGetSetting(key, def){
+  const rows = await window.NEXUS_LIVE.sbSelect('settings_kv', { key: 'eq.'+key });
+  return rows[0] ? rows[0].value : def;
+}
+async function sbSetSetting(key, value){
+  await window.NEXUS_LIVE.sbDelete('settings_kv', { key: 'eq.'+key });
+  return window.NEXUS_LIVE.sbInsert('settings_kv', { key, value });
+}
+window.sbGetSetting = sbGetSetting;
+window.sbSetSetting = sbSetSetting;
+
+// ── H3 #39 MOBILE CSS POLISH ──────────────────────────────
+(function(){
+  const css = `
+@media (max-width:720px){
+  main { padding: 8px !important; }
+  .kpis, .kpis.k4, .kpis.k5 { grid-template-columns: 1fr 1fr !important; }
+  .g21, .g2, .g3 { grid-template-columns: 1fr !important; }
+  .kpi-val { font-size: 18px !important; }
+  .sec-hd-title { font-size: 14px !important; }
+  .card { padding: 10px !important; }
+  .card-t { font-size: 11px !important; }
+  aside.sb { width: 60px !important; }
+  aside.sb .sb-item span:not(.sb-ico):not(.sb-bdg) { display: none !important; }
+  aside.sb .sb-sec { display: none !important; }
+  main { margin-left: 60px !important; }
+}`;
+  if(!document.getElementById('nx-mobile-css')){
+    const s = document.createElement('style'); s.id = 'nx-mobile-css'; s.textContent = css;
+    document.head.appendChild(s);
+  }
+})();
+
+// ── H3 #34 ALERTS ENGINE ──────────────────────────────────
+// Reads alert_rules from Supabase, evaluates them against current
+// data, writes alert_events on breach. Optionally POSTs to a Slack/
+// Discord webhook if configured in settings_kv.
+async function evaluateAlerts(){
+  const L = window.NEXUS_LIVE;
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA;
+  if(!L || !data || !L.sbSelect) return;
+  const rules = await L.sbSelect('alert_rules', {});
+  if(!rules.length) return;
+  const metrics = {
+    ytd_gross: data.mis && data.mis.gross && data.mis.gross.ytd,
+    ytd_net: data.mis && data.mis.net && data.mis.net.ytd,
+    ytd_ebitda: data.mis && data.mis.ebitda && data.mis.ebitda.ytd,
+    roas: (window.__MKT_AGG && window.__MKT_AGG.roas) || 0,
+    spend_2026: (window.__MKT_AGG && window.__MKT_AGG.spend2026) || 0,
+    online_orders: (data.shopifyOnline && data.shopifyOnline.rows && data.shopifyOnline.rows.length) || 0,
+    b2b_concentration: (() => {
+      const p = (window.__B2B_AGG && window.__B2B_AGG.parties) || [];
+      const total = p.reduce((s,x)=>s+x.revenue,0);
+      return p[0] && total > 0 ? p[0].revenue / total * 100 : 0;
+    })()
+  };
+  const webhook = await sbGetSetting('webhook_url', '');
+  for(const rule of rules){
+    const val = metrics[rule.metric];
+    if(!isFinite(val)) continue;
+    const t = Number(rule.threshold);
+    const op = rule.operator;
+    let fired = false;
+    if(op === '<' && val < t) fired = true;
+    if(op === '<=' && val <= t) fired = true;
+    if(op === '>' && val > t) fired = true;
+    if(op === '>=' && val >= t) fired = true;
+    if(op === '==' && val === t) fired = true;
+    if(!fired) continue;
+    // Debounce: don't fire same rule more than once per hour
+    if(rule.last_fired && (Date.now() - new Date(rule.last_fired).getTime()) < 3600*1000) continue;
+    const msg = `🚨 ${rule.name}: ${rule.metric}=${val.toFixed(2)} ${op} ${t}`;
+    await L.sbInsert('alert_events', { rule_id: rule.id, metric: rule.metric, value: val, threshold: t, message: msg });
+    if(webhook){
+      try { await fetch(webhook, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text: msg }) }); } catch(_){}
+    }
+  }
+}
+
+// ── H3 #43 ETL HOOKS ──────────────────────────────────────
+// User-defined JS snippets run against parsed data after sync.
+// Stored in public.etl_scripts. body is evaluated with (data) in scope.
+async function runEtlScripts(){
+  const L = window.NEXUS_LIVE;
+  const data = window.NEXUS_DATA;
+  if(!L || !data || !L.sbSelect) return;
+  const scripts = await L.sbSelect('etl_scripts', { enabled: 'eq.true' });
+  for(const s of scripts){
+    try {
+      const fn = new Function('data', s.body);
+      fn(data);
+    } catch(e){ console.error('ETL', s.name, e); }
+  }
+}
+
+// ── H3 #35 CHAT WIDGET (scaffolded; activates once API key is set) ──
+async function openChatWidget(){
+  let modal = document.getElementById('nx-chat-modal');
+  const key = await sbGetSetting('anthropic_api_key', '');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'nx-chat-modal';
+    modal.style.cssText = 'position:fixed;bottom:20px;right:20px;width:400px;max-height:600px;background:#0a0a0a;border:1px solid var(--border);border-radius:4px;z-index:9996;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.6)';
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = `<div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+    <span style="font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:.07em">💬 NEXUS Chat</span>
+    <button onclick="document.getElementById('nx-chat-modal').remove()" style="background:transparent;border:1px solid var(--border);color:var(--cream);padding:2px 8px;font-size:10px;cursor:pointer">×</button>
+  </div>
+  ${!key ? `<div style="padding:14px;font-size:10.5px;color:var(--cream);line-height:1.6">
+    <b>Chat requires an Anthropic API key.</b><br><br>
+    1. Get one at <span style="color:var(--cream);text-decoration:underline">console.anthropic.com</span><br>
+    2. Open the Settings panel (gear icon top-right) and paste it in "Anthropic API key".<br>
+    3. Reload this widget.
+  </div>` : `<div id="nx-chat-log" style="flex:1;overflow-y:auto;padding:10px 14px;font-size:10.5px"></div>
+  <div style="padding:10px 14px;border-top:1px solid var(--border)">
+    <textarea id="nx-chat-input" placeholder="Ask about your data…" style="width:100%;background:var(--bg1);color:var(--cream);border:1px solid var(--border);padding:6px;font-family:'DM Mono',monospace;font-size:10.5px;min-height:50px;resize:vertical"></textarea>
+    <button id="nx-chat-send" style="background:var(--red);color:#fff;border:none;padding:6px 14px;cursor:pointer;font-family:inherit;font-size:10px;margin-top:4px">Send</button>
+  </div>`}`;
+  if(key){
+    const input = document.getElementById('nx-chat-input');
+    const log = document.getElementById('nx-chat-log');
+    const send = async () => {
+      const q = input.value.trim(); if(!q) return;
+      input.value = '';
+      log.innerHTML += `<div style="padding:6px 0;color:var(--cream)"><b>You:</b> ${escapeHTML(q)}</div>`;
+      log.innerHTML += `<div id="nx-chat-reply" style="padding:6px 0;color:var(--muted)">Thinking…</div>`;
+      log.scrollTop = log.scrollHeight;
+      // Summary of data to pass as context
+      const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA || {};
+      const ctx = { mis: data.mis, shopifyOnlineCount: (data.shopifyOnline&&data.shopifyOnline.rows&&data.shopifyOnline.rows.length)||0, b2bParties: (window.__B2B_AGG&&window.__B2B_AGG.parties)||[] };
+      try {
+        const r = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true', 'content-type': 'application/json' },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 800,
+            system: 'You are a concise business analytics assistant. Answer questions about the data in the JSON context. Numbers in INR.',
+            messages: [{ role: 'user', content: `Context:\n${JSON.stringify(ctx).slice(0,4000)}\n\nQuestion: ${q}` }]
+          })
+        });
+        const j = await r.json();
+        const reply = (j.content && j.content[0] && j.content[0].text) || j.error && j.error.message || 'No response';
+        document.getElementById('nx-chat-reply').outerHTML = `<div style="padding:6px 0;color:var(--grn)"><b>NEXUS:</b> ${escapeHTML(reply).replace(/\n/g,'<br>')}</div>`;
+      } catch(e){
+        document.getElementById('nx-chat-reply').outerHTML = `<div style="padding:6px 0;color:var(--red)"><b>Error:</b> ${escapeHTML(String(e))}</div>`;
+      }
+      log.scrollTop = log.scrollHeight;
+    };
+    document.getElementById('nx-chat-send').onclick = send;
+    input.onkeydown = (e) => { if((e.ctrlKey||e.metaKey)&&e.key==='Enter') send(); };
+  }
+}
+window.openChatWidget = openChatWidget;
+
+// ── SETTINGS PANEL (gear icon) ────────────────────────────
+async function openSettingsPanel(){
+  const L = window.NEXUS_LIVE;
+  let modal = document.getElementById('nx-settings-modal');
+  const webhook = await sbGetSetting('webhook_url', '');
+  const apiKey  = await sbGetSetting('anthropic_api_key', '');
+  const userEmail = await sbGetSetting('user_email', '');
+  const shopifyToken = await sbGetSetting('shopify_token', '');
+  const metaToken    = await sbGetSetting('meta_ads_token', '');
+  const googleToken  = await sbGetSetting('google_ads_token', '');
+  if(!modal){
+    modal = document.createElement('div'); modal.id = 'nx-settings-modal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:9997;display:flex;align-items:center;justify-content:center;padding:30px';
+    modal.onclick = (e) => { if(e.target === modal) modal.style.display = 'none'; };
+    document.body.appendChild(modal);
+  }
+  const row = (label, key, value, type, note) => `<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+    <div style="font-size:10px;color:var(--cream);margin-bottom:2px">${label}</div>
+    <input type="${type||'text'}" data-setting="${key}" value="${escapeHTML(value||'')}" placeholder="${note||''}" style="width:100%;background:var(--bg1);color:var(--cream);border:1px solid var(--border);padding:5px 8px;font-family:'DM Mono',monospace;font-size:10px">
+    ${note?`<div style="font-size:9px;color:var(--dim);margin-top:3px">${note}</div>`:''}
+  </div>`;
+  modal.innerHTML = `<div style="background:#0a0a0a;border:1px solid var(--border);border-radius:4px;max-width:720px;width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.07em">⚙ Settings</div>
+      <button onclick="document.getElementById('nx-settings-modal').style.display='none'" style="background:transparent;border:1px solid var(--border);color:var(--cream);padding:4px 12px;cursor:pointer;font-family:inherit">×</button>
+    </div>
+    <div style="padding:14px 18px;overflow-y:auto;flex:1">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:.07em;margin:10px 0 6px;color:var(--red)">Identity</div>
+      ${row('Your email (used as Auth/annotations author)', 'user_email', userEmail, 'email', '')}
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:.07em;margin:14px 0 6px;color:var(--red)">Alerts (H3 #34)</div>
+      ${row('Webhook URL (Slack/Discord incoming webhook)', 'webhook_url', webhook, 'url', 'Alerts POST a JSON {text} payload here')}
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:.07em;margin:14px 0 6px;color:var(--red)">Chat (H3 #35)</div>
+      ${row('Anthropic API key', 'anthropic_api_key', apiKey, 'password', 'console.anthropic.com → API keys')}
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:.07em;margin:14px 0 6px;color:var(--red)">Direct integrations (H3 #36, #37)</div>
+      ${row('Shopify Admin API token', 'shopify_token', shopifyToken, 'password', 'Not yet wired — roadmap')}
+      ${row('Meta Ads API token', 'meta_ads_token', metaToken, 'password', 'Not yet wired — roadmap')}
+      ${row('Google Ads API token', 'google_ads_token', googleToken, 'password', 'Not yet wired — roadmap')}
+    </div>
+    <div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;gap:8px">
+      <button id="nx-settings-save" style="background:var(--red);color:#fff;border:none;padding:8px 18px;cursor:pointer;font-family:inherit;font-size:11px">Save all</button>
+      <span style="flex:1"></span>
+      <span style="color:var(--dim);font-size:9px">Stored in Supabase · public.settings_kv</span>
+    </div>
+  </div>`;
+  modal.style.display = 'flex';
+  document.getElementById('nx-settings-save').onclick = async () => {
+    const inputs = modal.querySelectorAll('input[data-setting]');
+    for(const inp of inputs){
+      await sbSetSetting(inp.getAttribute('data-setting'), inp.value);
+    }
+    alert('Saved. Changes apply on next sync.');
+    modal.style.display = 'none';
+  };
+}
+window.openSettingsPanel = openSettingsPanel;
+
+// Add gear icon + chat icon to the topbar once it's there
+function installTopbarButtons(){
+  const bar = document.querySelector('.tb-r') || document.querySelector('.topbar');
+  if(!bar || document.getElementById('nx-settings-btn')) return;
+  const btn = document.createElement('button');
+  btn.id = 'nx-settings-btn';
+  btn.textContent = '⚙';
+  btn.title = 'Settings';
+  btn.style.cssText = 'background:transparent;border:1px solid var(--border);color:var(--cream);padding:3px 10px;cursor:pointer;font-family:inherit;font-size:14px;margin-left:6px';
+  btn.onclick = openSettingsPanel;
+  bar.appendChild(btn);
+  const cbtn = document.createElement('button');
+  cbtn.id = 'nx-chat-btn';
+  cbtn.textContent = '💬';
+  cbtn.title = 'NEXUS Chat';
+  cbtn.style.cssText = btn.style.cssText;
+  cbtn.onclick = openChatWidget;
+  bar.appendChild(cbtn);
+}
+document.addEventListener('DOMContentLoaded', () => setTimeout(installTopbarButtons, 400));
+setTimeout(installTopbarButtons, 1000);
+
+// Hook alerts + ETL into every render
+const __prevRenderNx7 = window.renderNexus;
+window.renderNexus = function(data){
+  __prevRenderNx7(data);
+  setTimeout(() => {
+    try { evaluateAlerts(); } catch(e){}
+    try { runEtlScripts(); } catch(e){}
+  }, 500);
+};
+
 // ── H2 #27 ANNOTATIONS ────────────────────────────────────
 // Right-click any .kpi or table row with a data-annot-key to attach a
 // note. Notes live in Supabase (public.annotations) keyed by target_key.

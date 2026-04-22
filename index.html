@@ -4385,6 +4385,345 @@ function renderDataQuality(data){
   host.innerHTML = issues.map(i => `<div style="font-size:10px;color:${i.level==='err'?'var(--red)':'#F59E0B'};padding:2px 0">${i.level==='err'?'✗':'⚠'} ${escapeHTML(i.text)}</div>`).join('');
 }
 
+// ── LIVE CHARTS (Chart.js) ─────────────────────────────────
+// All chart instances are cached on window.__NX_CHARTS so re-renders
+// destroy-then-recreate cleanly when filters change.
+window.__NX_CHARTS = window.__NX_CHARTS || {};
+function mkChart(canvasId, config){
+  const el = document.getElementById(canvasId); if(!el) return null;
+  if(window.__NX_CHARTS[canvasId]) { window.__NX_CHARTS[canvasId].destroy(); delete window.__NX_CHARTS[canvasId]; }
+  if(typeof Chart === 'undefined') return null;
+  try {
+    window.__NX_CHARTS[canvasId] = new Chart(el, config);
+    return window.__NX_CHARTS[canvasId];
+  } catch(e){ console.error('Chart', canvasId, e); return null; }
+}
+const NX_COLORS = ['#E8E0D0','#D42B2B','#10B981','#F59E0B','#6366F1','#EC4899','#14B8A6','#F472B6','#A855F7','#84CC16'];
+const NX_AXIS = { grid:{color:'rgba(255,255,255,0.06)'}, ticks:{color:'rgba(240,235,224,0.5)',font:{size:9,family:'DM Mono'}} };
+const NX_LEGEND_OFF = { legend:{display:false} };
+
+function buildCharts(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const mis = data.mis;
+  const sagg = window.__SALES_AGG || {};
+  const magg = window.__MKT_AGG || {};
+  const ragg = window.__RETAIL_AGG || {};
+  const bagg = window.__B2B_AGG || {};
+  const lagg = window.__LOG_AGG || {};
+
+  // ── Sales channel mix donut
+  if(sagg.total > 0){
+    mkChart('c-sales-mix', {
+      type:'doughnut',
+      data:{ labels:['Online','Retail','B2B'], datasets:[{ data:[sagg.onlineRev, sagg.retailRev, sagg.b2bRev], backgroundColor:[NX_COLORS[0], NX_COLORS[3], NX_COLORS[1]], borderColor:'#000', borderWidth:2 }]},
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'64%', plugins:{ legend:{display:false}, tooltip:{callbacks:{label:x=>' '+x.label+': ₹'+Math.round(x.raw).toLocaleString('en-IN')}} } }
+    });
+    const leg = document.getElementById('sales-mix-legend');
+    if(leg){
+      const labels = [['Online',sagg.onlineRev,NX_COLORS[0]],['Retail',sagg.retailRev,NX_COLORS[3]],['B2B',sagg.b2bRev,NX_COLORS[1]]];
+      leg.innerHTML = '<div style="display:flex;gap:14px;justify-content:center;margin-top:10px;font-size:10px;flex-wrap:wrap">'+labels.map(([l,v,c])=>`<span style="display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;background:${c};border-radius:2px"></span>${l} ${sagg.total>0?((v/sagg.total*100).toFixed(0)+'%'):''}</span>`).join('')+'</div>';
+    }
+  }
+
+  // ── Sales monthly stacked bar by channel
+  const sOnline = (data.shopifyOnline&&data.shopifyOnline.rows)||[];
+  const sRetail = (data.shopifyRetail&&data.shopifyRetail.rows)||[];
+  const invS = (data.invoicesSummary&&data.invoicesSummary.rows)||[];
+  const monthTotals = (rows, dateKeyRegex, priceKeyRegex) => {
+    if(!rows.length) return {};
+    const dk = findKey(rows[0], dateKeyRegex);
+    const pk = findKey(rows[0], priceKeyRegex);
+    const by = {};
+    for(const r of rows){
+      const m = dk ? monthOf(r[dk]) : null; if(!m) continue;
+      const v = pk ? toNum(r[pk]) : 0;
+      by[m] = (by[m]||0) + (isFinite(v)?v:0);
+    }
+    return by;
+  };
+  const onlineByM = monthTotals(sOnline, [/order\s*date/i], [/total\s*order\s*value/i, /total\s*product\s*value/i]);
+  const retailByM = monthTotals(sRetail, [/^date$/i], [/^price$/i]);
+  const b2bByM = monthTotals(invS, [/^date$/i], [/total\s*amount/i]);
+  const allMonths = Array.from(new Set([...Object.keys(onlineByM), ...Object.keys(retailByM), ...Object.keys(b2bByM)])).sort();
+  if(allMonths.length){
+    mkChart('c-sales-monthly', {
+      type:'bar',
+      data:{ labels: allMonths, datasets:[
+        {label:'Online', data:allMonths.map(m=>onlineByM[m]||0), backgroundColor:NX_COLORS[0]},
+        {label:'Retail', data:allMonths.map(m=>retailByM[m]||0), backgroundColor:NX_COLORS[3]},
+        {label:'B2B',    data:allMonths.map(m=>b2bByM[m]||0),    backgroundColor:NX_COLORS[1]}
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false, scales:{x:{stacked:true,...NX_AXIS}, y:{stacked:true, ...NX_AXIS, ticks:{...NX_AXIS.ticks, callback:v=>'₹'+(v/1e5).toFixed(1)+'L'}}}, plugins:{legend:{labels:{color:'#F0EBE0',font:{size:10}}}, tooltip:{callbacks:{label:x=>' '+x.dataset.label+': ₹'+Math.round(x.raw).toLocaleString('en-IN')}}} }
+    });
+  }
+
+  // ── Sales daily order trend (online)
+  if(sOnline.length){
+    const dk = findKey(sOnline[0], [/order\s*date/i]);
+    if(dk){
+      const byDay = {};
+      for(const r of sOnline){ const v = r[dk]; if(!v) continue; const d = new Date(v); if(!isFinite(d.valueOf())) continue; const k = d.toISOString().slice(0,10); byDay[k] = (byDay[k]||0)+1; }
+      const days = Object.keys(byDay).sort();
+      mkChart('c-sales-daily', {
+        type:'line',
+        data:{ labels: days, datasets:[{ label:'Orders', data: days.map(d=>byDay[d]), borderColor:NX_COLORS[1], backgroundColor:'rgba(16,185,129,0.15)', fill:true, tension:0.3, pointRadius:0 }]},
+        options:{ responsive:true, maintainAspectRatio:false, scales:{x:NX_AXIS,y:NX_AXIS}, plugins:NX_LEGEND_OFF }
+      });
+      const sub = document.getElementById('sales-trend-sub');
+      if(sub) sub.textContent = `${days.length} days · peak ${Math.max(...Object.values(byDay))} orders`;
+    }
+  }
+
+  // ── Financials bridge (Jan/Feb/Mar Gross/Net/COGS)
+  if(mis){
+    const months = ['jan','feb','mar'];
+    const gs = months.map(m => mis.gross && mis.gross[m] || 0);
+    const ns = months.map(m => mis.net && mis.net[m] || 0);
+    const cs = months.map(m => mis.cogs && mis.cogs[m] || 0);
+    mkChart('c-fin-bridge', {
+      type:'bar',
+      data:{ labels:['Jan','Feb','Mar'], datasets:[
+        {label:'Gross', data:gs, backgroundColor:NX_COLORS[0]},
+        {label:'Net',   data:ns, backgroundColor:NX_COLORS[1]},
+        {label:'COGS',  data:cs, backgroundColor:NX_COLORS[3]}
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false, scales:{x:NX_AXIS,y:{...NX_AXIS, ticks:{...NX_AXIS.ticks, callback:v=>'₹'+(v/1e5).toFixed(1)+'L'}}}, plugins:{legend:{labels:{color:'#F0EBE0',font:{size:10}}}} }
+    });
+    // Margin trend
+    const gp = months.map(m => (mis.grossProfit&&mis.grossProfit[m])||0);
+    const margins = months.map((_,i) => ns[i]>0 ? (gp[i]/ns[i]*100) : 0);
+    mkChart('c-fin-margin', {
+      type:'line',
+      data:{ labels:['Jan','Feb','Mar'], datasets:[{label:'GM %', data:margins, borderColor:NX_COLORS[1], backgroundColor:'rgba(16,185,129,0.1)', fill:true, tension:0.35, pointRadius:4 }]},
+      options:{ responsive:true, maintainAspectRatio:false, scales:{x:NX_AXIS, y:{...NX_AXIS, ticks:{...NX_AXIS.ticks, callback:v=>v+'%'}}}, plugins:NX_LEGEND_OFF }
+    });
+  }
+
+  // ── Products: category mix
+  const prods = (window.__PROD_AGG && window.__PROD_AGG.products) || [];
+  if(sOnline.length){
+    const typeKey = findKey(sOnline[0], [/product\s*type/i]);
+    if(typeKey){
+      const by = {};
+      for(const r of sOnline){ const t = r[typeKey]; if(!t) continue; by[t] = (by[t]||0)+1; }
+      const entries = Object.entries(by).sort((a,b)=>b[1]-a[1]).slice(0,8);
+      mkChart('c-prod-cat', {
+        type:'bar',
+        data:{ labels: entries.map(e=>String(e[0]).replace(/^Streetwear\s*/i,'').slice(0,18)), datasets:[{ data: entries.map(e=>e[1]), backgroundColor: entries.map((_,i)=>NX_COLORS[i%NX_COLORS.length]) }]},
+        options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{x:NX_AXIS,y:NX_AXIS}, plugins:NX_LEGEND_OFF }
+      });
+    }
+    const sizeKey = findKey(sOnline[0], [/\bsize\b/i]);
+    if(sizeKey){
+      const by = {};
+      for(const r of sOnline){ const s = r[sizeKey]; if(!s) continue; by[s] = (by[s]||0)+1; }
+      const sizeOrder = ['XS','S','M','L','XL','XXL','XXXL','FREE'];
+      const entries = Object.entries(by).sort((a,b) => {
+        const ai = sizeOrder.indexOf(String(a[0]).toUpperCase());
+        const bi = sizeOrder.indexOf(String(b[0]).toUpperCase());
+        if(ai >= 0 && bi >= 0) return ai - bi;
+        return b[1] - a[1];
+      }).slice(0,10);
+      mkChart('c-prod-size', {
+        type:'bar',
+        data:{ labels: entries.map(e=>e[0]), datasets:[{ data: entries.map(e=>e[1]), backgroundColor: NX_COLORS[0] }]},
+        options:{ responsive:true, maintainAspectRatio:false, scales:{x:NX_AXIS,y:NX_AXIS}, plugins:NX_LEGEND_OFF }
+      });
+    }
+  }
+
+  // ── B2B party mix donut
+  if(bagg.parties && bagg.parties.length){
+    const top = bagg.parties.slice(0,6);
+    const other = bagg.parties.slice(6).reduce((s,p)=>s+p.revenue,0);
+    const labels = top.map(p=>p.name.slice(0,18));
+    const values = top.map(p=>p.revenue);
+    if(other>0){ labels.push('Others'); values.push(other); }
+    mkChart('c-b2b-mix', {
+      type:'doughnut',
+      data:{ labels, datasets:[{ data: values, backgroundColor: NX_COLORS, borderColor:'#000', borderWidth:2 }]},
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'62%', plugins:{legend:{labels:{color:'#F0EBE0',font:{size:10}}, position:'bottom'}, tooltip:{callbacks:{label:x=>' '+x.label+': ₹'+Math.round(x.raw).toLocaleString('en-IN')}}} }
+    });
+  }
+
+  // ── Retail monthly
+  if(sRetail.length){
+    const storeMap = {};
+    const dk = findKey(sRetail[0], [/^date$/i]);
+    const pk = findKey(sRetail[0], [/^price$/i]);
+    for(const r of sRetail){
+      const st = r._store || '—';
+      if(!dk || !pk) continue;
+      const m = monthOf(r[dk]);
+      if(!m) continue;
+      const v = toNum(r[pk]); if(!isFinite(v)) continue;
+      storeMap[st] = storeMap[st] || {};
+      storeMap[st][m] = (storeMap[st][m]||0) + v;
+    }
+    const stores = Object.keys(storeMap);
+    const months2 = Array.from(new Set(Object.values(storeMap).flatMap(o=>Object.keys(o)))).sort();
+    if(stores.length && months2.length){
+      mkChart('c-retail-monthly', {
+        type:'bar',
+        data:{ labels: months2, datasets: stores.map((s,i) => ({ label:s, data: months2.map(m=>storeMap[s][m]||0), backgroundColor: NX_COLORS[i%NX_COLORS.length] })) },
+        options:{ responsive:true, maintainAspectRatio:false, scales:{x:NX_AXIS, y:{...NX_AXIS, ticks:{...NX_AXIS.ticks, callback:v=>'₹'+(v/1e5).toFixed(1)+'L'}}}, plugins:{legend:{labels:{color:'#F0EBE0',font:{size:10}}}} }
+      });
+    }
+  }
+
+  // ── Marketing: 2026 monthly spend
+  if(magg.monthly){
+    const ent = Object.entries(magg.monthly).filter(([k])=>k.startsWith('2026')).sort();
+    if(ent.length){
+      mkChart('c-mkt-monthly', {
+        type:'bar',
+        data:{ labels: ent.map(e=>e[0]), datasets:[{ data: ent.map(e=>e[1]), backgroundColor: NX_COLORS[1] }]},
+        options:{ responsive:true, maintainAspectRatio:false, scales:{x:NX_AXIS, y:{...NX_AXIS, ticks:{...NX_AXIS.ticks, callback:v=>'₹'+(v/1e3).toFixed(0)+'K'}}}, plugins:NX_LEGEND_OFF }
+      });
+    }
+    const ent24 = Object.entries(magg.monthly).filter(([k])=>k.startsWith('2024')).sort();
+    if(ent24.length){
+      mkChart('c-mkt-baseline', {
+        type:'bar',
+        data:{ labels: ent24.map(e=>e[0].slice(5)), datasets:[{ data: ent24.map(e=>e[1]), backgroundColor: NX_COLORS[4] }]},
+        options:{ responsive:true, maintainAspectRatio:false, scales:{x:NX_AXIS, y:{...NX_AXIS, ticks:{...NX_AXIS.ticks, callback:v=>'₹'+(v/1e3).toFixed(0)+'K'}}}, plugins:NX_LEGEND_OFF }
+      });
+    }
+    // Daily spend 2026
+    if(magg.daily && magg.daily.length){
+      const d2026 = magg.daily.filter(d => d.year === 2026).sort((a,b)=>a.date.localeCompare(b.date));
+      mkChart('c-mkt-daily', {
+        type:'line',
+        data:{ labels: d2026.map(d=>d.date), datasets:[{ label:'₹/day', data: d2026.map(d=>d.spend), borderColor:NX_COLORS[3], backgroundColor:'rgba(245,158,11,0.1)', fill:true, tension:0.25, pointRadius:0 }]},
+        options:{ responsive:true, maintainAspectRatio:false, scales:{x:NX_AXIS, y:{...NX_AXIS, ticks:{...NX_AXIS.ticks, callback:v=>'₹'+(v/1e3).toFixed(0)+'K'}}}, plugins:NX_LEGEND_OFF }
+      });
+    }
+  }
+
+  // ── GA4 top sources
+  const ga4 = (data.ga4 && data.ga4.rows) || [];
+  if(ga4.length){
+    const by = {};
+    for(const r of ga4){ const s = r['Session source / medium']||r['col0']; if(!s) continue; by[s] = (by[s]||0) + (toNum(r.Sessions)||0); }
+    const top = Object.entries(by).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    mkChart('c-ga4-sources', {
+      type:'bar',
+      data:{ labels: top.map(t=>t[0].slice(0,22)), datasets:[{ data: top.map(t=>t[1]), backgroundColor: NX_COLORS[0] }]},
+      options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{x:NX_AXIS,y:NX_AXIS}, plugins:NX_LEGEND_OFF }
+    });
+    // Organic vs Paid
+    let organic=0, paid=0, direct=0, ref=0;
+    for(const r of ga4){
+      const s = String(r['Session source / medium']||r['col0']||'').toLowerCase();
+      const sessions = toNum(r.Sessions) || 0;
+      if(/organic/.test(s)) organic += sessions;
+      else if(/cpc|paid/.test(s)) paid += sessions;
+      else if(/\(direct\)/.test(s)) direct += sessions;
+      else ref += sessions;
+    }
+    mkChart('c-ga4-op', {
+      type:'doughnut',
+      data:{ labels:['Organic','Paid','Direct','Referral/Other'], datasets:[{ data:[organic,paid,direct,ref], backgroundColor:[NX_COLORS[1],NX_COLORS[3],NX_COLORS[4],NX_COLORS[5]], borderColor:'#000', borderWidth:2 }]},
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'60%', plugins:{legend:{labels:{color:'#F0EBE0',font:{size:9}}, position:'bottom'}} }
+    });
+  }
+
+  // ── Logistics origin bar
+  if(lagg.origins && lagg.origins.length){
+    const top = lagg.origins.slice(0,8);
+    mkChart('c-log-origin', {
+      type:'bar',
+      data:{ labels: top.map(t=>String(t[0]).slice(0,22)), datasets:[{ data: top.map(t=>t[1]), backgroundColor: NX_COLORS[0] }]},
+      options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{x:NX_AXIS,y:NX_AXIS}, plugins:NX_LEGEND_OFF }
+    });
+  }
+  if(lagg.rows && lagg.rows.length){
+    const dk = findKey(lagg.rows[0], [/pickup.*date/i, /^date$/i]);
+    if(dk){
+      const by = {};
+      for(const r of lagg.rows){ const v = r[dk]; if(!v) continue; const d = new Date(v); if(!isFinite(d.valueOf())) continue; const k = d.toISOString().slice(0,10); by[k] = (by[k]||0)+1; }
+      const days = Object.keys(by).sort();
+      mkChart('c-log-daily', {
+        type:'line',
+        data:{ labels: days, datasets:[{ label:'Shipments', data: days.map(d=>by[d]), borderColor: NX_COLORS[0], backgroundColor:'rgba(232,224,208,0.1)', fill:true, tension:0.3, pointRadius:0 }]},
+        options:{ responsive:true, maintainAspectRatio:false, scales:{x:NX_AXIS,y:NX_AXIS}, plugins:NX_LEGEND_OFF }
+      });
+    }
+  }
+}
+
+// Hook chart builder to renderNexus
+const __prevRenderNexus = window.renderNexus;
+window.renderNexus = function(data){
+  __prevRenderNexus(data);
+  setTimeout(buildCharts, 40);
+  setTimeout(renderAnomalies, 50);
+};
+
+// ── ANOMALY STRIP (auto-generated findings for Overview) ───
+function renderAnomalies(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const mis = data.mis;
+  const magg = window.__MKT_AGG || {};
+  const pagg = window.__PROD_AGG || {};
+  const bagg = window.__B2B_AGG || {};
+  const findings = [];
+  // Financial growth signal
+  if(mis && mis.gross){
+    const jan = mis.gross.jan, feb = mis.gross.feb, mar = mis.gross.mar;
+    if(isFinite(jan) && isFinite(feb) && jan>0){
+      const pct = (feb/jan - 1) * 100;
+      findings.push({ tone: pct>=20?'grn':pct<0?'red':'cream', text:`Feb ${pct>=0?'+':''}${pct.toFixed(0)}% vs Jan` });
+    }
+    if(isFinite(feb) && isFinite(mar) && feb>0){
+      const pct = (mar/feb - 1) * 100;
+      findings.push({ tone: pct>=0?'grn':'red', text:`Mar ${pct>=0?'+':''}${pct.toFixed(0)}% vs Feb` });
+    }
+  }
+  if(mis && mis.ebitda && isFinite(mis.ebitda.jan) && mis.ebitda.jan < 0){
+    findings.push({ tone:'red', text:`Jan EBITDA negative ${fmtINR(mis.ebitda.jan,{signed:true})} — commissions + Jan costs` });
+  }
+  if(isFinite(magg.roas) && magg.spend2026 > 0){
+    findings.push({ tone: magg.roas>=4?'grn':magg.roas>=2?'cream':'red', text:`ROAS ${magg.roas.toFixed(2)}× on ${fmtINR(magg.spend2026)} spent` });
+  }
+  if(bagg.parties && bagg.parties.length && bagg.total > 0){
+    const top = bagg.parties[0];
+    const share = top.revenue / bagg.total * 100;
+    if(share > 30) findings.push({ tone:'red', text:`B2B concentration: ${top.name.slice(0,20)} = ${share.toFixed(0)}% of invoice revenue` });
+  }
+  if(pagg.products){
+    const missing = pagg.products.filter(p => !isFinite(p.cost)).length;
+    if(missing > 0) findings.push({ tone:'cream', text:`${missing} products missing COGS — margin can't be computed. Add via COGS Master.` });
+  }
+  // Ad spend outliers
+  if(magg.daily && magg.daily.length){
+    const d2026 = magg.daily.filter(d => d.year === 2026);
+    if(d2026.length > 3){
+      const spends = d2026.map(d=>d.spend).sort((a,b)=>a-b);
+      const p95 = spends[Math.floor(spends.length*0.95)];
+      const max = d2026.reduce((m,d) => d.spend > (m?m.spend:0) ? d : m, null);
+      if(max && p95 > 0 && max.spend > p95 * 1.5){
+        findings.push({ tone:'cream', text:`Spend spike on ${max.date}: ${fmtINR(max.spend)} (${(max.spend/p95).toFixed(1)}× p95)` });
+      }
+    }
+  }
+  if(!findings.length) return;
+  // Render into Overview insight strip
+  let strip = document.querySelector('#sec-overview .ins-strip');
+  if(!strip) return;
+  strip.innerHTML = findings.map(f => `<span class="ins"><span class="ins-dot" style="background:var(--${f.tone})"></span>${escapeHTML(f.text)}</span>`).join('');
+}
+
+// ── EXPORT CSV HELPER ──────────────────────────────────────
+window.exportRowsAsCSV = function(rows, filename){
+  if(!rows || !rows.length) return;
+  const cols = Object.keys(rows[0]);
+  const csv = cols.join(',') + '\n' + rows.map(r => cols.map(c => { const v = r[c]; if(v==null) return ''; const s = String(v).replace(/"/g,'""'); return /[,"\n]/.test(s) ? '"'+s+'"' : s; }).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = filename || 'export.csv'; a.click();
+};
+
 // ── LIVE DATA EXPLORER ─────────────────────────────────────
 function renderExplorer(data){
   const host = document.getElementById('nx-explorer-host'); if(!host) return;

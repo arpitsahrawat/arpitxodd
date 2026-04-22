@@ -34,7 +34,11 @@
     // upload it; next page load fetches that blob (~500 ms vs 30-60 s
     // for re-downloading 20+ Drive files).
     SUPABASE_URL: 'https://twzvinjjbwxzrmrbfpaa.supabase.co',
-    SUPABASE_KEY: 'sb_publishable_S2osWuKpsb4y86f4c7zkrw_rAfWGhI_',
+    // Supabase Storage/REST writes reject the short-format sb_publishable_
+    // key with 403 "Invalid Compact JWS" — it's a reference, not a JWT.
+    // The JWT-format "anon" key (legacy) works for both reads and writes
+    // under the current public RLS policies.
+    SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3enZpbmpqYnd4enJtcmJmcGFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NTU0MzgsImV4cCI6MjA5MjQzMTQzOH0.YARSOKypyparVAPzlPPbwTzq8Fj5F7MsVOXuaVmmbUE',
     SUPABASE_BUCKET: 'nexus-cache',
     SUPABASE_SNAPSHOT: 'snapshot.json',
     SCOPES: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file',
@@ -695,22 +699,20 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
           const ws  = wb.Sheets[wb.SheetNames[0]];
           const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
 
-          // Find section markers
+          // Find section markers. Scan ALL cells in each row, not just
+          // col 0 — the "Item Details …" banner often starts mid-row.
           let sumHdr = -1, itemMarker = -1, itemHdr = -1;
           for (let i = 0; i < raw.length; i++) {
             const row = raw[i] || [];
-            const first = String(row[0]||'').trim();
-            if (sumHdr < 0 && /^Date$/i.test(first) &&
-                row.some(c => /party.*name/i.test(String(c||''))) &&
-                row.some(c => /total.*amount/i.test(String(c||'')))) {
-              sumHdr = i;
-            }
-            if (itemMarker < 0 && /item\s*details|item\s*wise/i.test(first)) itemMarker = i;
-            if (itemMarker >= 0 && i > itemMarker && itemHdr < 0 &&
-                /^Date$/i.test(first) &&
-                row.some(c => /item.*name/i.test(String(c||'')))) {
-              itemHdr = i;
-            }
+            const cells = row.map(c => String(c||'').trim());
+            const hasDateCell  = cells.some(c => /^Date$/i.test(c));
+            const hasParty     = cells.some(c => /party.*name/i.test(c));
+            const hasTotalAmt  = cells.some(c => /total.*amount/i.test(c));
+            const hasItemName  = cells.some(c => /item.*name/i.test(c));
+            const hasMarker    = cells.some(c => /item\s*details|item\s*wise|item\s*wise\s*sales/i.test(c));
+            if (sumHdr < 0 && hasDateCell && hasParty && hasTotalAmt) sumHdr = i;
+            if (itemMarker < 0 && hasMarker) itemMarker = i;
+            if (itemMarker >= 0 && i > itemMarker && itemHdr < 0 && hasDateCell && hasItemName) itemHdr = i;
           }
 
           const parseSection = (headerIdx, endIdx) => {
@@ -1222,11 +1224,25 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
       }
     },
     saveCache() {
+      // With the data split shapes (online/retail/summary/items/daily/master)
+      // plus per-file raw rows, the full payload routinely exceeds the
+      // ~5 MB localStorage cap and throws QuotaExceededError. Supabase
+      // already has the authoritative snapshot; localStorage only needs
+      // to remember "when we last synced" for the freshness pill to show
+      // instantly on boot.
+      const meta = { lastSync: this.lastSync, version: this.VERSION };
       try {
         localStorage.setItem(this.STORAGE_KEY, JSON.stringify({
           data: this.data, files: this.files, lastSync: this.lastSync
         }));
-      } catch(e) { this.warn('Cache save failed', String(e)); }
+      } catch(e) {
+        // Fall back to meta-only on quota errors so the pill + boot
+        // still work; full data comes from Supabase snapshot instead.
+        try {
+          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(meta));
+          this.warn('Cache too big for localStorage; stored metadata only — full data lives on Supabase');
+        } catch(_) { this.warn('Cache save failed entirely', String(e)); }
+      }
     }
   };
 

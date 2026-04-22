@@ -843,7 +843,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
   </div>
   <nav class="sb-nav">
     <div class="sb-sec">Analytics</div>
-    <div class="sb-item active" onclick="go(this,'overview')"><span class="sb-ico">&#x2B21;</span>Overview<span class="sb-bdg">7 KPIs</span></div>
+    <div class="sb-item active" onclick="go(this,'overview')"><span class="sb-ico">&#x2B21;</span>Overview</div>
     <div class="sb-item" onclick="go(this,'pnl')"><span class="sb-ico">&#x25C8;</span>P&amp;L Statement</div>
     <div class="sb-sec">Sales</div>
     <div class="sb-item" onclick="go(this,'channels')"><span class="sb-ico">&#x229E;</span>Channels</div>
@@ -854,17 +854,14 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
     <div class="sb-item" onclick="go(this,'geography')"><span class="sb-ico">&#x25D0;</span>Geography</div>
     <div class="sb-sec">Strategy</div>
     <div class="sb-item" onclick="go(this,'projections')"><span class="sb-ico">&#x25B2;</span>Projections</div>
-    <div class="sb-item" onclick="go(this,'simulator')"><span class="sb-ico">&#x2609;</span>Forecast Simulator<span class="sb-bdg hot">NEW</span></div>
     <div class="sb-item" onclick="go(this,'budget')"><span class="sb-ico">&#x25E7;</span>Budget vs Actual</div>
-    <div class="sb-item" onclick="go(this,'suggestions')"><span class="sb-ico">&#x2B1F;</span>AI Insights<span class="sb-bdg hot">12</span></div>
-    <div class="sb-sec">Relationships</div>
-    <div class="sb-item" onclick="go(this,'crm')"><span class="sb-ico">&#x2740;</span>Customer Intel<span class="sb-bdg hot">NEW</span></div>
-    <div class="sb-item" onclick="go(this,'pipeline')"><span class="sb-ico">&#x25EF;</span>B2B Pipeline<span class="sb-bdg hot">NEW</span></div>
+    <div class="sb-item" onclick="go(this,'suggestions')"><span class="sb-ico">&#x2B1F;</span>AI Insights</div>
     <div class="sb-sec">Operations</div>
-    <div class="sb-item" onclick="go(this,'ops')"><span class="sb-ico">&#x2699;</span>Ops &amp; Replenishment<span class="sb-bdg hot">PRO</span></div>
+    <div class="sb-item" onclick="go(this,'ops')"><span class="sb-ico">&#x2699;</span>Ops &amp; Logistics</div>
     <div class="sb-sec">Data</div>
+    <div class="sb-item" onclick="go(this,'explorer')"><span class="sb-ico">&#x25A9;</span>Live Data Explorer<span class="sb-bdg hot">NEW</span></div>
     <div class="sb-item" onclick="go(this,'drive')"><span class="sb-ico">&#x2601;</span>Drive Hub</div>
-    <div class="sb-item" onclick="openUp()"><span class="sb-ico">&#x2191;</span>Upload Files<span class="sb-bdg hot">NEW</span></div>
+    <div class="sb-item" onclick="openUp()"><span class="sb-ico">&#x2191;</span>Upload Files</div>
   </nav>
   <div class="sb-foot">
     <div class="sb-ts">Last sync<span id="syncTime">&mdash;</span></div>
@@ -2248,6 +2245,12 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
 
   </div>
 
+  <!-- LIVE DATA EXPLORER -->
+  <div class="sec" id="sec-explorer">
+    <div class="sec-hd"><div class="sec-hd-title">LIVE DATA EXPLORER</div><div class="sec-hd-line"></div><div class="sec-hd-sub">Every parsed row from Google Drive &middot; filterable + searchable</div></div>
+    <div id="nx-explorer-host"></div>
+  </div>
+
   <!-- DRIVE HUB -->
   <div class="sec" id="sec-drive">
     <div class="sec-hd"><div class="sec-hd-title">DRIVE HUB</div><div class="sec-hd-line"></div><div class="sec-hd-sub">Google Drive Data Pipeline &middot; Auto-sync</div></div>
@@ -2292,7 +2295,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opa
 
 <script>
 // ── NAV ──
-const pgNames={overview:'COMMAND OVERVIEW',pnl:'P&L STATEMENT',channels:'CHANNEL MATRIX',shopify:'SHOPIFY B2C',b2b:'B2B PARTNERS',products:'PRODUCT INTEL',geography:'GEO ANALYTICS',projections:'PROJECTIONS',simulator:'FORECAST SIMULATOR',budget:'BUDGET VS ACTUAL',suggestions:'AI INSIGHTS',crm:'CUSTOMER INTEL',pipeline:'B2B PIPELINE',ops:'OPS & REPLENISHMENT',drive:'DRIVE HUB'};
+const pgNames={overview:'COMMAND OVERVIEW',pnl:'P&L STATEMENT',channels:'CHANNEL MATRIX',shopify:'SHOPIFY B2C',b2b:'B2B PARTNERS',products:'PRODUCT INTEL',geography:'GEO ANALYTICS',projections:'PROJECTIONS',budget:'BUDGET VS ACTUAL',suggestions:'AI INSIGHTS',ops:'OPS & LOGISTICS',explorer:'LIVE DATA EXPLORER',drive:'DRIVE HUB'};
 function go(el,id){
   document.querySelectorAll('.sb-item').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
@@ -4986,23 +4989,36 @@ function findKey(row, patterns){
   return null;
 }
 
+// Global filter state — every renderer reads from window.NEXUS_DATA_FILTERED
+// (the post-filter view) rather than the raw data so the month / source
+// selectors in the top bar drive the whole dashboard.
+window.NEXUS_FILTERS = { month: '', source: '' };
+
 window.renderNexus = function(data){
   if(!data) return;
-  try { renderDriveHub(data); }   catch(e){ console.error('renderDriveHub', e); }
-  try { renderFreshness(data); }  catch(e){ console.error('renderFreshness', e); }
-  try { renderOverview(data); }   catch(e){ console.error('renderOverview', e); }
-  try { renderPnL(data); }        catch(e){ console.error('renderPnL', e); }
-  try { renderChannels(data); }   catch(e){ console.error('renderChannels', e); }
-  try { renderShopify(data); }    catch(e){ console.error('renderShopify', e); }
-  try { renderB2B(data); }        catch(e){ console.error('renderB2B', e); }
-  try { renderBudget(data); }     catch(e){ console.error('renderBudget', e); }
-  try { renderOps(data); }        catch(e){ console.error('renderOps', e); }
-  try { renderGA4(data); }        catch(e){ console.error('renderGA4', e); }
-  try { renderProducts(data); }   catch(e){ console.error('renderProducts', e); }
-  try { renderGeography(data); }  catch(e){ console.error('renderGeography', e); }
-  try { renderProjections(data); }catch(e){ console.error('renderProjections', e); }
-  try { renderAIInsights(data); } catch(e){ console.error('renderAIInsights', e); }
+  window.NEXUS_DATA = data;
+  if(!window._nx_cleared){ try{ clearDemoValues(); }catch(_){ } window._nx_cleared = true; }
+  try { initFilterBar(data); } catch(e){ console.error('initFilterBar', e); }
+  const filtered = applyFilters(data);
+  window.NEXUS_DATA_FILTERED = filtered;
+  try { renderDriveHub(filtered); }   catch(e){ console.error('renderDriveHub', e); }
+  try { renderFreshness(filtered); }  catch(e){ console.error('renderFreshness', e); }
+  try { renderOverview(filtered); }   catch(e){ console.error('renderOverview', e); }
+  try { renderPnL(filtered); }        catch(e){ console.error('renderPnL', e); }
+  try { renderChannels(filtered); }   catch(e){ console.error('renderChannels', e); }
+  try { renderShopify(filtered); }    catch(e){ console.error('renderShopify', e); }
+  try { renderB2B(filtered); }        catch(e){ console.error('renderB2B', e); }
+  try { renderBudget(filtered); }     catch(e){ console.error('renderBudget', e); }
+  try { renderOps(filtered); }        catch(e){ console.error('renderOps', e); }
+  try { renderGA4(filtered); }        catch(e){ console.error('renderGA4', e); }
+  try { renderProducts(filtered); }   catch(e){ console.error('renderProducts', e); }
+  try { renderGeography(filtered); }  catch(e){ console.error('renderGeography', e); }
+  try { renderProjections(filtered); }catch(e){ console.error('renderProjections', e); }
+  try { renderAIInsights(filtered); } catch(e){ console.error('renderAIInsights', e); }
+  try { renderExplorer(data); }       catch(e){ console.error('renderExplorer', e); }
 };
+
+function rehydrate(){ if(window.NEXUS_DATA) window.renderNexus(window.NEXUS_DATA); }
 
 // ── DRIVE HUB ────────────────────────────────────────────────
 function renderDriveHub(data){
@@ -5617,6 +5633,209 @@ function renderAIInsights(data){
       <div style="font-size:10px;color:var(--muted);line-height:1.45">${i.body}</div>
     </div>
   `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  DEMO WIPE · FILTER BAR · LIVE DATA EXPLORER
+// ═══════════════════════════════════════════════════════════════════
+
+// One-time wipe of every hardcoded metric cell so the dashboard shows
+// em-dashes for anything a renderer can't fill from live data.
+function clearDemoValues(){
+  const wipe = (sel, txt) => document.querySelectorAll(sel).forEach(el => { el.textContent = (txt==null?'—':txt); });
+  wipe('.kpi-val');
+  wipe('.kpi-foot', '');
+  wipe('.srev');
+  wipe('.dval');
+  wipe('.duse', '');
+  wipe('.rrev');
+  wipe('.rtag', '');
+  wipe('.pm-v');
+  wipe('.schip-bot', '');
+  wipe('.brow-act', '');
+  wipe('.brow-bud', '');
+  wipe('.brow-var', '');
+  wipe('.pb-v');
+  wipe('.mg-v');
+  wipe('.pb-lbl', '');
+  // clear dynamic legend containers
+  const leg1 = document.getElementById('pay-leg');  if(leg1) leg1.innerHTML = '';
+  const leg2 = document.getElementById('cust-leg'); if(leg2) leg2.innerHTML = '';
+  // clear state revenue bars visible fills
+  document.querySelectorAll('.sbar-f').forEach(el => { el.style.width = '0%'; });
+  // zero the demo table rows in P&L (kept; renderPnL re-fills)
+  document.querySelectorAll('#sec-pnl .tbl tbody td').forEach((td, i) => { if(i%4!==0) td.textContent = '—'; });
+  // Clear "insight strip" hardcoded blurbs at top of Overview — AI Insights
+  // renderer will inject real ones later.
+  const ins = document.querySelector('#sec-overview .ins-strip');
+  if(ins) ins.innerHTML = '<span class="ins" style="color:var(--dim)">Insights will populate after sync …</span>';
+}
+
+// Subset rows in every folder based on the current filter state. Returns a
+// shallow-copied data object so the explorer still sees the unfiltered view.
+function applyFilters(data){
+  const f = window.NEXUS_FILTERS || {};
+  if(!f.month && !f.source) return data;
+  const monthMatches = (v) => {
+    if(v==null) return false;
+    const d = new Date(v);
+    if(isFinite(d.valueOf())) return d.toISOString().slice(0,7) === f.month;
+    return String(v).includes(f.month);
+  };
+  const out = { mis: data.mis };
+  for(const key of Object.keys(data)){
+    if(key === 'mis') continue;
+    const d = data[key];
+    if(!d || !d.rows){ out[key] = d; continue; }
+    let rows = d.rows;
+    if(f.source) rows = rows.filter(r => r._source === f.source);
+    if(f.month){
+      const dateKey = rows[0] ? findKey(rows[0], [/order\s*date/i, /^date$/i, /pickup.*date/i, /invoice.*date/i]) : null;
+      if(dateKey){
+        rows = rows.filter(r => {
+          const v = r[dateKey];
+          if(v==null || String(v).trim()==='') return true;
+          return monthMatches(v);
+        });
+      }
+    }
+    out[key] = Object.assign({}, d, { rows });
+  }
+  return out;
+}
+
+// Sticky filter bar at the top of <main>. Builds the month/source options
+// from the live data so the user only sees values that actually exist.
+function initFilterBar(data){
+  let bar = document.getElementById('nx-filter-bar');
+  if(!bar){
+    bar = document.createElement('div');
+    bar.id = 'nx-filter-bar';
+    bar.style.cssText = 'position:sticky;top:0;z-index:80;background:#0a0a0a;'+
+      'border-bottom:1px solid var(--border);padding:8px 18px;display:flex;gap:12px;'+
+      'align-items:center;font-family:\'DM Mono\',monospace;font-size:10px;flex-wrap:wrap';
+    const main = document.querySelector('main') || document.querySelector('.mn');
+    if(main && main.parentNode) main.parentNode.insertBefore(bar, main);
+  }
+  // Collect months across every row from a date-ish column
+  const months = new Set();
+  const sources = new Set();
+  for(const key of Object.keys(data)){
+    if(key==='mis') continue;
+    const d = data[key]; if(!d) continue;
+    (d.files||[]).forEach(f => sources.add(f.name));
+    (d.rows||[]).forEach(r => {
+      const dk = findKey(r, [/order\s*date/i, /^date$/i, /pickup.*date/i, /invoice.*date/i]);
+      if(!dk) return;
+      const v = r[dk]; if(v==null || String(v).trim()==='') return;
+      const dd = new Date(v);
+      if(isFinite(dd.valueOf())) months.add(dd.toISOString().slice(0,7));
+      else {
+        const m = String(v).match(/(\d{4})-(\d{2})/);
+        if(m) months.add(m[0]);
+      }
+    });
+  }
+  const monthsSorted = Array.from(months).sort();
+  const sourcesSorted = Array.from(sources).sort();
+  const ss = 'background:var(--bg1);color:var(--cream);border:1px solid var(--border);padding:3px 6px;font-family:inherit;font-size:inherit';
+  const f = window.NEXUS_FILTERS;
+  bar.innerHTML = `
+    <span style="color:var(--dim);text-transform:uppercase;letter-spacing:.08em">Filters</span>
+    <label style="display:flex;gap:6px;align-items:center">Month
+      <select id="nxf-month" style="${ss}">
+        <option value="">All</option>
+        ${monthsSorted.map(m=>`<option value="${m}"${m===f.month?' selected':''}>${m}</option>`).join('')}
+      </select></label>
+    <label style="display:flex;gap:6px;align-items:center">Source file
+      <select id="nxf-source" style="${ss};max-width:280px">
+        <option value="">All</option>
+        ${sourcesSorted.map(s=>`<option value="${escapeHTML(s)}"${s===f.source?' selected':''}>${escapeHTML(s.slice(0,55))}</option>`).join('')}
+      </select></label>
+    <span style="color:${(f.month||f.source)?'var(--grn)':'var(--dim)'};margin-left:6px">
+      ${(f.month||f.source)?'● filtered':'○ no filter'}
+    </span>
+    <span style="flex:1"></span>
+    <button id="nxf-clear" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:3px 10px;cursor:pointer;font-family:inherit;font-size:inherit">Clear</button>
+  `;
+  const mEl = document.getElementById('nxf-month');
+  const sEl = document.getElementById('nxf-source');
+  if(mEl) mEl.onchange = e => { window.NEXUS_FILTERS.month = e.target.value; rehydrate(); };
+  if(sEl) sEl.onchange = e => { window.NEXUS_FILTERS.source = e.target.value; rehydrate(); };
+  const cBtn = document.getElementById('nxf-clear');
+  if(cBtn) cBtn.onclick = () => { window.NEXUS_FILTERS = { month:'', source:'' }; rehydrate(); };
+}
+
+// Live Data Explorer — a per-folder dump: file list, column names, first
+// 40 rows. Always shows unfiltered data so the user can verify what the
+// loader actually pulled.
+function renderExplorer(data){
+  const host = document.getElementById('nx-explorer-host');
+  if(!host) return;
+  const keys = ['mis','shopify','invoices','logistics','ga4','adspends','sku'];
+  const blocks = [];
+  for(const key of keys){
+    const d = data[key]; if(!d) continue;
+    if(key === 'mis'){
+      const lines = ['gross','net','cogs','grossProfit','ebitda','commission'];
+      blocks.push(`
+        <div class="card mb14">
+          <div class="card-hd"><div class="card-t">MIS · ${escapeHTML(d._file||'—')}</div>
+          <div class="card-sub">Structured financial statement · feeds Overview / P&amp;L / Projections</div></div>
+          <table class="tbl"><thead><tr><th>Line</th><th>Jan</th><th>Feb</th><th>Mar</th><th>YTD</th></tr></thead>
+          <tbody>${lines.map(k=>{
+            const r = d[k]; if(!r) return '';
+            return `<tr><td style="text-transform:capitalize">${k}</td>
+              <td>${isFinite(r.jan)?fmtINR(r.jan,{raw:true}):'—'}</td>
+              <td>${isFinite(r.feb)?fmtINR(r.feb,{raw:true}):'—'}</td>
+              <td>${isFinite(r.mar)?fmtINR(r.mar,{raw:true}):'—'}</td>
+              <td>${isFinite(r.ytd)?fmtINR(r.ytd,{raw:true}):'—'}</td></tr>`;
+          }).join('')}</tbody></table>
+        </div>`);
+      continue;
+    }
+    const rows = d.rows || [];
+    const files = d.files || [];
+    if(!rows.length){
+      blocks.push(`
+        <div class="card mb14">
+          <div class="card-hd"><div class="card-t">${key.toUpperCase()}</div></div>
+          <div style="font-size:10px;color:var(--muted);padding:4px 0">No parsed rows.</div>
+        </div>`);
+      continue;
+    }
+    const allCols = Object.keys(rows[0]).filter(c => c !== '_source');
+    const cols = allCols.slice(0, 10);
+    const preview = rows.slice(0, 40);
+    blocks.push(`
+      <div class="card mb14" data-expl="${key}">
+        <div class="card-hd">
+          <div>
+            <div class="card-t">${key.toUpperCase()} · ${rows.length.toLocaleString('en-IN')} rows · ${files.length} file(s)</div>
+            <div class="card-sub">${allCols.length} columns · showing first ${cols.length}</div>
+          </div>
+        </div>
+        <div style="font-size:9.5px;color:var(--dim);margin:6px 0 4px">
+          <b style="color:var(--muted)">Files:</b> ${files.map(f=>`<span style="color:var(--cream)">${escapeHTML(f.name)}</span> <span style="color:var(--dim)">(${f.rows.length})</span>`).join(' · ')}
+        </div>
+        <div style="overflow-x:auto;margin-top:8px;border:1px solid var(--b2);border-radius:3px">
+          <table class="tbl" style="font-size:9.5px">
+            <thead><tr>${cols.map(c=>`<th style="text-align:left;white-space:nowrap">${escapeHTML(c)}</th>`).join('')}</tr></thead>
+            <tbody>${preview.map(r => `<tr>${cols.map(c => {
+              const v = r[c];
+              const txt = v==null || v==='' ? '—' : String(v);
+              return `<td style="font-family:'DM Mono',monospace;font-size:9.5px;color:var(--cream);text-align:left;white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis" title="${escapeHTML(txt)}">${escapeHTML(txt.slice(0,80))}</td>`;
+            }).join('')}</tr>`).join('')}</tbody>
+          </table>
+        </div>
+        ${rows.length > preview.length ? `<div style="font-size:9.5px;color:var(--dim);margin-top:6px">Showing 40 of ${rows.length.toLocaleString('en-IN')} rows · use the filter bar or Source file selector to narrow down</div>` : ''}
+      </div>`);
+  }
+  host.innerHTML = blocks.join('');
+}
+
+function escapeHTML(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>

@@ -25,7 +25,7 @@
   'use strict';
 
   const NEXUS_LIVE = window.NEXUS_LIVE = {
-    VERSION: '1.4.0',
+    VERSION: '1.5.0',
 
     // ─── CONFIG ───────────────────────────────────────────
     CLIENT_ID: '',
@@ -541,30 +541,35 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
         this.warn('No .xlsx file found in MIS folder');
       }
 
-      // Every other domain folder: pick the latest CSV / XLSX / XLS and parse it
-      // with smart-header detection so GA4 (# comment rows) and Invoices
-      // (title banner in row 0) produce usable column names.
+      // Every other domain folder: parse EVERY CSV/XLSX/XLS (not just latest)
+      // so cross-file analytics (e.g. Jan + Feb + Mar CDC reports merged) are
+      // possible. Each row gets a `_source` tag identifying the file it came
+      // from, and the folder exposes both per-file arrays and a merged one.
       for (const name of names) {
         if (name === 'mis') continue;
-        const latest = (this.files[name] || []).find(f => /\.(csv|xlsx?)$/i.test(f.name));
-        if (!latest) {
-          this.warn(`  ${name} → no CSV/XLSX file found`);
-          this.data[name] = { rows: [], file: null };
+        const all = (this.files[name] || []).filter(f => /\.(csv|xlsx?)$/i.test(f.name));
+        if (!all.length) {
+          this.warn(`  ${name} → no CSV/XLSX files`);
+          this.data[name] = { rows: [], files: [], file: null };
           continue;
         }
-        this.log(`▶ Parsing ${name}: ${latest.name}`);
-        try {
-          const buf = await this.downloadFile(latest.id);
-          const parsed = this._readTable(buf);
-          this.data[name] = { rows: parsed.rows, file: latest.name, sheet: parsed.sheet, headerRow: parsed.headerRow };
-          this.success(
-            `  ${name} parsed: ${parsed.rows.length} rows (header row ${parsed.headerRow}) from "${parsed.sheet}"`,
-            parsed.rows.length ? Object.keys(parsed.rows[0]).slice(0, 6) : []
-          );
-        } catch (e) {
-          this.err(`  ${name} parse failed`, String(e));
-          this.data[name] = { rows: [], file: latest.name, error: String(e) };
+        const perFile = [];
+        const merged = [];
+        for (const f of all) {
+          try {
+            const buf = await this.downloadFile(f.id);
+            const parsed = this._readTable(buf);
+            perFile.push({ name: f.name, rows: parsed.rows, sheet: parsed.sheet, headerRow: parsed.headerRow, modifiedTime: f.modifiedTime });
+            for (const r of parsed.rows) merged.push(Object.assign({ _source: f.name }, r));
+          } catch (e) {
+            this.warn(`  ${name} parse failed for ${f.name}`, String(e));
+          }
         }
+        this.data[name] = { rows: merged, files: perFile, file: perFile[0] ? perFile[0].name : null };
+        this.success(
+          `  ${name} parsed: ${merged.length} rows across ${perFile.length}/${all.length} files`,
+          merged.length ? Object.keys(merged[0]).filter(k=>k!=='_source').slice(0, 8) : []
+        );
       }
 
       this.lastSync = new Date();

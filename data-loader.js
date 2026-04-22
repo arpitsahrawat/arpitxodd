@@ -813,9 +813,16 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
       const all = this.loadCogsOverrides();
       const key = this._normalizeProductName(productName);
       if (!key) return;
-      if (cost === null || cost === undefined || cost === '' || !isFinite(Number(cost))) delete all[key];
-      else all[key] = Number(cost);
+      const oldValue = all[key];
+      let action = 'cogs_set';
+      if (cost === null || cost === undefined || cost === '' || !isFinite(Number(cost))) {
+        delete all[key];
+        action = 'cogs_clear';
+      } else {
+        all[key] = Number(cost);
+      }
       try { localStorage.setItem(this.COGS_STORAGE, JSON.stringify(all)); } catch(_){ }
+      this.logAudit(action, { product: productName, normalized: key, old: oldValue, new: all[key] || null });
     },
     // Resolve cost for a given product name: overrides → sku sheet → null.
     // Returns { cost, source } so callers can label where the figure came from.
@@ -1078,6 +1085,62 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
       return await new Response(stream).text();
     },
 
+    // ─── SUPABASE · SQL helpers ───────────────────────────
+    //
+    // These wrap the Supabase REST endpoint for the three tables
+    // created in migration `annotations_audit_versions`. They're all
+    // best-effort — any error is logged but never throws.
+
+    async sbInsert(table, row) {
+      if (!this.SUPABASE_URL || !this.SUPABASE_KEY) return null;
+      try {
+        const r = await fetch(`${this.SUPABASE_URL}/rest/v1/${table}`, {
+          method: 'POST',
+          headers: {
+            'apikey': this.SUPABASE_KEY,
+            'Authorization': 'Bearer ' + this.SUPABASE_KEY,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify(row)
+        });
+        if (!r.ok) { this.warn(`sb ${table} insert ${r.status}: ${(await r.text()).slice(0,120)}`); return null; }
+        const arr = await r.json();
+        return arr && arr[0];
+      } catch(e) { this.warn(`sb ${table} insert failed`, String(e)); return null; }
+    },
+    async sbSelect(table, params) {
+      if (!this.SUPABASE_URL || !this.SUPABASE_KEY) return [];
+      try {
+        const qs = Object.entries(params || {}).map(([k,v])=>`${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+        const r = await fetch(`${this.SUPABASE_URL}/rest/v1/${table}?${qs}`, {
+          headers: {
+            'apikey': this.SUPABASE_KEY,
+            'Authorization': 'Bearer ' + this.SUPABASE_KEY
+          }
+        });
+        if (!r.ok) return [];
+        return await r.json();
+      } catch(_) { return []; }
+    },
+    async sbDelete(table, params) {
+      if (!this.SUPABASE_URL || !this.SUPABASE_KEY) return false;
+      try {
+        const qs = Object.entries(params || {}).map(([k,v])=>`${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+        const r = await fetch(`${this.SUPABASE_URL}/rest/v1/${table}?${qs}`, {
+          method: 'DELETE',
+          headers: {
+            'apikey': this.SUPABASE_KEY,
+            'Authorization': 'Bearer ' + this.SUPABASE_KEY
+          }
+        });
+        return r.ok;
+      } catch(_) { return false; }
+    },
+    logAudit(action, payload) {
+      this.sbInsert('audit_log', { actor: this.CLIENT_ID ? this.CLIENT_ID.slice(0,12) : 'anon', action, payload }).catch(()=>{});
+    },
+
     async uploadSnapshot() {
       if (!this.SUPABASE_URL || !this.SUPABASE_KEY || !this.SUPABASE_BUCKET) return false;
       try {
@@ -1113,6 +1176,16 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
         const uploadedKB = (useGz ? gz.size : body.length) / 1024;
         const rawKB = body.length / 1024;
         this.success(`▲ Snapshot uploaded ${useGz?'(gzipped)':''} ${uploadedKB.toFixed(1)} KB${useGz?` (from ${rawKB.toFixed(1)} KB, ${(100*(1-uploadedKB/rawKB)).toFixed(0)}% smaller)`:''}`);
+        // H3 #41: write a snapshot_versions row so the dashboard can scrub
+        // back to historical state later. The blob itself always lives at
+        // the same storage key; we keep metadata here.
+        this.sbInsert('snapshot_versions', {
+          version_tag: this.VERSION + '+' + new Date().toISOString(),
+          storage_key: path,
+          byte_size: Math.round((useGz ? gz.size : body.length)),
+          note: `sync-of-${Object.keys(this.files||{}).length}-folders`
+        }).catch(()=>{});
+        this.logAudit('snapshot_upload', { size: Math.round((useGz?gz.size:body.length)), gzipped: !!useGz });
         return true;
       } catch (e) {
         this.warn('Supabase snapshot upload failed', String(e));

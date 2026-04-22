@@ -5085,6 +5085,163 @@ if(typeof __initFilterBar === 'function'){
   };
 }
 
+// ── H2 #27 ANNOTATIONS ────────────────────────────────────
+// Right-click any .kpi or table row with a data-annot-key to attach a
+// note. Notes live in Supabase (public.annotations) keyed by target_key.
+// Shows a 💬 badge on targets that already have notes.
+window.__nxAnnotCache = {};
+
+async function loadAnnotationsFor(key){
+  if(window.__nxAnnotCache[key]) return window.__nxAnnotCache[key];
+  const L = window.NEXUS_LIVE;
+  if(!L || !L.sbSelect) return [];
+  const rows = await L.sbSelect('annotations', { target_key: 'eq.'+key, order: 'created_at.desc', limit: 50 });
+  window.__nxAnnotCache[key] = rows || [];
+  return window.__nxAnnotCache[key];
+}
+
+async function openAnnotationModal(targetKey, label){
+  const existing = await loadAnnotationsFor(targetKey);
+  let modal = document.getElementById('nx-annot-modal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'nx-annot-modal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:9997;display:flex;align-items:center;justify-content:center;padding:30px';
+    modal.onclick = (e) => { if(e.target === modal) modal.style.display='none'; };
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = `<div style="background:#0a0a0a;border:1px solid var(--border);border-radius:4px;max-width:560px;width:100%;max-height:80vh;overflow:hidden;display:flex;flex-direction:column">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <div><div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.07em">💬 ${escapeHTML(label||targetKey)}</div>
+        <div style="font-size:9px;color:var(--dim);margin-top:2px">${existing.length} note${existing.length===1?'':'s'}</div></div>
+      <button onclick="document.getElementById('nx-annot-modal').style.display='none'" style="background:transparent;border:1px solid var(--border);color:var(--cream);padding:4px 12px;cursor:pointer;font-family:inherit">×</button>
+    </div>
+    <div id="nx-annot-list" style="padding:14px 18px;flex:1;overflow-y:auto">${existing.map(n => `
+      <div style="padding:8px 10px;border-left:2px solid var(--red);background:var(--bg1);margin-bottom:8px;border-radius:3px">
+        <div style="font-size:10px;color:var(--cream);white-space:pre-wrap;line-height:1.5">${escapeHTML(n.body)}</div>
+        <div style="font-size:9px;color:var(--dim);margin-top:4px">${new Date(n.created_at).toLocaleString()} · ${escapeHTML(n.author||'anon')} <button data-aid="${n.id}" class="nx-annot-del" style="background:transparent;border:none;color:var(--red);cursor:pointer;font-size:9px;margin-left:6px">× delete</button></div>
+      </div>`).join('') || '<div style="color:var(--dim);font-size:10px">No notes yet.</div>'}</div>
+    <div style="padding:14px 18px;border-top:1px solid var(--border)">
+      <textarea id="nx-annot-input" placeholder="Type a note… (Ctrl/Cmd+Enter to save)" style="width:100%;background:var(--bg1);color:var(--cream);border:1px solid var(--border);padding:8px;font-family:'DM Mono',monospace;font-size:10.5px;min-height:60px;resize:vertical"></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="nx-annot-save" style="background:var(--red);color:#fff;border:none;padding:6px 14px;cursor:pointer;font-family:inherit;font-size:10px">Save note</button>
+        <span style="flex:1"></span>
+        <span style="color:var(--dim);font-size:9px">Target: ${escapeHTML(targetKey)}</span>
+      </div>
+    </div>
+  </div>`;
+  modal.style.display = 'flex';
+  const input = document.getElementById('nx-annot-input');
+  input.focus();
+  const save = async () => {
+    const body = input.value.trim();
+    if(!body) return;
+    const L = window.NEXUS_LIVE;
+    await L.sbInsert('annotations', { target_key: targetKey, author: 'arpit', body });
+    delete window.__nxAnnotCache[targetKey];
+    openAnnotationModal(targetKey, label);
+    updateAnnotationBadges();
+  };
+  document.getElementById('nx-annot-save').onclick = save;
+  input.onkeydown = (e) => { if((e.ctrlKey||e.metaKey) && e.key==='Enter') save(); };
+  modal.querySelectorAll('.nx-annot-del').forEach(btn => {
+    btn.onclick = async () => {
+      if(!confirm('Delete this note?')) return;
+      const id = btn.getAttribute('data-aid');
+      await window.NEXUS_LIVE.sbDelete('annotations', { id: 'eq.'+id });
+      delete window.__nxAnnotCache[targetKey];
+      openAnnotationModal(targetKey, label);
+      updateAnnotationBadges();
+    };
+  });
+}
+window.openAnnotationModal = openAnnotationModal;
+
+async function updateAnnotationBadges(){
+  // Scan every .kpi and highlight those with notes
+  const kpis = document.querySelectorAll('.kpi');
+  for(const el of kpis){
+    const lbl = el.querySelector('.kpi-lbl');
+    if(!lbl) continue;
+    const key = 'kpi:' + lbl.textContent.trim();
+    el.setAttribute('data-annot-key', key);
+    el.oncontextmenu = (e) => { e.preventDefault(); openAnnotationModal(key, lbl.textContent.trim()); };
+    // Lazy badge check (cache-only, no network per KPI)
+    const cached = window.__nxAnnotCache[key];
+    if(cached && cached.length && !el.querySelector('.nx-annot-badge')){
+      const b = document.createElement('span');
+      b.className = 'nx-annot-badge';
+      b.textContent = '💬';
+      b.style.cssText = 'position:absolute;top:4px;right:4px;font-size:10px';
+      el.style.position = 'relative';
+      el.appendChild(b);
+    }
+  }
+}
+
+// Pre-warm annotation cache for visible targets every render
+async function prefetchAnnotations(){
+  const keys = new Set();
+  document.querySelectorAll('.kpi .kpi-lbl').forEach(el => keys.add('kpi:'+el.textContent.trim()));
+  const L = window.NEXUS_LIVE; if(!L || !L.sbSelect) return;
+  const rows = await L.sbSelect('annotations', { order: 'created_at.desc', limit: 500 });
+  const byKey = {};
+  for(const r of rows) (byKey[r.target_key] = byKey[r.target_key] || []).push(r);
+  window.__nxAnnotCache = byKey;
+  updateAnnotationBadges();
+}
+
+// ── H3 #32 + #41 AUDIT LOG + VERSION HISTORY PANEL ───────
+async function renderAuditAndVersions(){
+  const host = document.getElementById('dq-panel') && document.getElementById('dq-panel').parentElement;
+  if(!host) return;
+  let wrap = document.getElementById('nx-audit-panel');
+  if(!wrap){
+    wrap = document.createElement('div');
+    wrap.className = 'card mb14';
+    wrap.id = 'nx-audit-panel';
+    host.parentElement.insertBefore(wrap, host.nextSibling);
+  }
+  const L = window.NEXUS_LIVE;
+  const [audit, versions] = await Promise.all([
+    L.sbSelect('audit_log', { order: 'created_at.desc', limit: 30 }),
+    L.sbSelect('snapshot_versions', { order: 'created_at.desc', limit: 20 })
+  ]);
+  wrap.innerHTML = `
+    <div class="card-hd"><div class="card-t">Audit Log &amp; Version History</div><div class="card-sub">Supabase · every COGS edit, resync, and snapshot lands here</div></div>
+    <div class="g2">
+      <div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:.07em;margin:6px 0">Recent activity (${audit.length})</div>
+        <div style="max-height:280px;overflow-y:auto">
+          ${audit.map(a => `<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:9.5px">
+            <span style="color:var(--dim)">${new Date(a.created_at).toLocaleString().slice(0,17)}</span>
+            <span style="color:var(--red);text-transform:uppercase;letter-spacing:.05em;margin:0 6px">${escapeHTML(a.action)}</span>
+            <span style="color:var(--cream)">${a.payload?escapeHTML(JSON.stringify(a.payload).slice(0,70)):''}</span>
+          </div>`).join('') || '<div style="font-size:10px;color:var(--dim)">No audit entries yet.</div>'}
+        </div>
+      </div>
+      <div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:.07em;margin:6px 0">Snapshot versions (${versions.length})</div>
+        <div style="max-height:280px;overflow-y:auto">
+          ${versions.map(v => `<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:9.5px">
+            <div style="color:var(--cream)">${escapeHTML(v.version_tag)}</div>
+            <div style="color:var(--dim)">${Math.round(v.byte_size/1024)} KB · ${escapeHTML(v.note||'')} · <span style="color:var(--muted)">${new Date(v.created_at).toLocaleString()}</span></div>
+          </div>`).join('') || '<div style="font-size:10px;color:var(--dim)">No snapshots yet.</div>'}
+        </div>
+      </div>
+    </div>`;
+}
+
+// Hook into every renderNexus cycle (debounced)
+const __prevRenderNx4 = window.renderNexus;
+window.renderNexus = function(data){
+  __prevRenderNx4(data);
+  setTimeout(() => {
+    try { prefetchAnnotations(); } catch(e){}
+    try { renderAuditAndVersions(); } catch(e){}
+  }, 300);
+};
+
 // ── LIVE CHARTS (Chart.js) ─────────────────────────────────
 // All chart instances are cached on window.__NX_CHARTS so re-renders
 // destroy-then-recreate cleanly when filters change.

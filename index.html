@@ -4385,6 +4385,309 @@ function renderDataQuality(data){
   host.innerHTML = issues.map(i => `<div style="font-size:10px;color:${i.level==='err'?'var(--red)':'#F59E0B'};padding:2px 0">${i.level==='err'?'✗':'⚠'} ${escapeHTML(i.text)}</div>`).join('');
 }
 
+// ── DEEP-DIVE ANALYSIS HELPERS ─────────────────────────────
+// Shared utilities used by multiple enhanced renderers below.
+function pctDelta(cur, prev){
+  if(!isFinite(cur) || !isFinite(prev) || prev === 0) return null;
+  return (cur/prev - 1) * 100;
+}
+function bucketBy(rows, keyFn){
+  const out = {};
+  for(const r of rows){
+    const k = keyFn(r); if(k==null || k==='') continue;
+    out[k] = (out[k]||0) + 1;
+  }
+  return out;
+}
+function sumBy(rows, keyFn, valFn){
+  const out = {};
+  for(const r of rows){
+    const k = keyFn(r); if(k==null || k==='') continue;
+    const v = valFn(r);
+    if(!isFinite(v)) continue;
+    out[k] = (out[k]||0) + v;
+  }
+  return out;
+}
+function topN(obj, n){
+  return Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n);
+}
+
+// ── ENHANCED SALES DEEP-DIVE (payment / status / discount) ─
+// Extends the existing renderSales with a structured breakdown panel so
+// the Sales page has per-metric depth, not just a channel-mix donut.
+function enhanceSalesSection(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const sO = (data.shopifyOnline && data.shopifyOnline.rows) || [];
+  if(!sO.length) return;
+  // Look up keys once
+  const payKey    = findKey(sO[0], [/payment\s*method/i]);
+  const statusKey = findKey(sO[0], [/financial\s*status/i, /order\s*status/i]);
+  const discKey   = findKey(sO[0], [/total\s*discount\s*value/i, /product\s*discount/i]);
+  const commKey   = findKey(sO[0], [/merchant\s*earning/i, /merchant\s*commission/i]);
+  const courKey   = findKey(sO[0], [/courier\s*name/i]);
+  const totKey    = findKey(sO[0], [/total\s*order\s*value/i, /total\s*product\s*value/i]);
+
+  const pay = payKey ? bucketBy(sO, r => r[payKey]) : {};
+  const stat = statusKey ? bucketBy(sO, r => r[statusKey]) : {};
+  const cour = courKey ? bucketBy(sO, r => r[courKey]) : {};
+  let discountTotal = 0, discountRows = 0;
+  if(discKey){ for(const r of sO){ const v = toNum(r[discKey]); if(isFinite(v) && v>0){ discountTotal += v; discountRows++; } } }
+  let commTotal = 0;
+  if(commKey){ for(const r of sO){ const v = toNum(r[commKey]); if(isFinite(v)) commTotal += v; } }
+  const totalRev = totKey ? sO.reduce((s,r)=>{ const v = toNum(r[totKey]); return s+(isFinite(v)?v:0); },0) : 0;
+
+  const deep = document.getElementById('sales-deep');
+  if(!deep) return;
+  const renderBucket = (title, obj, fmt) => {
+    const entries = Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const total = entries.reduce((s,[,v])=>s+v,0);
+    if(!entries.length) return `<div><div class="card-t">${title}</div><div style="font-size:10px;color:var(--muted);margin-top:4px">No column match</div></div>`;
+    return `<div style="background:var(--bg1);border:1px solid var(--border);border-radius:3px;padding:10px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:.07em;margin-bottom:6px">${title}</div>
+      ${entries.map(([k,v])=>`<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+        <span style="color:var(--cream);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:6px">${escapeHTML(String(k).slice(0,30))}</span>
+        <span style="color:var(--muted);white-space:nowrap">${fmt?fmt(v):fmtNum(v)} <span style="color:var(--dim)">· ${(v/total*100).toFixed(0)}%</span></span>
+      </div>`).join('')}
+    </div>`;
+  };
+  deep.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px">
+      ${renderBucket('Payment Method', pay)}
+      ${renderBucket('Order Status', stat)}
+      ${renderBucket('Courier', cour)}
+      <div style="background:var(--bg1);border:1px solid var(--border);border-radius:3px;padding:10px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:.07em;margin-bottom:6px">Discounts &amp; Commission</div>
+        <div style="font-size:10px;color:var(--muted);line-height:1.7">
+          Total discount: <b style="color:var(--cream)">${fmtINR(discountTotal)}</b> on ${discountRows} orders<br>
+          Avg discount: <b style="color:var(--cream)">${discountRows?fmtINR(discountTotal/discountRows):'—'}</b><br>
+          Commission paid: <b style="color:var(--cream)">${fmtINR(commTotal)}</b><br>
+          Commission %: <b style="color:var(--cream)">${totalRev>0?fmtPct(commTotal/totalRev*100):'—'}</b>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── ENHANCED PRODUCTS — per-SKU drill modal ───────────────
+// Replaces the top-20 table click behaviour with a detailed modal
+// showing order history, size mix, store mix, margin breakdown.
+function openProductDrill(productName){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const sO = (data.shopifyOnline && data.shopifyOnline.rows) || [];
+  const sR = (data.shopifyRetail && data.shopifyRetail.rows) || [];
+  const L = window.NEXUS_LIVE;
+  const rc = L.resolveCost(productName);
+  const nameKey = sO[0] ? findKey(sO[0], [/^product\s*name$/i]) : null;
+  const sizeKey = sO[0] ? findKey(sO[0], [/\bsize\b/i]) : null;
+  const qtyKey  = sO[0] ? findKey(sO[0], [/product\s*quantity/i, /^quantity$/i, /^qty$/i]) : null;
+  const totKey  = sO[0] ? findKey(sO[0], [/total\s*product\s*value/i, /total\s*order\s*value/i]) : null;
+  const dateKey = sO[0] ? findKey(sO[0], [/order\s*date/i]) : null;
+  const priceKey= sO[0] ? findKey(sO[0], [/unit\s*selling\s*price/i]) : null;
+  const orders = sO.filter(r => nameKey && r[nameKey] === productName);
+  const retailStyleKey = sR[0] ? findKey(sR[0], [/style.*name/i, /^style$/i]) : null;
+  const retailPriceKey = sR[0] ? findKey(sR[0], [/^price$/i]) : null;
+  const retailRows = sR.filter(r => retailStyleKey && String(r[retailStyleKey]||'').toLowerCase().includes(productName.toLowerCase().slice(0,15)));
+
+  const units = orders.reduce((s,r)=>{const q=qtyKey?toNum(r[qtyKey]):1; return s+(isFinite(q)?q:1);},0);
+  const rev = totKey ? orders.reduce((s,r)=>{const v=toNum(r[totKey]); return s+(isFinite(v)?v:0);},0) : 0;
+  const cost = isFinite(rc.cost) ? rc.cost * units : null;
+  const margin = isFinite(cost) ? rev - cost : null;
+
+  const bySize = {};
+  if(sizeKey) for(const r of orders){ const s = r[sizeKey]; if(!s) continue; bySize[s] = (bySize[s]||0)+1; }
+
+  const m = document.getElementById('nx-product-drill') || (function(){
+    const d = document.createElement('div');
+    d.id = 'nx-product-drill';
+    d.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:9998;display:none;align-items:center;justify-content:center;padding:30px';
+    d.innerHTML = '<div id="nx-pd-box" style="background:#0a0a0a;border:1px solid var(--border);border-radius:4px;max-width:1000px;width:100%;max-height:90vh;overflow:hidden;display:flex;flex-direction:column"></div>';
+    d.onclick = (e) => { if(e.target === d) d.style.display='none'; };
+    document.body.appendChild(d);
+    return d;
+  })();
+  const box = document.getElementById('nx-pd-box');
+  box.innerHTML = `
+    <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <div><div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.07em">${escapeHTML(productName)}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">${units} units online · ${retailRows.length} retail bills · cost ${isFinite(rc.cost)?fmtINR(rc.cost)+' ('+rc.source+')':'missing'}</div>
+      </div>
+      <button onclick="document.getElementById('nx-product-drill').style.display='none'" style="background:transparent;border:1px solid var(--border);color:var(--cream);padding:4px 12px;cursor:pointer;font-family:inherit">×</button>
+    </div>
+    <div style="padding:14px 18px;overflow-y:auto">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px">
+        <div style="background:var(--bg1);border:1px solid var(--border);padding:10px;border-radius:3px"><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em">Online Rev</div><div style="font-family:'Bebas Neue',sans-serif;font-size:18px;margin-top:3px">${fmtINR(rev)}</div></div>
+        <div style="background:var(--bg1);border:1px solid var(--border);padding:10px;border-radius:3px"><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em">Units</div><div style="font-family:'Bebas Neue',sans-serif;font-size:18px;margin-top:3px">${fmtNum(units)}</div></div>
+        <div style="background:var(--bg1);border:1px solid var(--border);padding:10px;border-radius:3px"><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em">Cost (units×COGS)</div><div style="font-family:'Bebas Neue',sans-serif;font-size:18px;margin-top:3px;color:${isFinite(cost)?'var(--red)':'var(--dim)'}">${isFinite(cost)?fmtINR(cost):'—'}</div></div>
+        <div style="background:var(--bg1);border:1px solid var(--border);padding:10px;border-radius:3px"><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em">Margin</div><div style="font-family:'Bebas Neue',sans-serif;font-size:18px;margin-top:3px;color:${isFinite(margin)?(margin>=0?'var(--grn)':'var(--red)'):'var(--dim)'}">${isFinite(margin)?fmtINR(margin):'—'}</div></div>
+        <div style="background:var(--bg1);border:1px solid var(--border);padding:10px;border-radius:3px"><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em">Margin %</div><div style="font-family:'Bebas Neue',sans-serif;font-size:18px;margin-top:3px">${isFinite(margin)&&rev>0?fmtPct(margin/rev*100):'—'}</div></div>
+      </div>
+      ${Object.keys(bySize).length ? `<div style="margin-bottom:14px"><div style="font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:.07em;margin-bottom:6px">Size Mix</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">${Object.entries(bySize).sort((a,b)=>b[1]-a[1]).map(([s,c])=>`<span style="background:var(--bg1);border:1px solid var(--border);padding:4px 10px;border-radius:3px;font-size:10px"><b style="color:var(--cream)">${escapeHTML(s)}</b> <span style="color:var(--muted)">${c}×</span></span>`).join('')}</div>
+      </div>` : ''}
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:.07em;margin-bottom:6px">Order History (${orders.length})</div>
+      <div style="max-height:320px;overflow-y:auto;border:1px solid var(--b2);border-radius:3px">
+        <table class="tbl" style="font-size:9.5px"><thead><tr><th style="text-align:left">Date</th><th style="text-align:left">Order</th><th style="text-align:left">Size</th><th>Qty</th><th>Unit ₹</th><th>Total ₹</th></tr></thead><tbody>
+          ${orders.slice(0,100).map(r => `<tr><td style="text-align:left">${escapeHTML(String(dateKey?r[dateKey]:'').slice(0,10))}</td><td style="text-align:left">${escapeHTML(String(r['Shopify order number']||r['Unique order number']||''))}</td><td style="text-align:left">${escapeHTML(String(sizeKey?r[sizeKey]||'—':'—'))}</td><td>${qtyKey?toNum(r[qtyKey]):''}</td><td>${priceKey?fmtINR(toNum(r[priceKey])):''}</td><td>${totKey?fmtINR(toNum(r[totKey])):''}</td></tr>`).join('')}
+        </tbody></table>
+      </div>
+    </div>`;
+  m.style.display = 'flex';
+}
+
+// Wire up click handlers on the Products top table after render
+function wireProductDrill(){
+  document.querySelectorAll('#prod-top-table tbody tr').forEach(tr => {
+    tr.style.cursor = 'pointer';
+    tr.onclick = () => {
+      const nameCell = tr.querySelector('td:nth-child(2)');
+      if(nameCell) openProductDrill(nameCell.textContent.trim());
+    };
+  });
+}
+
+// ── PERIOD COMPARE (KPI deltas) ────────────────────────────
+// Injects a tiny "vs Jan" / "vs Feb" delta pill under each .kpi-val so
+// every KPI on Overview, Financials, Sales, etc. shows its MoM swing.
+function renderKpiDeltas(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const mis = data.mis; if(!mis) return;
+  const addDelta = (sel, cur, prev, prefix) => {
+    const el = document.querySelector(sel); if(!el) return;
+    const pct = pctDelta(cur, prev);
+    if(pct == null) return;
+    const cls = pct >= 0 ? 'pos' : 'neg';
+    const exist = el.querySelector('.nx-delta');
+    const txt = `${prefix} ${pct>=0?'+':''}${pct.toFixed(1)}%`;
+    if(exist) exist.textContent = txt;
+    else {
+      const d = document.createElement('div');
+      d.className = 'nx-delta ' + cls;
+      d.style.cssText = 'font-size:9px;margin-top:2px;font-family:\'DM Mono\',monospace;color:'+(pct>=0?'var(--grn)':'var(--red)');
+      d.textContent = txt;
+      el.appendChild(d);
+    }
+  };
+  if(mis.gross){
+    addDelta('#fin-kpis .kpi:nth-child(1)', mis.gross.feb, mis.gross.jan, 'Feb vs Jan');
+  }
+  if(mis.ebitda){
+    addDelta('#fin-kpis .kpi:nth-child(3)', mis.ebitda.feb, mis.ebitda.jan, 'Feb vs Jan');
+  }
+}
+
+// ── GLOBAL SEARCH ──────────────────────────────────────────
+// Free-text search across every parsed row. Hit / to focus.
+function openGlobalSearch(){
+  let modal = document.getElementById('nx-search-modal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'nx-search-modal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:9998;display:flex;align-items:flex-start;justify-content:center;padding:60px 30px';
+    modal.innerHTML = `
+      <div style="background:#0a0a0a;border:1px solid var(--border);border-radius:4px;max-width:800px;width:100%;max-height:80vh;overflow:hidden;display:flex;flex-direction:column">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:center">
+          <input id="nx-search-input" placeholder="Search orders, invoices, products…" autofocus style="flex:1;background:var(--bg1);color:var(--cream);border:1px solid var(--border);padding:8px 12px;font-size:12px;font-family:'DM Mono',monospace">
+          <button onclick="document.getElementById('nx-search-modal').style.display='none'" style="background:transparent;border:1px solid var(--border);color:var(--cream);padding:5px 12px;cursor:pointer;font-family:inherit">Esc</button>
+        </div>
+        <div id="nx-search-results" style="flex:1;overflow-y:auto;padding:8px 16px;font-size:10px"></div>
+      </div>`;
+    modal.onclick = (e) => { if(e.target === modal) modal.style.display='none'; };
+    document.body.appendChild(modal);
+    const input = document.getElementById('nx-search-input');
+    input.oninput = () => performSearch(input.value);
+    input.onkeydown = (e) => { if(e.key==='Escape') modal.style.display='none'; };
+  }
+  modal.style.display = 'flex';
+  const input = document.getElementById('nx-search-input');
+  input.focus(); input.select();
+}
+function performSearch(q){
+  const out = document.getElementById('nx-search-results'); if(!out) return;
+  if(!q || q.length < 2){ out.innerHTML = '<div style="color:var(--dim);padding:10px">Type at least 2 characters…</div>'; return; }
+  const data = window.NEXUS_DATA; if(!data) return;
+  const needle = q.toLowerCase();
+  const hits = [];
+  const sources = ['shopifyOnline','shopifyRetail','invoicesSummary','invoicesItems','logistics','skuMaster'];
+  for(const src of sources){
+    const d = data[src]; if(!d || !d.rows) continue;
+    for(const r of d.rows){
+      const matched = Object.values(r).some(v => v!=null && String(v).toLowerCase().includes(needle));
+      if(matched){ hits.push({ src, r }); if(hits.length >= 80) break; }
+    }
+    if(hits.length >= 80) break;
+  }
+  if(!hits.length){ out.innerHTML = '<div style="color:var(--dim);padding:10px">No matches.</div>'; return; }
+  out.innerHTML = `<div style="color:var(--muted);padding:4px 0;font-size:9px">${hits.length}${hits.length>=80?'+':''} matches across ${new Set(hits.map(h=>h.src)).size} data sources</div>` +
+    hits.map(h => {
+      const cols = Object.keys(h.r).filter(k => k !== '_source' && k !== '_store').slice(0, 6);
+      return `<div style="padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+        <div style="font-size:9px;color:var(--red);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">${h.src}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:9.5px;color:var(--cream)">${cols.map(c => `<span style="color:var(--dim)">${escapeHTML(c)}:</span> ${escapeHTML(String(h.r[c]||'—').slice(0,40))}`).join(' · ')}</div>
+      </div>`;
+    }).join('');
+}
+document.addEventListener('keydown', (e) => {
+  if(e.key === '/' && !['INPUT','TEXTAREA','SELECT'].includes((e.target||{}).tagName)){
+    e.preventDefault();
+    openGlobalSearch();
+  }
+});
+
+// ── CSV EXPORT BUTTONS ─────────────────────────────────────
+// Attach a small ↓ export button beside every card title on cards that
+// contain a table we know how to export.
+function attachCsvButtons(){
+  const targets = [
+    { host: '#prod-top-table', rows: () => (window.__PROD_AGG && window.__PROD_AGG.products) || [], file: 'products.csv' },
+    { host: '#b2b-parties-table', rows: () => (window.__B2B_AGG && window.__B2B_AGG.parties) || [], file: 'b2b-parties.csv' },
+    { host: '#retail-bills', rows: () => (window.NEXUS_DATA_FILTERED && window.NEXUS_DATA_FILTERED.shopifyRetail && window.NEXUS_DATA_FILTERED.shopifyRetail.rows) || [], file: 'retail-bills.csv' },
+    { host: '#log-table', rows: () => (window.NEXUS_DATA_FILTERED && window.NEXUS_DATA_FILTERED.logistics && window.NEXUS_DATA_FILTERED.logistics.rows) || [], file: 'shipments.csv' }
+  ];
+  for(const t of targets){
+    const el = document.querySelector(t.host); if(!el) continue;
+    const card = el.closest('.card'); if(!card) continue;
+    if(card.querySelector('.nx-csv-btn')) continue;
+    const hd = card.querySelector('.card-hd');
+    if(!hd) continue;
+    const btn = document.createElement('button');
+    btn.className = 'nx-csv-btn';
+    btn.textContent = '↓ CSV';
+    btn.style.cssText = 'margin-left:auto;background:transparent;border:1px solid var(--border);color:var(--muted);padding:3px 10px;font-size:9px;cursor:pointer;font-family:inherit';
+    btn.onclick = () => window.exportRowsAsCSV(t.rows(), t.file);
+    hd.appendChild(btn);
+  }
+}
+
+// Dispatch enhancements after every render
+const __prevRenderNx2 = window.renderNexus;
+window.renderNexus = function(data){
+  __prevRenderNx2(data);
+  setTimeout(() => {
+    try { enhanceSalesSection(); } catch(e){ console.error('enhanceSalesSection', e); }
+    try { wireProductDrill(); } catch(e){ console.error('wireProductDrill', e); }
+    try { renderKpiDeltas(); } catch(e){ console.error('renderKpiDeltas', e); }
+    try { attachCsvButtons(); } catch(e){ console.error('attachCsvButtons', e); }
+  }, 80);
+};
+
+// Add search icon to the filter bar once it's initialized
+const __initFilterBar = window.initFilterBar;
+if(typeof __initFilterBar === 'function'){
+  window.initFilterBar = function(data){
+    __initFilterBar(data);
+    const bar = document.getElementById('nx-filter-bar');
+    if(bar && !document.getElementById('nxf-search-btn')){
+      const btn = document.createElement('button');
+      btn.id = 'nxf-search-btn';
+      btn.textContent = '⌕ Search (press /)';
+      btn.style.cssText = 'background:transparent;border:1px solid var(--border);color:var(--cream);padding:3px 10px;cursor:pointer;font-family:inherit;font-size:inherit';
+      btn.onclick = openGlobalSearch;
+      const clear = document.getElementById('nxf-clear');
+      if(clear && clear.parentNode) clear.parentNode.insertBefore(btn, clear);
+    }
+  };
+}
+
 // ── LIVE CHARTS (Chart.js) ─────────────────────────────────
 // All chart instances are cached on window.__NX_CHARTS so re-renders
 // destroy-then-recreate cleanly when filters change.

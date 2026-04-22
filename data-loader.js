@@ -370,9 +370,22 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
       // an explicit 🔄 Force resync or 🔑 Re-auth click.
       const cached = this.loadCache();
       if (cached) {
-        this.data = cached.data;
+        this.data = cached.data || {};
         this.files = cached.files || {};
         this.lastSync = cached.lastSync ? new Date(cached.lastSync) : null;
+        // Caches from v1.5.0 lack the split shapes (shopifyOnline,
+        // shopifyRetail, invoicesSummary/Items, adspendsDaily/Monthly,
+        // skuMaster). Run post-processors on the cached merged data so
+        // the dashboard renders immediately even on first v1.6.0 load.
+        const needsUpgrade = !this.data.shopifyOnline || !this.data.invoicesSummary
+          || !this.data.adspendsDaily || !this.data.skuMaster;
+        if (needsUpgrade) {
+          try { this._postShopifySplit(); } catch(e){ this.warn('cache upgrade: shopify split', String(e)); }
+          try { this._postInvoiceSections(); } catch(e){ this.warn('cache upgrade: invoice sections', String(e)); }
+          try { this._postAdspendsTranspose(); } catch(e){ this.warn('cache upgrade: adspends transpose', String(e)); }
+          try { this._postSkuFlatten(); } catch(e){ this.warn('cache upgrade: sku flatten', String(e)); }
+          this.log('Upgraded cached data to v1.6.0 shape (no network call)');
+        }
         this.log(`Loaded cache from ${this.lastSync ? this.lastSync.toLocaleString() : 'unknown'} — click 🔄 Force resync to refresh`);
         this.applyToUI();
       } else {

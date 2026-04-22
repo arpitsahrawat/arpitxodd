@@ -752,31 +752,61 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
       const ad = this.data.adspends;
       if (!ad || !ad.rows || !ad.rows.length) return;
       const monthIdx = (name) => ['january','february','march','april','may','june','july','august','september','october','november','december'].indexOf(name.toLowerCase());
+      // Excel stores dates as day counts from 1900-01-00 (with the 1900 leap
+      // year bug baked in). Serial 46048 → 2026-01-20 etc.
+      const EXCEL_EPOCH = Date.UTC(1899, 11, 30);
+      const serialToYM = (n) => {
+        const ms = EXCEL_EPOCH + Number(n) * 86400 * 1000;
+        const d = new Date(ms);
+        if (!isFinite(d.valueOf())) return null;
+        return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 };
+      };
+      const parseColHeader = (key) => {
+        // "January 26" / "Jan 2026" / "Jan-26" / "January"
+        const m = String(key).match(/^\s*([A-Za-z]{3,9})[\s\-\/'_]*(\d{2,4})?\s*$/);
+        if (m && monthIdx(m[1]) >= 0) {
+          const yr = m[2] ? (m[2].length === 2 ? 2000 + Number(m[2]) : Number(m[2])) : 2024;
+          return { year: yr, month: monthIdx(m[1]) + 1 };
+        }
+        // Excel date serial — pure digits ≥ 30000 (year 1982+)
+        if (/^\d{5,6}$/.test(String(key).trim())) {
+          const n = Number(key);
+          if (n > 30000 && n < 80000) return serialToYM(n);
+        }
+        // ISO-ish "2026-01-20"
+        const iso = String(key).match(/^(\d{4})[-\/](\d{2})/);
+        if (iso) return { year: Number(iso[1]), month: Number(iso[2]) };
+        return null;
+      };
       const daily = [];
       const monthly = {};
       for (const r of ad.rows) {
-        const day = Number(r.Date);
+        // Find the day cell — often 'Date' but sometimes elsewhere; fall back
+        // to the first cell holding a 1-31 integer.
+        let day = Number(r.Date);
+        if (!isFinite(day) || day < 1 || day > 31) {
+          for (const v of Object.values(r)) {
+            const n = Number(v);
+            if (isFinite(n) && n >= 1 && n <= 31 && Number.isInteger(n)) { day = n; break; }
+          }
+        }
         if (!isFinite(day) || day < 1 || day > 31) continue;
         for (const key of Object.keys(r)) {
           if (key === 'Date' || key === '_source') continue;
-          const m = String(key).match(/^([A-Za-z]+)(?:\s+(\d{2,4}))?$/);
-          if (!m) continue;
-          const mi = monthIdx(m[1]);
-          if (mi < 0) continue;
-          const yearStr = m[2];
-          const year = yearStr
-            ? (yearStr.length === 2 ? 2000 + Number(yearStr) : Number(yearStr))
-            : 2024; // Bare month name = 2024 historical baseline per user's call
+          const ym = parseColHeader(key);
+          if (!ym) continue;
           const v = parseFloat(String(r[key] ?? '').replace(/,/g,'').replace(/[^\d.\-]/g,''));
           if (!isFinite(v) || v <= 0) continue;
-          daily.push({ day, month: mi + 1, year, spend: v, date: `${year}-${String(mi+1).padStart(2,'0')}-${String(day).padStart(2,'0')}` });
-          const mKey = `${year}-${String(mi+1).padStart(2,'0')}`;
+          daily.push({ day, month: ym.month, year: ym.year, spend: v,
+            date: `${ym.year}-${String(ym.month).padStart(2,'0')}-${String(day).padStart(2,'0')}` });
+          const mKey = `${ym.year}-${String(ym.month).padStart(2,'0')}`;
           monthly[mKey] = (monthly[mKey] || 0) + v;
         }
       }
       this.data.adspendsDaily = { rows: daily };
       this.data.adspendsMonthly = monthly;
-      this.log(`  transpose adspends: ${daily.length} day-month-year points across ${Object.keys(monthly).length} months`);
+      const years = Array.from(new Set(daily.map(d => d.year))).sort();
+      this.log(`  transpose adspends: ${daily.length} day-month-year points across ${Object.keys(monthly).length} months, years [${years.join(', ')}]`);
     },
 
     // SKU cost sheet has multiple sheets and broken formulas. Flatten to a

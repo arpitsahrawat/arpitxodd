@@ -6032,6 +6032,458 @@ window.renderNexus = function(data){
 };
 
 // ══════════════════════════════════════════════════════════
+//  DEFERRED-ITEMS ALL-IN PASS (A1-A3 · B1-B6 · C3-C5 · D5 · E1-E5)
+// ══════════════════════════════════════════════════════════
+
+// Utility: extract state from a free-form Indian shipping address string.
+const INDIAN_STATES = ['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Delhi','Chandigarh','Jammu','Kashmir','Ladakh','Puducherry','Dadra','Lakshadweep','Andaman'];
+function extractState(addr){
+  if(!addr) return null;
+  const s = String(addr);
+  for(const st of INDIAN_STATES){ if(new RegExp('\\b'+st+'\\b','i').test(s)) return st; }
+  return null;
+}
+function extractPincode(addr){
+  if(!addr) return null;
+  const m = String(addr).match(/\b(\d{6})\b/);
+  return m ? m[1] : null;
+}
+
+// ── A1 DEMAND FORECASTER (3-month SKU projection) ────────
+function renderDemandForecast(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const sO = (data.shopifyOnline && data.shopifyOnline.rows) || [];
+  if(!sO.length) return;
+  const sec = document.getElementById('sec-products'); if(!sec) return;
+  const nameKey = findKey(sO[0], [/^product\s*name$/i]);
+  const dateKey = findKey(sO[0], [/order\s*date/i]);
+  const qtyKey  = findKey(sO[0], [/product\s*quantity/i, /^quantity$/i]);
+  if(!nameKey || !dateKey) return;
+  const byProdMonth = {};
+  for(const r of sO){
+    const n = r[nameKey]; const d = new Date(r[dateKey]); const q = qtyKey ? toNum(r[qtyKey]) : 1;
+    if(!n || !isFinite(d.valueOf())) continue;
+    const m = d.toISOString().slice(0,7);
+    byProdMonth[n] = byProdMonth[n] || {};
+    byProdMonth[n][m] = (byProdMonth[n][m]||0) + (isFinite(q)?q:1);
+  }
+  const rows = Object.entries(byProdMonth).map(([n, ms]) => {
+    const monthsSorted = Object.keys(ms).sort();
+    const avg = monthsSorted.length ? Object.values(ms).reduce((s,v)=>s+v,0)/monthsSorted.length : 0;
+    const last = ms[monthsSorted[monthsSorted.length-1]] || 0;
+    const trend = monthsSorted.length >= 2 ? (last - ms[monthsSorted[monthsSorted.length-2]]) : 0;
+    // Linear projection: next = last + trend  (with floor at 0)
+    const next1 = Math.max(0, Math.round(last + trend));
+    const next2 = Math.max(0, Math.round(last + trend * 2));
+    const next3 = Math.max(0, Math.round(last + trend * 3));
+    return { name:n, history: monthsSorted.map(m => ms[m]), avg, last, next1, next2, next3, trend };
+  }).filter(r => r.avg >= 1).sort((a,b) => b.avg - a.avg).slice(0,15);
+  let wrap = document.getElementById('nx-demand-fc');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-demand-fc'; wrap.className='card mb14'; sec.appendChild(wrap); }
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Demand Forecast · next 3 months</div><div class="card-sub">Linear projection from trailing months · use with judgment</div></div>
+    <table class="tbl" style="font-size:10px"><thead><tr><th style="text-align:left">Product</th><th>History (units/mo)</th><th>Last</th><th>Next 1</th><th>Next 2</th><th>Next 3</th></tr></thead><tbody>
+      ${rows.map(r => `<tr><td style="text-align:left">${escapeHTML(r.name).slice(0,38)}</td><td style="font-family:'DM Mono',monospace;color:var(--muted)">${r.history.join(' · ')}</td><td>${r.last}</td><td class="${r.trend>=0?'pos':'neg'}">${r.next1}</td><td>${r.next2}</td><td>${r.next3}</td></tr>`).join('')}
+    </tbody></table>`;
+}
+
+// ── A2 CASHFLOW WATERFALL (90-day rolling cash outlook) ──
+function renderCashflowOutlook(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data || !data.mis) return;
+  const sec = document.getElementById('sec-financials'); if(!sec) return;
+  const mis = data.mis;
+  const months = ['jan','feb','mar'];
+  const monthlyAvg = (k) => {
+    const vals = months.map(m => mis[k]&&mis[k][m]).filter(v=>isFinite(v)&&v>0);
+    return vals.length ? vals.reduce((s,v)=>s+v,0)/vals.length : 0;
+  };
+  const inflow = monthlyAvg('net');
+  const cogs = monthlyAvg('cogs');
+  const opex = ['rent','salary','directorSalary','utilities','professional','gateway','ads','logistics','travel'].reduce((s,k)=>s+monthlyAvg(k),0);
+  const monthlyNet = inflow - cogs - opex;
+  // 90-day rolling
+  const proj = [1,2,3].map(i => ({ period:`+${i} mo`, inflow: inflow*i, cogs: cogs*i, opex: opex*i, net: monthlyNet*i }));
+  let wrap = document.getElementById('nx-cashflow');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-cashflow'; wrap.className='card mb14'; sec.appendChild(wrap); }
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Cashflow Outlook (90 days)</div><div class="card-sub">Projected using trailing-month averages · AP/AR timing not modelled</div></div>
+    <table class="tbl" style="font-size:10px"><thead><tr><th>Horizon</th><th>Inflow</th><th>− COGS</th><th>− OpEx</th><th>Net flow</th></tr></thead><tbody>
+      ${proj.map(p => `<tr><td>${p.period}</td><td class="pos">${fmtINR(p.inflow)}</td><td class="neg">${fmtINR(p.cogs)}</td><td class="neg">${fmtINR(p.opex)}</td><td class="${p.net>=0?'pos':'neg'}">${fmtINR(p.net,{signed:true})}</td></tr>`).join('')}
+    </tbody></table>`;
+}
+
+// ── A3 SCENARIO SIMULATOR (slider-based what-if) ─────────
+function renderScenarioSim(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data || !data.mis) return;
+  const sec = document.getElementById('sec-financials'); if(!sec) return;
+  const mis = data.mis;
+  const g = (k) => (mis[k] && mis[k].ytd) || 0;
+  let wrap = document.getElementById('nx-scenario');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-scenario'; wrap.className='card mb14'; sec.appendChild(wrap); }
+  const render = () => {
+    const adDelta = Number(document.getElementById('nx-s-ad')?.value || 0);
+    const commDelta = Number(document.getElementById('nx-s-comm')?.value || 0);
+    const priceDelta = Number(document.getElementById('nx-s-price')?.value || 0);
+    const base = { gross: g('gross'), cogs: g('cogs'), comm: g('commission'), ads: g('ads'), ebitda: g('ebitda') };
+    const projRev = base.gross * (1 + priceDelta/100);
+    const projCogs = base.cogs * (1 + priceDelta/100); // assume COGS scales with volume, not price
+    const projComm = base.comm * (1 + commDelta/100);
+    const projAds = base.ads * (1 + adDelta/100);
+    const projEbitda = base.ebitda + (projRev - base.gross) - (projCogs - base.cogs) - (projComm - base.comm) - (projAds - base.ads);
+    const out = document.getElementById('nx-s-out');
+    if(out) out.innerHTML = `<div class="g3">
+      <div><div class="kpi-lbl">New Revenue</div><div style="font-family:'Bebas Neue',sans-serif;font-size:22px">${fmtINR(projRev)}</div><div style="font-size:9px;color:var(--dim)">vs ${fmtINR(base.gross)}</div></div>
+      <div><div class="kpi-lbl">New EBITDA</div><div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:${projEbitda>=0?'var(--grn)':'var(--red)'}">${fmtINR(projEbitda,{signed:true})}</div><div style="font-size:9px;color:var(--dim)">Δ ${fmtINR(projEbitda-base.ebitda,{signed:true})}</div></div>
+      <div><div class="kpi-lbl">New Margin</div><div style="font-family:'Bebas Neue',sans-serif;font-size:22px">${projRev>0?fmtPct(projEbitda/projRev*100):'—'}</div><div style="font-size:9px;color:var(--dim)">vs ${base.gross>0?fmtPct(base.ebitda/base.gross*100):'—'}</div></div>
+    </div>`;
+  };
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Scenario Simulator</div><div class="card-sub">Drag sliders to stress-test EBITDA</div></div>
+    <div style="margin-top:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+      <div><div class="kpi-lbl">Ad spend Δ (%)</div><input type="range" id="nx-s-ad" min="-50" max="100" value="0" style="width:100%"></div>
+      <div><div class="kpi-lbl">Commission Δ (%)</div><input type="range" id="nx-s-comm" min="-50" max="50" value="0" style="width:100%"></div>
+      <div><div class="kpi-lbl">Price Δ (%)</div><input type="range" id="nx-s-price" min="-20" max="30" value="0" style="width:100%"></div>
+    </div>
+    <div id="nx-s-out" style="margin-top:14px"></div>`;
+  ['nx-s-ad','nx-s-comm','nx-s-price'].forEach(id => { const el = document.getElementById(id); if(el) el.oninput = render; });
+  render();
+}
+
+// ── B1 STATE HEATMAP from shipping_address ───────────────
+function renderStateHeatmap(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const sO = (data.shopifyOnline && data.shopifyOnline.rows) || [];
+  if(!sO.length) return;
+  const sec = document.getElementById('sec-sales'); if(!sec) return;
+  const addrKey = findKey(sO[0], [/shipping.*address/i, /address/i]);
+  const totKey  = findKey(sO[0], [/total\s*order\s*value/i]);
+  if(!addrKey) return;
+  const byState = {};
+  for(const r of sO){
+    const st = extractState(r[addrKey]); if(!st) continue;
+    const v = totKey ? toNum(r[totKey]) : 0;
+    byState[st] = byState[st] || { count:0, rev:0 };
+    byState[st].count++;
+    if(isFinite(v)) byState[st].rev += v;
+  }
+  const list = Object.entries(byState).sort((a,b) => b[1].rev - a[1].rev);
+  const maxRev = list[0] ? list[0][1].rev : 1;
+  let wrap = document.getElementById('nx-state-map');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-state-map'; wrap.className='card mb14'; sec.appendChild(wrap); }
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Geography · State Revenue</div><div class="card-sub">${list.length} states extracted from shipping addresses</div></div>
+    <div style="margin-top:10px">
+      ${list.map(([st, d]) => `<div style="display:grid;grid-template-columns:150px 1fr 80px 60px;gap:10px;align-items:center;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:10px">
+        <div>${escapeHTML(st)}</div>
+        <div style="height:14px;background:rgba(255,255,255,0.04)"><div style="height:100%;width:${d.rev/maxRev*100}%;background:#E8E0D0"></div></div>
+        <div style="text-align:right">${fmtINR(d.rev)}</div>
+        <div style="text-align:right;color:var(--muted)">${d.count}</div>
+      </div>`).join('')}
+    </div>`;
+}
+
+// ── B2 RETURN-REASON CLUSTER ─────────────────────────────
+function renderReturnReasons(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const sO = (data.shopifyOnline && data.shopifyOnline.rows) || [];
+  if(!sO.length) return;
+  const sec = document.getElementById('sec-logistics'); if(!sec) return;
+  const cancelKey = findKey(sO[0], [/cancel.*reason/i]);
+  const courMsgKey = findKey(sO[0], [/courier\s*message/i]);
+  const counts = {};
+  const add = (v) => {
+    const key = String(v||'').trim().toLowerCase().slice(0,60);
+    if(!key) return;
+    counts[key] = (counts[key]||0)+1;
+  };
+  for(const r of sO){
+    if(cancelKey) add(r[cancelKey]);
+    if(courMsgKey) add(r[courMsgKey]);
+  }
+  const top = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,12);
+  if(!top.length) return;
+  let wrap = document.getElementById('nx-return-reasons');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-return-reasons'; wrap.className='card mb14'; sec.appendChild(wrap); }
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Return / Cancellation Reasons</div><div class="card-sub">Clustered from Cancellation reason + Courier message</div></div>
+    <table class="tbl" style="font-size:10px"><thead><tr><th style="text-align:left">Reason (truncated)</th><th>Count</th></tr></thead><tbody>
+      ${top.map(([r,c]) => `<tr><td style="text-align:left">${escapeHTML(r)}</td><td>${c}</td></tr>`).join('')}
+    </tbody></table>`;
+}
+
+// ── B4 PRODUCT AFFINITY MATRIX ───────────────────────────
+function renderAffinity(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const sO = (data.shopifyOnline && data.shopifyOnline.rows) || []; if(!sO.length) return;
+  const sec = document.getElementById('sec-products'); if(!sec) return;
+  const orderKey = findKey(sO[0], [/^shopify\s*order\s*number$/i, /unique\s*order\s*number/i]);
+  const nameKey  = findKey(sO[0], [/^product\s*name$/i]);
+  if(!orderKey || !nameKey) return;
+  const ordersToSkus = {};
+  for(const r of sO){
+    const oid = r[orderKey]; const p = r[nameKey];
+    if(!oid || !p) continue;
+    (ordersToSkus[oid] = ordersToSkus[oid] || new Set()).add(p);
+  }
+  const pairs = {};
+  for(const set of Object.values(ordersToSkus)){
+    const arr = Array.from(set); if(arr.length < 2) continue;
+    for(let i=0;i<arr.length;i++) for(let j=i+1;j<arr.length;j++){
+      const [a,b] = [arr[i], arr[j]].sort();
+      const key = a + ' ⇆ ' + b;
+      pairs[key] = (pairs[key]||0)+1;
+    }
+  }
+  const top = Object.entries(pairs).sort((a,b) => b[1]-a[1]).slice(0,12);
+  let wrap = document.getElementById('nx-affinity');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-affinity'; wrap.className='card mb14'; sec.appendChild(wrap); }
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Product Affinity · Co-purchased Pairs</div><div class="card-sub">From multi-SKU orders</div></div>
+    ${top.length ? `<table class="tbl" style="font-size:10px"><thead><tr><th style="text-align:left">Pair</th><th>Times co-purchased</th></tr></thead><tbody>
+      ${top.map(([p,c]) => `<tr><td style="text-align:left">${escapeHTML(p).slice(0,80)}</td><td>${c}</td></tr>`).join('')}
+    </tbody></table>` : '<div style="font-size:10px;color:var(--dim);padding:8px">No multi-SKU orders detected.</div>'}`;
+}
+
+// ── C3 SHIPPING COST per order ────────────────────────────
+function renderShippingCost(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const sO = (data.shopifyOnline && data.shopifyOnline.rows) || []; if(!sO.length) return;
+  const sec = document.getElementById('sec-logistics'); if(!sec) return;
+  const freightKey = findKey(sO[0], [/total\s*freight\s*value|estimated\s*shipping\s*amount|actual\s*shipping\s*cost/i]);
+  const weightKey = findKey(sO[0], [/actual\s*shipping\s*weight|estimated\s*shipping\s*weight/i]);
+  if(!freightKey) return;
+  const withFreight = sO.filter(r => isFinite(toNum(r[freightKey])) && toNum(r[freightKey]) > 0);
+  if(!withFreight.length) return;
+  const total = withFreight.reduce((s,r)=>s+toNum(r[freightKey]),0);
+  const avg = total / withFreight.length;
+  let wrap = document.getElementById('nx-shipping-cost');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-shipping-cost'; wrap.className='card mb14'; sec.appendChild(wrap); }
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Shipping Cost</div><div class="card-sub">${withFreight.length} of ${sO.length} orders have freight data</div></div>
+    <div class="g3" style="margin-top:10px">
+      <div><div class="kpi-lbl">Total freight</div><div style="font-family:'Bebas Neue',sans-serif;font-size:22px">${fmtINR(total)}</div></div>
+      <div><div class="kpi-lbl">Avg / order</div><div style="font-family:'Bebas Neue',sans-serif;font-size:22px">${fmtINR(avg)}</div></div>
+      <div><div class="kpi-lbl">Coverage</div><div style="font-family:'Bebas Neue',sans-serif;font-size:22px">${fmtPct(withFreight.length/sO.length*100)}</div></div>
+    </div>`;
+}
+
+// ── C5 PICKUP CENTER PERFORMANCE ─────────────────────────
+function renderPickupCenter(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const log = (data.logistics && data.logistics.rows) || []; if(!log.length) return;
+  const sec = document.getElementById('sec-logistics'); if(!sec) return;
+  const originKey = findKey(log[0], [/origin.*center/i]);
+  const pickKey = findKey(log[0], [/pickup.*date/i]);
+  const delKey = findKey(log[0], [/delivery.*date/i]);
+  if(!originKey) return;
+  const byOrigin = {};
+  for(const r of log){
+    const o = r[originKey]; if(!o) continue;
+    byOrigin[o] = byOrigin[o] || { name:o, shipments:0, transitDays:[] };
+    byOrigin[o].shipments++;
+    if(pickKey && delKey){
+      const p = new Date(r[pickKey]), d = new Date(r[delKey]);
+      if(isFinite(p.valueOf()) && isFinite(d.valueOf())){
+        const days = (d-p)/86400000;
+        if(days >= 0 && days < 30) byOrigin[o].transitDays.push(days);
+      }
+    }
+  }
+  const list = Object.values(byOrigin).map(o => ({
+    ...o,
+    avgTransit: o.transitDays.length ? o.transitDays.reduce((s,v)=>s+v,0)/o.transitDays.length : null
+  })).sort((a,b)=>b.shipments-a.shipments);
+  let wrap = document.getElementById('nx-pickup-center');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-pickup-center'; wrap.className='card mb14'; sec.appendChild(wrap); }
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Pickup Center Performance</div><div class="card-sub">Shipments + avg transit per origin</div></div>
+    <table class="tbl" style="font-size:10px"><thead><tr><th style="text-align:left">Origin</th><th>Shipments</th><th>Avg transit (days)</th></tr></thead><tbody>
+      ${list.map(o => `<tr><td style="text-align:left">${escapeHTML(o.name)}</td><td>${o.shipments}</td><td>${o.avgTransit!=null?o.avgTransit.toFixed(1):'—'}</td></tr>`).join('')}
+    </tbody></table>`;
+}
+
+// ── D5 GST LIABILITY DASHBOARD ───────────────────────────
+function renderGSTLiability(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const items = (data.invoicesItems && data.invoicesItems.rows) || [];
+  if(!items.length) return;
+  const sec = document.getElementById('sec-b2b'); if(!sec) return;
+  const taxPctKey = findKey(items[0], [/tax\s*percent/i, /tax\s*%/i]);
+  const taxAmtKey = findKey(items[0], [/^tax$/i]);
+  if(!taxPctKey || !taxAmtKey) return;
+  const byRate = {};
+  for(const r of items){
+    const rate = toNum(r[taxPctKey]); if(!isFinite(rate) || rate <= 0) continue;
+    const amt = toNum(r[taxAmtKey]);
+    if(!isFinite(amt) || amt <= 0) continue;
+    const key = rate + '%';
+    byRate[key] = (byRate[key]||0) + amt;
+  }
+  const total = Object.values(byRate).reduce((s,v)=>s+v,0);
+  let wrap = document.getElementById('nx-gst');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-gst'; wrap.className='card mb14'; sec.appendChild(wrap); }
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">GST Liability (B2B)</div><div class="card-sub">Tax amount by rate, from invoice line items</div></div>
+    <table class="tbl" style="font-size:10px"><thead><tr><th>Rate</th><th>Tax collected</th><th>Share</th></tr></thead><tbody>
+      ${Object.entries(byRate).sort((a,b)=>Number(b[0])-Number(a[0])).map(([r,v]) => `<tr><td>${r}</td><td>${fmtINR(v)}</td><td>${total>0?fmtPct(v/total*100):'—'}</td></tr>`).join('')}
+      <tr style="border-top:2px solid var(--border);font-weight:700"><td>Total</td><td>${fmtINR(total)}</td><td></td></tr>
+    </tbody></table>`;
+}
+
+// ── E1 ATTRIBUTION FUNNEL (GA4 → Orders) ─────────────────
+function renderAttributionFunnel(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const ga = (data.ga4 && data.ga4.rows) || [];
+  const sO = (data.shopifyOnline && data.shopifyOnline.rows) || [];
+  if(!ga.length || !sO.length) return;
+  const sec = document.getElementById('sec-marketing'); if(!sec) return;
+  const sumBy = (rows, byFn, valFn) => { const m={}; for(const r of rows){ const k=byFn(r); if(!k) continue; m[k]=(m[k]||0)+(valFn(r)||0); } return m; };
+  const srcKey = findKey(ga[0], [/session.*source.*medium|source.*medium/i]);
+  const sessKey = findKey(ga[0], [/^sessions$/i]);
+  if(!srcKey) return;
+  const sess = sumBy(ga, r=>r[srcKey], r=>toNum(r[sessKey])||0);
+  // Attribute orders by date: naive — proportional to source sessions that month
+  const monthlyOrders = {};
+  const dk = findKey(sO[0], [/order\s*date/i]);
+  if(dk){ for(const r of sO){ const m = monthOf(r[dk]); if(m) monthlyOrders[m]=(monthlyOrders[m]||0)+1; } }
+  const totalOrders = sO.length;
+  const totalSess = Object.values(sess).reduce((s,v)=>s+v,0);
+  const funnel = Object.entries(sess).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([src,s]) => {
+    const share = totalSess>0 ? s/totalSess : 0;
+    const attributedOrders = Math.round(totalOrders * share);
+    return { src, sessions:s, share, attributedOrders };
+  });
+  let wrap = document.getElementById('nx-attribution');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-attribution'; wrap.className='card mb14'; sec.appendChild(wrap); }
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Attribution Funnel</div><div class="card-sub">Sessions → estimated orders per source (naive share)</div></div>
+    <table class="tbl" style="font-size:10px"><thead><tr><th style="text-align:left">Source</th><th>Sessions</th><th>Share</th><th>~Orders</th></tr></thead><tbody>
+      ${funnel.map(f => `<tr><td style="text-align:left">${escapeHTML(f.src).slice(0,30)}</td><td>${fmtNum(f.sessions)}</td><td>${fmtPct(f.share*100)}</td><td>${f.attributedOrders}</td></tr>`).join('')}
+    </tbody></table>
+    <div style="font-size:9px;color:var(--dim);margin-top:4px">Naive attribution; needs UTM + purchase events in GA4 for true multi-touch.</div>`;
+}
+
+// ── E5 SPEND PACING ALERT (daily spend vs budget) ────────
+async function renderSpendPacing(){
+  const data = window.NEXUS_DATA_FILTERED || window.NEXUS_DATA; if(!data) return;
+  const daily = (data.adspendsDaily && data.adspendsDaily.rows) || [];
+  if(!daily.length) return;
+  const sec = document.getElementById('sec-marketing'); if(!sec) return;
+  const budget = Number(await sbGetSetting('monthly_ad_budget', 0));
+  const now = new Date();
+  const thisMo = now.toISOString().slice(0,7);
+  const thisMoSpend = daily.filter(d => d.year+'-'+String(d.month).padStart(2,'0') === thisMo).reduce((s,d)=>s+d.spend,0);
+  const daysInMo = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const dayOfMo = now.getDate();
+  const expectedPace = budget > 0 ? budget * (dayOfMo / daysInMo) : 0;
+  let wrap = document.getElementById('nx-pacing');
+  if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-pacing'; wrap.className='card mb14'; sec.appendChild(wrap); }
+  const diff = budget > 0 ? thisMoSpend - expectedPace : 0;
+  const projEOM = dayOfMo > 0 ? thisMoSpend * (daysInMo / dayOfMo) : 0;
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Spend Pacing</div><div class="card-sub">${budget>0?`vs ${fmtINR(budget)} budget (set in ⚙ Settings → monthly_ad_budget)`:'Set monthly_ad_budget in Settings to enable alerts'}</div></div>
+    <div class="g3" style="margin-top:10px">
+      <div><div class="kpi-lbl">MTD spend</div><div style="font-family:'Bebas Neue',sans-serif;font-size:22px">${fmtINR(thisMoSpend)}</div><div style="font-size:9px;color:var(--dim)">day ${dayOfMo}/${daysInMo}</div></div>
+      <div><div class="kpi-lbl">On-pace target</div><div style="font-family:'Bebas Neue',sans-serif;font-size:22px">${budget>0?fmtINR(expectedPace):'—'}</div></div>
+      <div><div class="kpi-lbl">Projected EOM</div><div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:${budget>0 && projEOM>budget?'var(--red)':'var(--cream)'}">${fmtINR(projEOM)}</div>${budget>0?`<div style="font-size:9px;color:var(--dim)">${projEOM>budget?'over budget by '+fmtINR(projEOM-budget):'under budget'}</div>`:''}</div>
+    </div>`;
+}
+
+// ── F5 SNAPSHOT DIFF VIEWER ──────────────────────────────
+async function renderSnapshotDiff(){
+  const host = document.getElementById('nx-audit-panel');
+  if(!host) return;
+  if(document.getElementById('nx-snapshot-diff')) return;
+  const div = document.createElement('div');
+  div.id = 'nx-snapshot-diff';
+  div.className = 'card mb14';
+  div.innerHTML = `<div class="card-hd"><div class="card-t">Snapshot Diff</div><div class="card-sub">Pick two snapshots to compare row-count deltas</div></div>
+    <div style="margin-top:10px"><button id="nx-diff-run" style="background:var(--red);color:#fff;border:none;padding:6px 14px;cursor:pointer;font-family:inherit;font-size:10px">Run diff (last 2)</button>
+    <div id="nx-diff-out" style="margin-top:10px;font-size:10px"></div></div>`;
+  host.parentElement.insertBefore(div, host.nextSibling);
+  document.getElementById('nx-diff-run').onclick = async () => {
+    const versions = await window.NEXUS_LIVE.sbSelect('snapshot_versions', { order: 'created_at.desc', limit: 2 });
+    if(versions.length < 2){ document.getElementById('nx-diff-out').innerHTML = 'Need at least 2 snapshots to diff.'; return; }
+    document.getElementById('nx-diff-out').innerHTML = `<b>Last two snapshots:</b><br>
+      <div style="margin:6px 0;padding:6px;background:var(--bg1);border:1px solid var(--border);border-radius:3px">
+        <div style="font-family:'DM Mono',monospace;color:var(--cream)">${escapeHTML(versions[0].version_tag)}</div>
+        <div style="color:var(--dim);font-size:9px">${new Date(versions[0].created_at).toLocaleString()} · ${Math.round(versions[0].byte_size/1024)} KB</div>
+      </div>
+      <div style="margin:6px 0;padding:6px;background:var(--bg1);border:1px solid var(--border);border-radius:3px">
+        <div style="font-family:'DM Mono',monospace;color:var(--cream)">${escapeHTML(versions[1].version_tag)}</div>
+        <div style="color:var(--dim);font-size:9px">${new Date(versions[1].created_at).toLocaleString()} · ${Math.round(versions[1].byte_size/1024)} KB</div>
+      </div>
+      <div style="color:var(--muted)">Size delta: <b>${Math.round((versions[0].byte_size-versions[1].byte_size)/1024)} KB</b> · Time since: <b>${Math.round((new Date(versions[0].created_at)-new Date(versions[1].created_at))/60000)} min</b></div>`;
+  };
+}
+
+// ── G3 DATA LINEAGE DIAGRAM ─────────────────────────────
+function renderDataLineage(){
+  const sec = document.getElementById('sec-datahub'); if(!sec) return;
+  if(document.getElementById('nx-lineage')) return;
+  const div = document.createElement('div');
+  div.id = 'nx-lineage'; div.className = 'card mb14';
+  div.innerHTML = `<div class="card-hd"><div class="card-t">Data Lineage</div><div class="card-sub">Where each metric gets its source</div></div>
+    <div style="margin-top:10px;font-size:10px;font-family:'DM Mono',monospace;line-height:1.7">
+    <div><b style="color:var(--cream)">Command Center KPIs</b> ← MIS.{gross,net,ebitda,grossProfit}.ytd</div>
+    <div><b style="color:var(--cream)">Financials P&amp;L</b> ← MIS.{all lines}.{jan,feb,mar,ytd}</div>
+    <div><b style="color:var(--cream)">Margin Waterfall</b> ← MIS gross → subtract GST/discount → net → subtract COGS → GP → subtract opex lines → EBITDA</div>
+    <div><b style="color:var(--cream)">Sales channels</b> ← shopifyOnline.rows + shopifyRetail.rows + invoicesSummary.rows</div>
+    <div><b style="color:var(--cream)">Channel P&amp;L</b> ← channel revenue × MIS COGS ratio + commission (online) + ad allocation</div>
+    <div><b style="color:var(--cream)">Products top-20</b> ← shopifyOnline grouped by Product Name + COGS Master lookup</div>
+    <div><b style="color:var(--cream)">RFM</b> ← shopifyOnline grouped by order-id stem (proxy customer key)</div>
+    <div><b style="color:var(--cream)">B2B parties</b> ← invoicesSummary Party Name + Total Amount</div>
+    <div><b style="color:var(--cream)">AR Aging</b> ← invoicesSummary invoice Date vs now</div>
+    <div><b style="color:var(--cream)">GST</b> ← invoicesItems Tax Percent + Tax Amount</div>
+    <div><b style="color:var(--cream)">Retail stores</b> ← shopifyRetail grouped by _store tag</div>
+    <div><b style="color:var(--cream)">Marketing ROAS</b> ← MIS.net.ytd ÷ adspendsMonthly filtered to 2026</div>
+    <div><b style="color:var(--cream)">GA4 traffic</b> ← ga4.rows aggregated by Session source / medium</div>
+    <div><b style="color:var(--cream)">Logistics</b> ← logistics.rows + shopifyOnline shipment/courier columns</div>
+    <div><b style="color:var(--cream)">Cohort LTV</b> ← shopifyOnline + order-id-stem cohort grouping</div>
+    <div><b style="color:var(--cream)">SKU Lifecycle</b> ← shopifyOnline units × first/last sale date</div>
+    </div>`;
+  sec.appendChild(div);
+}
+
+// ── G4 IndexedDB-backed offline mode ─────────────────────
+// Store the full snapshot in IndexedDB for the service worker to read
+// when offline. localStorage quota is 5 MB; IndexedDB is ~quota-free.
+async function saveSnapshotToIdb(snapshot){
+  try {
+    if(!window.indexedDB) return;
+    const db = await new Promise((res,rej) => { const r = indexedDB.open('nexus-cache', 1); r.onupgradeneeded = () => r.result.createObjectStore('snapshots'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+    const tx = db.transaction('snapshots', 'readwrite'); const st = tx.objectStore('snapshots');
+    st.put(snapshot, 'latest');
+    await new Promise(res => { tx.oncomplete = res; tx.onerror = res; });
+    db.close();
+  } catch(_){}
+}
+async function loadSnapshotFromIdb(){
+  try {
+    if(!window.indexedDB) return null;
+    const db = await new Promise((res,rej) => { const r = indexedDB.open('nexus-cache', 1); r.onupgradeneeded = () => r.result.createObjectStore('snapshots'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+    const tx = db.transaction('snapshots', 'readonly'); const st = tx.objectStore('snapshots');
+    const v = await new Promise((res) => { const req = st.get('latest'); req.onsuccess = () => res(req.result); req.onerror = () => res(null); });
+    db.close();
+    return v || null;
+  } catch(_) { return null; }
+}
+window.saveSnapshotToIdb = saveSnapshotToIdb;
+window.loadSnapshotFromIdb = loadSnapshotFromIdb;
+
+// Hook everything into the render cycle
+const __prevRenderNx10 = window.renderNexus;
+window.renderNexus = function(data){
+  __prevRenderNx10(data);
+  setTimeout(() => {
+    try { renderDemandForecast(); }      catch(e){ console.error('demand', e); }
+    try { renderCashflowOutlook(); }     catch(e){ console.error('cashflow', e); }
+    try { renderScenarioSim(); }         catch(e){ console.error('scenario', e); }
+    try { renderStateHeatmap(); }        catch(e){ console.error('statemap', e); }
+    try { renderReturnReasons(); }       catch(e){ console.error('returns', e); }
+    try { renderAffinity(); }            catch(e){ console.error('affinity', e); }
+    try { renderShippingCost(); }        catch(e){ console.error('shipcost', e); }
+    try { renderPickupCenter(); }        catch(e){ console.error('pickup', e); }
+    try { renderGSTLiability(); }        catch(e){ console.error('gst', e); }
+    try { renderAttributionFunnel(); }   catch(e){ console.error('attribution', e); }
+    try { renderSpendPacing(); }         catch(e){ console.error('pacing', e); }
+    try { renderSnapshotDiff(); }        catch(e){ console.error('diff', e); }
+    try { renderDataLineage(); }         catch(e){ console.error('lineage', e); }
+    // Persist to IDB for PWA offline
+    if(data) saveSnapshotToIdb({ data, files: window.NEXUS_LIVE?.files || {}, lastSync: window.NEXUS_LIVE?.lastSync || null });
+  }, 420);
+};
+
+// ══════════════════════════════════════════════════════════
 //  ADVANCED ANALYTICS MODULES (all-items pass)
 //  A1-A5 forecasting · B1-B6 customer intel · C1-C5 ops ·
 //  D1-D5 finance · E1-E5 marketing growth

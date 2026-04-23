@@ -737,15 +737,41 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
     _postForwardFillOnline() {
       const shop = this.data.shopifyOnline;
       if (!shop || !shop.rows || !shop.rows.length) return;
-      const idKey = ['ST Unique Order ID', 'Unique order number', 'Shopify order number']
-        .find(k => shop.rows[0] && k in shop.rows[0]);
-      if (!idKey) return;
+      // Some rows blank out one ID column while keeping another populated,
+      // so resolve each row's order key from whichever of the three
+      // is non-blank. This improves group membership dramatically on
+      // Shopflo's multi-line exports.
+      const ID_COLS = ['ST Unique Order ID', 'Unique order number', 'Shopify order number'];
+      const getId = (r) => {
+        for (const c of ID_COLS) {
+          const v = r[c];
+          if (v != null && String(v).trim() !== '') return String(v).trim().replace(/[^\w\-]/g, '');
+        }
+        return '';
+      };
       // Group rows by order id, preserve original order
       const orderIndex = {};
       shop.rows.forEach((r, i) => {
-        const id = String(r[idKey] || '').trim();
+        const id = getId(r);
         if (!id) return;
         (orderIndex[id] = orderIndex[id] || []).push(i);
+      });
+      // Secondary pass: for rows with no primary id, attempt to group by
+      // adjacent rows' order id (Shopflo often leaves whole ID set blank
+      // on the 3rd+ line of a multi-item order). Walk the file, and if a
+      // row has NO id but the previous row did, assume same order.
+      let lastId = '';
+      shop.rows.forEach((r, i) => {
+        const id = getId(r);
+        if (id) { lastId = id; return; }
+        if (lastId && orderIndex[lastId]) {
+          orderIndex[lastId].push(i);
+          // Also back-write the ID onto this row so downstream renderers
+          // treat it as part of the order.
+          for (const c of ID_COLS) {
+            if (r[c] == null || r[c] === '') r[c] = lastId;
+          }
+        }
       });
       // Fields that carry order-level context, not line-item context
       const CARRY = [

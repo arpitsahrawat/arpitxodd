@@ -5328,16 +5328,41 @@ function renderDriveHub(data){
 function renderDataQuality(data){
   const host = document.getElementById('dq-panel'); if(!host) return;
   const issues = [];
-  const checkKey = (folder, key, expect) => {
+  // Cancelled / refunded / voided rows are expected to have no total —
+  // skip them from the "missing" count so the panel doesn't nag about
+  // legitimate data.
+  const isExpectedlyBlank = (r) => {
+    const cancel = String(r['Order Cancellation reason'] || r['_c_cancelReason'] || '').trim();
+    if (cancel) return true;
+    const fs = String(r['Financial Status'] || r['_c_paymentStatus'] || '').toLowerCase();
+    if (/refund|void|cancel|fail/.test(fs)) return true;
+    const os = String(r['Order status'] || r['_c_orderStatus'] || '').toLowerCase();
+    if (/cancel/.test(os)) return true;
+    return false;
+  };
+  const checkKey = (folder, key, opts) => {
     const rows = (data[folder]&&data[folder].rows)||[];
     if(!rows.length){ issues.push({level:'warn',text:`${folder} has no parsed rows`}); return; }
-    const missing = rows.filter(r => r[key] == null || String(r[key]).trim() === '').length;
-    if(missing>0) issues.push({level:'warn',text:`${folder}: ${missing}/${rows.length} rows missing "${key}"`});
+    let missing = 0, expectedBlanks = 0;
+    for (const r of rows) {
+      if (r[key] == null || String(r[key]).trim() === '') {
+        if (opts && opts.allowCancelled && isExpectedlyBlank(r)) expectedBlanks++;
+        else missing++;
+      }
+    }
+    if (missing > 0) {
+      const pct = Math.round(missing / rows.length * 100);
+      const note = expectedBlanks > 0 ? ` (+${expectedBlanks} cancelled, excluded)` : '';
+      const level = pct > 15 ? 'warn' : 'info';
+      issues.push({ level, text: `${folder}: ${missing}/${rows.length} rows (${pct}%) missing "${key}"${note}` });
+    } else if (expectedBlanks > 0) {
+      issues.push({ level: 'info', text: `${folder}: all non-cancelled rows have "${key}" · ${expectedBlanks} cancelled/refunded blanks expected` });
+    }
   };
   const sku = (data.skuMaster&&data.skuMaster.rows)||[];
   const skuMissing = sku.filter(r=>!r.hasCost).length;
   if(skuMissing) issues.push({level:'err', text:`SKU: ${skuMissing}/${sku.length} products without cost price (broken formulas or blank)`});
-  if(data.shopifyOnline) checkKey('shopifyOnline', 'Total Order value');
+  if(data.shopifyOnline) checkKey('shopifyOnline', 'Total Order value', { allowCancelled: true });
   if(data.shopifyRetail) checkKey('shopifyRetail', 'PRICE');
   if(data.invoicesSummary) checkKey('invoicesSummary', 'Party Name');
   const mis = data.mis;
@@ -5346,7 +5371,9 @@ function renderDataQuality(data){
     host.innerHTML = '<div style="font-size:10px;color:var(--grn);padding:6px 0">✓ All expected columns present</div>';
     return;
   }
-  host.innerHTML = issues.map(i => `<div style="font-size:10px;color:${i.level==='err'?'var(--red)':'#F59E0B'};padding:2px 0">${i.level==='err'?'✗':'⚠'} ${escapeHTML(i.text)}</div>`).join('');
+  const tone = (lvl) => lvl === 'err' ? 'var(--red)' : lvl === 'warn' ? '#F59E0B' : 'var(--grn)';
+  const icon = (lvl) => lvl === 'err' ? '✗' : lvl === 'warn' ? '⚠' : '✓';
+  host.innerHTML = issues.map(i => `<div style="font-size:10px;color:${tone(i.level)};padding:2px 0">${icon(i.level)} ${escapeHTML(i.text)}</div>`).join('');
 }
 
 // ── H2 #22 DATE RANGE PICKER ──────────────────────────────

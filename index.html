@@ -5166,17 +5166,37 @@ function renderCogsRows(items, searchTerm, onlyMissing){
     if(searchTerm && !it.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     return true;
   });
-  host.innerHTML = `<div style="max-height:480px;overflow-y:auto"><table class="tbl" style="font-size:10px"><thead><tr><th style="text-align:left">Product</th><th>From orders?</th><th>SKU cost</th><th>Override</th><th>Resolved</th><th>Action</th></tr></thead><tbody>
+  // Summary counts by match source so the user instantly sees coverage
+  let exactN=0, tokenN=0, fuzzyN=0, overrideN=0, missingN=0;
+  for(const it of filtered){
+    const rc = L.resolveCost(it.name);
+    if(rc.source==='override') overrideN++;
+    else if(rc.source==='exact') exactN++;
+    else if(rc.source==='token-subset') tokenN++;
+    else if(rc.source==='fuzzy') fuzzyN++;
+    else missingN++;
+  }
+  host.innerHTML = `<div style="margin-bottom:8px;font-size:9.5px;color:var(--dim)">
+    Matched: <span class="pos">${exactN} exact</span> · <span style="color:#10B981">${overrideN} override</span> · <span style="color:#F59E0B">${tokenN} token</span> · <span style="color:#6366F1">${fuzzyN} fuzzy</span> · <span class="neg">${missingN} missing</span>
+  </div>
+  <div style="max-height:480px;overflow-y:auto"><table class="tbl" style="font-size:10px"><thead><tr><th style="text-align:left">Product</th><th>From orders?</th><th>SKU cost</th><th>Override</th><th>Resolved</th><th>Match</th><th>Action</th></tr></thead><tbody>
     ${filtered.slice(0,200).map(it => {
       const rc = L.resolveCost(it.name);
       const ovKey = L._normalizeProductName(it.name);
       const ovVal = overrides[ovKey];
+      const srcColor = rc.source==='exact'||rc.source==='override' ? 'var(--grn)' :
+                       rc.source==='token-subset' ? '#F59E0B' :
+                       rc.source==='fuzzy' ? '#6366F1' : 'var(--red)';
+      const matchInfo = rc.matched && rc.matched !== it.name
+        ? `<div style="font-size:8.5px;color:var(--dim);margin-top:2px">→ ${escapeHTML(rc.matched).slice(0,40)}${rc.confidence?` <span style="color:${srcColor}">(${Math.round(rc.confidence*100)}%)</span>`:''}</div>`
+        : '';
       return `<tr data-name="${escapeHTML(it.name)}">
-        <td style="text-align:left">${escapeHTML(it.name)}</td>
+        <td style="text-align:left">${escapeHTML(it.name).slice(0,46)}${matchInfo}</td>
         <td>${it.fromOrders?'<span class="pos">✓</span>':'—'}</td>
         <td>${isFinite(it.skuCost)?fmtINR(it.skuCost):'<span class="neg">—</span>'}</td>
         <td><input type="number" class="cogs-input" value="${isFinite(ovVal)?ovVal:''}" placeholder="—" style="width:80px;background:var(--bg1);color:var(--cream);border:1px solid var(--border);padding:3px 5px;font-size:9.5px;font-family:'DM Mono',monospace"></td>
-        <td>${isFinite(rc.cost)?fmtINR(rc.cost):'<span class="neg">—</span>'} <span style="color:var(--dim);font-size:9px">(${rc.source})</span></td>
+        <td>${isFinite(rc.cost)?fmtINR(rc.cost):'<span class="neg">—</span>'}</td>
+        <td><span style="color:${srcColor};font-size:9px">${rc.source}</span></td>
         <td><button class="cogs-save" style="background:transparent;border:1px solid var(--grn);color:var(--grn);padding:2px 8px;font-size:9px;cursor:pointer">Save</button></td>
       </tr>`;
     }).join('')}

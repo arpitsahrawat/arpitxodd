@@ -990,6 +990,8 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
       }
       const flat = Array.from(byName.values()).sort((a,b) => a.name.localeCompare(b.name));
       this.data.skuMaster = { rows: flat };
+      // Invalidate the resolveCost token index so it rebuilds with fresh data
+      this._skuIndex = null;
       const withCost = flat.filter(r => r.hasCost).length;
       this.log(`  flatten sku: ${flat.length} unique products, ${withCost} with cost (${flat.length - withCost} missing)`);
     },
@@ -1037,14 +1039,59 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
       return parseFloat(s.replace(/[₹,\s]/g,'').replace(/[^\d.\-]/g,''));
     },
 
+    // Strip Shopflo variant suffixes and normalise for matching.
+    // Shopflo product names end with patterns like:
+    //   " - L / White"            (size / color)
+    //   " - Polyester / L"        (material / size)
+    //   " - XL / BLACK"           (size / color caps)
+    //   " - Cotton / M"           (material / size)
+    //   " - Brown"                (color only)
+    //   " - XXXL"                 (size only)
+    // We want the base product stem: "97 Oversized Jersey" for matching
+    // against the SKU master's "97 Oversized Jersey" row.
     _normalizeProductName(name) {
       if (!name) return '';
-      return String(name)
-        .toLowerCase()
-        .replace(/\s*-\s*[a-z0-9\/\s,]+$/i, '')  // strip "- Size / Color" suffix
-        .replace(/[^\w\s]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
+      let s = String(name).trim();
+      // Iterate: strip trailing " - <segment>" up to 3 times (handles stacked
+      // variant suffixes like "... - Polyester - L / Black")
+      const VARIANT_WORDS = /^(xs|xxs|s|m|l|xl|xxl|xxxl|xxxxl|free|one\s*size|cotton|polyester|linen|denim|wool|nylon|silk|cashmere|black|white|red|blue|green|grey|gray|navy|beige|brown|olive|off\s*white|royal\s*blue)\b/i;
+      for (let i = 0; i < 3; i++) {
+        const m = s.match(/^(.*?)\s*-\s*([^-]+?)\s*$/);
+        if (!m) break;
+        const tail = m[2].trim();
+        // If tail looks like a variant (has slash, is a size/colour/material word,
+        // is ≤ 18 chars and has no multi-word non-variant noun), strip it.
+        const hasSlash = tail.includes('/');
+        const isShort = tail.length <= 18;
+        const slashParts = tail.split('/').map(p => p.trim());
+        const allVariant = slashParts.every(p => VARIANT_WORDS.test(p) || /^[a-zA-Z]{1,4}$/.test(p));
+        if (hasSlash && allVariant) { s = m[1]; continue; }
+        if (!hasSlash && isShort && VARIANT_WORDS.test(tail)) { s = m[1]; continue; }
+        break;
+      }
+      // Strip quotes / apostrophes / unicode punctuation, normalise whitespace
+      s = s.toLowerCase()
+           .replace(/['"`‘’“”]/g, '')
+           .replace(/[^\w\s]/g, ' ')
+           .replace(/\s+/g, ' ')
+           .trim();
+      return s;
+    },
+
+    // Token set for fuzzy overlap scoring.
+    _tokens(name) {
+      const norm = this._normalizeProductName(name);
+      const stop = new Set(['the','and','with','of','a','an','n','or','in','on','at','to','for']);
+      return new Set(norm.split(/\s+/).filter(w => w.length >= 2 && !stop.has(w)));
+    },
+
+    // Build + cache an indexed SKU master for fast resolveCost calls.
+    _buildSkuIndex() {
+      const sku = (this.data.skuMaster && this.data.skuMaster.rows) || [];
+      this._skuIndex = sku.map(r => Object.assign({}, r, {
+        normalized: this._normalizeProductName(r.name),
+        tokens: this._tokens(r.name)
+      }));
     },
 
     // ─── COGS MASTER (localStorage-backed per-product cost overrides) ───
@@ -1068,19 +1115,55 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
       try { localStorage.setItem(this.COGS_STORAGE, JSON.stringify(all)); } catch(_){ }
       this.logAudit(action, { product: productName, normalized: key, old: oldValue, new: all[key] || null });
     },
-    // Resolve cost for a given product name: overrides → sku sheet → null.
-    // Returns { cost, source } so callers can label where the figure came from.
+    // Resolve cost for a given product name.
+    // Waterfall: user override → exact normalised → all-tokens subset →
+    // weighted token overlap ≥ 0.5. Returns cost + source + confidence +
+    // matched-name for debugging in the COGS Master UI.
     resolveCost(productName) {
-      if (!productName) return { cost: null, source: 'missing' };
-      const overrides = this.loadCogsOverrides();
+      if (!productName) return { cost: null, source: 'missing', confidence: 0 };
       const key = this._normalizeProductName(productName);
-      if (key in overrides) return { cost: overrides[key], source: 'override' };
-      const sku = this.data.skuMaster && this.data.skuMaster.rows || [];
-      // Exact normalized match first, then fuzzy contains
-      let hit = sku.find(r => r.hasCost && r.normalized === key);
-      if (!hit) hit = sku.find(r => r.hasCost && (r.normalized.includes(key) || key.includes(r.normalized)));
-      if (hit) return { cost: hit.cost, source: 'sku-sheet' };
-      return { cost: null, source: 'missing' };
+      // 1. User override (highest precedence, perfect confidence)
+      const overrides = this.loadCogsOverrides();
+      if (key in overrides) return { cost: overrides[key], source: 'override', confidence: 1, matched: productName };
+      // Build (lazy) + cache the SKU index
+      if (!this._skuIndex) this._buildSkuIndex();
+      const index = this._skuIndex || [];
+      // 2. Exact normalised match
+      let exact = index.find(r => r.hasCost && r.normalized === key);
+      if (exact) return { cost: exact.cost, source: 'exact', confidence: 1, matched: exact.name };
+      // 3. Token-subset: every SKU token appears in query (or vice versa)
+      const qTokens = this._tokens(productName);
+      if (qTokens.size === 0) return { cost: null, source: 'missing', confidence: 0 };
+      let subsetHit = null, subsetScore = 0;
+      for (const r of index) {
+        if (!r.hasCost || r.tokens.size === 0) continue;
+        const skuInQ = Array.from(r.tokens).every(t => qTokens.has(t));
+        const qInSku = Array.from(qTokens).every(t => r.tokens.has(t));
+        if (skuInQ || qInSku) {
+          // Score = shared-token count / max set size
+          let shared = 0;
+          for (const t of r.tokens) if (qTokens.has(t)) shared++;
+          const score = shared / Math.max(r.tokens.size, qTokens.size);
+          if (score > subsetScore) { subsetScore = score; subsetHit = r; }
+        }
+      }
+      if (subsetHit && subsetScore >= 0.5) {
+        return { cost: subsetHit.cost, source: 'token-subset', confidence: subsetScore, matched: subsetHit.name };
+      }
+      // 4. Weighted Jaccard overlap ≥ 0.5
+      let fuzzy = null, fuzzyScore = 0;
+      for (const r of index) {
+        if (!r.hasCost || r.tokens.size === 0) continue;
+        let shared = 0;
+        for (const t of r.tokens) if (qTokens.has(t)) shared++;
+        const union = new Set([...r.tokens, ...qTokens]).size;
+        const score = union > 0 ? shared / union : 0;
+        if (score > fuzzyScore) { fuzzyScore = score; fuzzy = r; }
+      }
+      if (fuzzy && fuzzyScore >= 0.5) {
+        return { cost: fuzzy.cost, source: 'fuzzy', confidence: fuzzyScore, matched: fuzzy.name };
+      }
+      return { cost: null, source: 'missing', confidence: 0 };
     },
 
     // ─── GENERIC TABLE READER (smart header row) ─────────

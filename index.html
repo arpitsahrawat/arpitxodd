@@ -4708,9 +4708,33 @@ function findKey(row, patterns){
 function escapeHTML(s){
   return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+// Canonical month-of parser: returns YYYY-MM from many source formats.
+// Handles: DD/MM/YYYY, MM/DD/YYYY (heuristic), YYYY-MM-DD, ISO timestamps,
+// Excel date serials (integers), bare month numbers (2026 current year
+// default), and GA4-style "MM" two-digit month strings.
 function monthOf(v){
   if(v==null||v==='') return null;
+  // Numeric input — could be an Excel serial OR a month number
+  if(typeof v === 'number' && isFinite(v)){
+    if(v >= 1 && v <= 12 && Number.isInteger(v)){
+      // Bare month number, assume current calendar year
+      return `${new Date().getFullYear()}-${String(v).padStart(2,'0')}`;
+    }
+    if(v > 30000 && v < 80000){
+      // Excel date serial (1900 epoch)
+      const ms = Date.UTC(1899, 11, 30) + v * 86400000;
+      const d = new Date(ms);
+      if(isFinite(d.valueOf())) return d.toISOString().slice(0,7);
+    }
+  }
   const s = String(v).trim();
+  if(!s) return null;
+  // GA4-style "MM" — two-digit month only (uses current year)
+  if(/^\d{1,2}$/.test(s)){
+    const n = Number(s);
+    if(n >= 1 && n <= 12) return `${new Date().getFullYear()}-${String(n).padStart(2,'0')}`;
+  }
+  // DD/MM/YYYY or DD-MM-YYYY (Indian convention, used by CDC retail and invoices)
   const dmy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
   if(dmy){
     const day = Number(dmy[1]);
@@ -4718,13 +4742,49 @@ function monthOf(v){
     let year = Number(dmy[3]); if(year<100) year += 2000;
     if(month>=1 && month<=12 && day>=1 && day<=31) return `${year}-${String(month).padStart(2,'0')}`;
   }
+  // ISO "YYYY-MM-DD" or "YYYY/MM"
   const iso = s.match(/^(\d{4})[-\/](\d{2})/);
   if(iso) return `${iso[1]}-${iso[2]}`;
+  // "Jan 2026" / "January 2026" / "Jan-26"
+  const MONS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  const named = s.toLowerCase().match(/^([a-z]{3,9})[\s\-\/']*(\d{2,4})?/);
+  if(named){
+    const mi = MONS.indexOf(named[1].slice(0,3));
+    if(mi >= 0){
+      let y = named[2] ? Number(named[2]) : new Date().getFullYear();
+      if(y < 100) y += 2000;
+      return `${y}-${String(mi+1).padStart(2,'0')}`;
+    }
+  }
+  // JS Date parser fallback (handles "2026-03-31 19:14:51" and similar)
   const d = new Date(s);
   if(isFinite(d.valueOf())) return d.toISOString().slice(0,7);
   return null;
 }
 function monthKey(y, m){ return `${y}-${String(m).padStart(2,'0')}`; }
+// Human-readable month label: "2026-01" → "Jan 2026"; "2026-01-15" → "15 Jan 2026"
+const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtMonth(ym){
+  if(!ym) return '—';
+  const m = String(ym).match(/^(\d{4})-(\d{2})/);
+  if(!m) return String(ym);
+  return `${MONTH_SHORT[Number(m[2])-1]} ${m[1]}`;
+}
+function fmtDate(s){
+  if(s==null||s==='') return '—';
+  const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return `${Number(m[3])} ${MONTH_SHORT[Number(m[2])-1]} ${m[1]}`;
+  const dmy = String(s).match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if(dmy){
+    let y = Number(dmy[3]); if(y<100) y += 2000;
+    return `${Number(dmy[1])} ${MONTH_SHORT[Number(dmy[2])-1]} ${y}`;
+  }
+  const d = new Date(s);
+  if(isFinite(d.valueOf())) return `${d.getDate()} ${MONTH_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+  return String(s);
+}
+window.fmtMonth = fmtMonth;
+window.fmtDate = fmtDate;
 
 window.renderNexus = function(data){
   if(!data) return;
@@ -4834,7 +4894,7 @@ function initFilterBar(data){
   const active = flt.month||flt.source||flt.channel||flt.store||flt.category;
   bar.innerHTML = `
     <span style="color:var(--dim);text-transform:uppercase;letter-spacing:.08em">Filters</span>
-    <label style="display:flex;gap:5px;align-items:center">Month<select id="nxf-month" style="${ss}"><option value="">All</option>${monthsSorted.map(m=>`<option${m===flt.month?' selected':''}>${m}</option>`).join('')}</select></label>
+    <label style="display:flex;gap:5px;align-items:center">Month<select id="nxf-month" style="${ss}"><option value="">All</option>${monthsSorted.map(m=>`<option value="${m}"${m===flt.month?' selected':''}>${fmtMonth(m)}</option>`).join('')}</select></label>
     <label style="display:flex;gap:5px;align-items:center">Channel<select id="nxf-channel" style="${ss}"><option value="">All</option>${['Online','Retail','B2B'].map(c=>`<option${c===flt.channel?' selected':''}>${c}</option>`).join('')}</select></label>
     <label style="display:flex;gap:5px;align-items:center">Store<select id="nxf-store" style="${ss}"><option value="">All</option>${storesSorted.map(s=>`<option${s===flt.store?' selected':''}>${s}</option>`).join('')}</select></label>
     <label style="display:flex;gap:5px;align-items:center">Category<select id="nxf-category" style="${ss};max-width:140px"><option value="">All</option>${catsSorted.map(c=>`<option${c===flt.category?' selected':''}>${escapeHTML(c)}</option>`).join('')}</select></label>
@@ -5192,7 +5252,7 @@ window.showB2BDrilldown = function(partyName){
         const up = r['UnitPrice']||r['Unit Price']||'';
         const tx = r['Tax Percent']||r['Tax%']||'';
         const amt = r['Amount']||'';
-        return `<tr><td style="text-align:left">${escapeHTML(String(dt).slice(0,10))}</td><td style="text-align:left">${escapeHTML(String(inv))}</td><td style="text-align:left">${escapeHTML(String(it))}</td><td>${fmtNum(toNum(qty))}</td><td>${fmtINR(toNum(up))}</td><td>${escapeHTML(String(tx))}</td><td>${fmtINR(toNum(amt))}</td></tr>`;
+        return `<tr><td style="text-align:left">${fmtDate(dt)}</td><td style="text-align:left">${escapeHTML(String(inv))}</td><td style="text-align:left">${escapeHTML(String(it))}</td><td>${fmtNum(toNum(qty))}</td><td>${fmtINR(toNum(up))}</td><td>${escapeHTML(String(tx))}</td><td>${fmtINR(toNum(amt))}</td></tr>`;
       }).join('')}
     </tbody></table></div>`;
 };
@@ -5237,7 +5297,7 @@ function renderRetail(data){
     const secKey = findKey(rows[0], [/section/i]);
     const styleKey = findKey(rows[0], [/style.*name/i]);
     bills.innerHTML = `<div style="max-height:400px;overflow-y:auto"><table class="tbl" style="font-size:9.5px"><thead><tr><th style="text-align:left">Store</th><th style="text-align:left">Date</th><th style="text-align:left">Bill</th><th style="text-align:left">Section</th><th style="text-align:left">Style</th><th>Qty</th><th>Price</th></tr></thead><tbody>
-      ${rows.slice(0,120).map(r => `<tr><td style="text-align:left">${escapeHTML(r._store||'—')}</td><td style="text-align:left">${escapeHTML(String(dateKey?r[dateKey]:''))}</td><td style="text-align:left">${escapeHTML(String(billKey?r[billKey]:''))}</td><td style="text-align:left">${escapeHTML(String(secKey?r[secKey]:''))}</td><td style="text-align:left">${escapeHTML(String(styleKey?r[styleKey]:''))}</td><td>${qtyKey?toNum(r[qtyKey]):''}</td><td>${priceKey?fmtINR(toNum(r[priceKey])):''}</td></tr>`).join('')}
+      ${rows.slice(0,120).map(r => `<tr><td style="text-align:left">${escapeHTML(r._store||'—')}</td><td style="text-align:left">${fmtDate(dateKey?r[dateKey]:'')}</td><td style="text-align:left">${escapeHTML(String(billKey?r[billKey]:''))}</td><td style="text-align:left">${escapeHTML(String(secKey?r[secKey]:''))}</td><td style="text-align:left">${escapeHTML(String(styleKey?r[styleKey]:''))}</td><td>${qtyKey?toNum(r[qtyKey]):''}</td><td>${priceKey?fmtINR(toNum(r[priceKey])):''}</td></tr>`).join('')}
     </tbody></table></div>`;
   }
   window.__RETAIL_AGG = { stores, total };
@@ -6054,7 +6114,7 @@ function renderRollingCAC(){
   wrap.innerHTML = `<div class="card-hd"><div class="card-t">Rolling CAC &amp; ROAS (monthly)</div><div class="card-sub">Ad spend ÷ online orders, online revenue ÷ spend</div></div>
     <table class="tbl" style="font-size:10px"><thead><tr><th>Month</th><th>Spend</th><th>Orders</th><th>CAC</th><th>Revenue</th><th>ROAS</th></tr></thead><tbody>
       ${rows.map(r => `<tr>
-        <td>${escapeHTML(r.month)}</td>
+        <td>${fmtMonth(r.month)}</td>
         <td>${fmtINR(r.spend)}</td>
         <td>${fmtNum(r.orders)}</td>
         <td class="${r.cac>1000?'neg':''}">${isFinite(r.cac)?fmtINR(r.cac):'—'}</td>
@@ -7725,7 +7785,7 @@ function renderReorder(){
   if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-reorder'; wrap.className='card mb14'; sec.appendChild(wrap); }
   wrap.innerHTML = `<div class="card-hd"><div class="card-t">Inventory Reorder Recommendations</div><div class="card-sub">Assumes ${LEAD_DAYS}d lead time + ${TARGET_STOCK_DAYS}d target cover · starting stock not available, so these are REPLENISHMENT quantities</div></div>
     <table class="tbl" style="font-size:10px"><thead><tr><th style="text-align:left">Product</th><th>u/day</th><th>Reorder qty</th><th>Order by</th></tr></thead><tbody>
-      ${reorders.map(p => `<tr><td style="text-align:left">${escapeHTML(p.name).slice(0,45)}</td><td>${p.velocity.toFixed(2)}</td><td><b style="color:var(--cream)">${p.reorderQty}</b></td><td>${p.reorderBy.toISOString().slice(0,10)}</td></tr>`).join('')}
+      ${reorders.map(p => `<tr><td style="text-align:left">${escapeHTML(p.name).slice(0,45)}</td><td>${p.velocity.toFixed(2)}</td><td><b style="color:var(--cream)">${p.reorderQty}</b></td><td>${fmtDate(p.reorderBy.toISOString().slice(0,10))}</td></tr>`).join('')}
     </tbody></table>`;
 }
 
@@ -7828,7 +7888,7 @@ function renderCohortLTV(){
   if(!wrap){ wrap = document.createElement('div'); wrap.id='nx-cohort-ltv'; wrap.className='card mb14'; sec.appendChild(wrap); }
   wrap.innerHTML = `<div class="card-hd"><div class="card-t">Cohort LTV</div><div class="card-sub">Customer proxy = order-id stem · repeat rate = ≥2 orders</div></div>
     <table class="tbl" style="font-size:10px"><thead><tr><th>Cohort</th><th>Customers</th><th>Total spend</th><th>Avg LTV</th><th>Repeat rate</th></tr></thead><tbody>
-      ${cohorts.map(c => `<tr><td>${c.month}</td><td>${c.custs}</td><td>${fmtINR(c.totalSpend)}</td><td>${fmtINR(c.totalSpend/c.custs)}</td><td class="${c.repeats/c.custs>0.2?'pos':''}">${fmtPct(c.repeats/c.custs*100)}</td></tr>`).join('')}
+      ${cohorts.map(c => `<tr><td>${fmtMonth(c.month)}</td><td>${c.custs}</td><td>${fmtINR(c.totalSpend)}</td><td>${fmtINR(c.totalSpend/c.custs)}</td><td class="${c.repeats/c.custs>0.2?'pos':''}">${fmtPct(c.repeats/c.custs*100)}</td></tr>`).join('')}
     </tbody></table>`;
 }
 
@@ -8104,7 +8164,7 @@ function buildCharts(){
   if(allMonths.length){
     mkChart('c-sales-monthly', {
       type:'bar',
-      data:{ labels: allMonths, datasets:[
+      data:{ labels: allMonths.map(fmtMonth), datasets:[
         {label:'Online', data:allMonths.map(m=>onlineByM[m]||0), backgroundColor:NX_COLORS[0]},
         {label:'Retail', data:allMonths.map(m=>retailByM[m]||0), backgroundColor:NX_COLORS[3]},
         {label:'B2B',    data:allMonths.map(m=>b2bByM[m]||0),    backgroundColor:NX_COLORS[1]}
@@ -8122,7 +8182,7 @@ function buildCharts(){
       const days = Object.keys(byDay).sort();
       mkChart('c-sales-daily', {
         type:'line',
-        data:{ labels: days, datasets:[{ label:'Orders', data: days.map(d=>byDay[d]), borderColor:NX_COLORS[1], backgroundColor:'rgba(16,185,129,0.15)', fill:true, tension:0.3, pointRadius:0 }]},
+        data:{ labels: days.map(fmtDate), datasets:[{ label:'Orders', data: days.map(d=>byDay[d]), borderColor:NX_COLORS[1], backgroundColor:'rgba(16,185,129,0.15)', fill:true, tension:0.3, pointRadius:0 }]},
         options:{ responsive:true, maintainAspectRatio:false, scales:{x:NX_AXIS,y:NX_AXIS}, plugins:NX_LEGEND_OFF }
       });
       const sub = document.getElementById('sales-trend-sub');
@@ -8221,7 +8281,7 @@ function buildCharts(){
     if(stores.length && months2.length){
       mkChart('c-retail-monthly', {
         type:'bar',
-        data:{ labels: months2, datasets: stores.map((s,i) => ({ label:s, data: months2.map(m=>storeMap[s][m]||0), backgroundColor: NX_COLORS[i%NX_COLORS.length] })) },
+        data:{ labels: months2.map(fmtMonth), datasets: stores.map((s,i) => ({ label:s, data: months2.map(m=>storeMap[s][m]||0), backgroundColor: NX_COLORS[i%NX_COLORS.length] })) },
         options:{ responsive:true, maintainAspectRatio:false, scales:{x:NX_AXIS, y:{...NX_AXIS, ticks:{...NX_AXIS.ticks, callback:v=>'₹'+(v/1e5).toFixed(1)+'L'}}}, plugins:{legend:{labels:{color:'#F0EBE0',font:{size:10}}}} }
       });
     }
@@ -8233,7 +8293,7 @@ function buildCharts(){
     if(ent.length){
       mkChart('c-mkt-monthly', {
         type:'bar',
-        data:{ labels: ent.map(e=>e[0]), datasets:[{ data: ent.map(e=>e[1]), backgroundColor: NX_COLORS[1] }]},
+        data:{ labels: ent.map(e=>fmtMonth(e[0])), datasets:[{ data: ent.map(e=>e[1]), backgroundColor: NX_COLORS[1] }]},
         options:{ responsive:true, maintainAspectRatio:false, scales:{x:NX_AXIS, y:{...NX_AXIS, ticks:{...NX_AXIS.ticks, callback:v=>'₹'+(v/1e3).toFixed(0)+'K'}}}, plugins:NX_LEGEND_OFF }
       });
     }
@@ -8241,7 +8301,7 @@ function buildCharts(){
     if(ent24.length){
       mkChart('c-mkt-baseline', {
         type:'bar',
-        data:{ labels: ent24.map(e=>e[0].slice(5)), datasets:[{ data: ent24.map(e=>e[1]), backgroundColor: NX_COLORS[4] }]},
+        data:{ labels: ent24.map(e=>fmtMonth(e[0])), datasets:[{ data: ent24.map(e=>e[1]), backgroundColor: NX_COLORS[4] }]},
         options:{ responsive:true, maintainAspectRatio:false, scales:{x:NX_AXIS, y:{...NX_AXIS, ticks:{...NX_AXIS.ticks, callback:v=>'₹'+(v/1e3).toFixed(0)+'K'}}}, plugins:NX_LEGEND_OFF }
       });
     }
@@ -8250,7 +8310,7 @@ function buildCharts(){
       const d2026 = magg.daily.filter(d => d.year === 2026).sort((a,b)=>a.date.localeCompare(b.date));
       mkChart('c-mkt-daily', {
         type:'line',
-        data:{ labels: d2026.map(d=>d.date), datasets:[{ label:'₹/day', data: d2026.map(d=>d.spend), borderColor:NX_COLORS[3], backgroundColor:'rgba(245,158,11,0.1)', fill:true, tension:0.25, pointRadius:0 }]},
+        data:{ labels: d2026.map(d=>fmtDate(d.date)), datasets:[{ label:'₹/day', data: d2026.map(d=>d.spend), borderColor:NX_COLORS[3], backgroundColor:'rgba(245,158,11,0.1)', fill:true, tension:0.25, pointRadius:0 }]},
         options:{ responsive:true, maintainAspectRatio:false, scales:{x:NX_AXIS, y:{...NX_AXIS, ticks:{...NX_AXIS.ticks, callback:v=>'₹'+(v/1e3).toFixed(0)+'K'}}}, plugins:NX_LEGEND_OFF }
       });
     }
@@ -8301,7 +8361,7 @@ function buildCharts(){
       const days = Object.keys(by).sort();
       mkChart('c-log-daily', {
         type:'line',
-        data:{ labels: days, datasets:[{ label:'Shipments', data: days.map(d=>by[d]), borderColor: NX_COLORS[0], backgroundColor:'rgba(232,224,208,0.1)', fill:true, tension:0.3, pointRadius:0 }]},
+        data:{ labels: days.map(fmtDate), datasets:[{ label:'Shipments', data: days.map(d=>by[d]), borderColor: NX_COLORS[0], backgroundColor:'rgba(232,224,208,0.1)', fill:true, tension:0.3, pointRadius:0 }]},
         options:{ responsive:true, maintainAspectRatio:false, scales:{x:NX_AXIS,y:NX_AXIS}, plugins:NX_LEGEND_OFF }
       });
     }

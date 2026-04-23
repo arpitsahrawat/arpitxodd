@@ -690,7 +690,9 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
       // Post-process folders into analytics-ready shapes. Each produces a
       // sibling key on this.data without disturbing the raw folder view.
       try { this._postShopifySplit(); } catch(e){ this.warn('shopify split failed', String(e)); }
+      try { this._postForwardFillOnline(); } catch(e){ this.warn('forward-fill online failed', String(e)); }
       try { await this._postInvoiceSections(); } catch(e){ this.warn('invoice sections failed', String(e)); }
+      try { this._postCleanupInvoices(); } catch(e){ this.warn('invoice cleanup failed', String(e)); }
       try { this._postAdspendsTranspose(); } catch(e){ this.warn('adspends transpose failed', String(e)); }
       try { this._postSkuFlatten(); } catch(e){ this.warn('sku flatten failed', String(e)); }
 
@@ -722,6 +724,83 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
       this.data.shopifyOnline = { rows: online, files: onlineFiles };
       this.data.shopifyRetail = { rows: retail, files: retailFiles };
       this.log(`  split shopify: ${online.length} online rows, ${retail.length} retail rows`);
+    },
+
+    // ─── FORWARD-FILL ORDER CONTEXT (multi-item Shopflo orders) ──
+    //
+    // When an order has N line items, Shopflo's CSV writes order-level
+    // fields (Total Order value, Payment method, shipping address, etc.)
+    // on row 1 only and leaves them blank on rows 2..N. Downstream
+    // renderers that aggregate per row end up thinking ~22% of rows are
+    // missing data. This post-processor groups rows by order id and
+    // forward-fills the order-level fields from the first non-null value.
+    _postForwardFillOnline() {
+      const shop = this.data.shopifyOnline;
+      if (!shop || !shop.rows || !shop.rows.length) return;
+      const idKey = ['ST Unique Order ID', 'Unique order number', 'Shopify order number']
+        .find(k => shop.rows[0] && k in shop.rows[0]);
+      if (!idKey) return;
+      // Group rows by order id, preserve original order
+      const orderIndex = {};
+      shop.rows.forEach((r, i) => {
+        const id = String(r[idKey] || '').trim();
+        if (!id) return;
+        (orderIndex[id] = orderIndex[id] || []).push(i);
+      });
+      // Fields that carry order-level context, not line-item context
+      const CARRY = [
+        'Order Date', 'Shopify order number', 'Unique order number',
+        'Channel type', 'Total Order value', 'Total Discount value',
+        'Total Tax on freight', 'Total freight value',
+        'Payment method (from Shopify)', 'Payment reference (from Shopify)',
+        'Payment Gateway', 'Financial Status', 'Order status',
+        'Order Cancellation reason', 'Courier name', 'Service Type',
+        'AWB Number', 'Shipment status', 'Shipping Address',
+        'Actual shipping weight', 'Actual shipping cost',
+        'Freight Reconciliation status', 'Payment Reconciliation status',
+        'Payment date', 'Delivery Date', 'Invoice Date', 'Invoice number',
+        '_c_date', '_c_amount', '_c_paymentMethod', '_c_paymentStatus',
+        '_c_orderStatus', '_c_courier', '_c_address', '_c_freight',
+        '_c_discount', '_c_cancelReason'
+      ];
+      let filled = 0;
+      for (const idxs of Object.values(orderIndex)) {
+        if (idxs.length < 2) continue;
+        // Find first non-null value per field across the group
+        const carriers = {};
+        for (const field of CARRY) {
+          for (const i of idxs) {
+            const v = shop.rows[i][field];
+            if (v != null && v !== '') { carriers[field] = v; break; }
+          }
+        }
+        // Back-write onto rows that are missing
+        for (const i of idxs) {
+          for (const [field, val] of Object.entries(carriers)) {
+            if (shop.rows[i][field] == null || shop.rows[i][field] === '') {
+              shop.rows[i][field] = val;
+              filled++;
+            }
+          }
+        }
+      }
+      this.log(`  forward-fill shopify online: ${filled} cells filled across ${Object.keys(orderIndex).length} order groups`);
+    },
+
+    // Invoice rows without a Party Name are Total / summary / blank
+    // lines that leaked past the section splitter. Drop them so the
+    // data-quality panel stops flagging phantom rows.
+    _postCleanupInvoices() {
+      const inv = this.data.invoicesSummary;
+      if (!inv || !inv.rows) return;
+      const before = inv.rows.length;
+      inv.rows = inv.rows.filter(r => {
+        const party = r['Party Name'] || r['party_name'] || r['_c_party'];
+        return party && String(party).trim() !== '' &&
+               !/^total$/i.test(String(party).trim());
+      });
+      const dropped = before - inv.rows.length;
+      if (dropped > 0) this.log(`  cleanup invoices: dropped ${dropped} summary/total rows without Party Name`);
     },
 
     // Invoice xlsx files have TWO tables stacked: invoice summary on top,

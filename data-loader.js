@@ -25,7 +25,46 @@
   'use strict';
 
   const NEXUS_LIVE = window.NEXUS_LIVE = {
-    VERSION: '1.7.0',
+    VERSION: '1.8.0',
+
+    // ─── CANONICAL FIELD PATTERNS ───────────────────────
+    // Every parsed row gets canonical aliases (_c_date, _c_amount etc.)
+    // added alongside its original columns. Downstream renderers can then
+    // consult a uniform field name regardless of which exporter wrote the
+    // file. First matching pattern wins.
+    CANONICAL_PATTERNS: {
+      date:          [/^order\s*date$/i, /^date$/i, /^pickup.*date$/i, /^invoice.*date$/i, /^txn.*date$/i, /^bill.*date$/i, /^created/i],
+      orderId:       [/^shopify\s*order\s*number$/i, /^unique\s*order\s*number$/i, /^st\s*unique\s*order\s*id$/i, /^order\s*id$/i, /^order\s*number$/i, /^bill\s*no/i, /^invoice\s*no/i, /^waybill.*num/i, /^awb\s*number$/i],
+      party:         [/^party.?name$/i, /^customer.?name$/i, /^party$/i, /^buyer$/i, /^client$/i, /^vendor$/i],
+      productName:   [/^product\s*name$/i, /^item\s*name$/i, /^style\s*name$/i, /^title$/i, /^product$/i, /^description$/i, /^item$/i],
+      productCode:   [/^product\s*code$/i, /^sku$/i, /^code$/i, /^item\s*code$/i, /^style\s*code$/i, /^hsn/i],
+      productType:   [/^product\s*type$/i, /^category$/i, /^section$/i, /^type$/i],
+      size:          [/^size$/i, /^variant\s*size$/i],
+      color:         [/^colou?r$/i],
+      quantity:      [/^product\s*quantity$/i, /^quantity$/i, /^qty$/i, /^units$/i, /^pcs$/i],
+      unitPrice:     [/^unit\s*selling\s*price$/i, /^unit\s*price$/i, /^selling\s*price$/i, /^price$/i, /^rate$/i, /^mrp$/i, /^unitprice$/i],
+      amount:        [/^total\s*order\s*value$/i, /^total\s*product\s*value$/i, /^total\s*invoice\s*value$/i, /^net\s*amount$/i, /^gross\s*amount$/i, /^total\s*amount$/i, /^invoice\s*value$/i, /^amount$/i, /^value$/i, /^total$/i],
+      discount:      [/^total\s*discount\s*value$/i, /^product\s*discount$/i, /^discount$/i],
+      tax:           [/^total\s*tax/i, /^tax$/i, /^gst$/i, /^vat$/i],
+      taxPercent:    [/^tax\s*percent$/i, /^tax\s*%$/i, /^gst\s*%$/i],
+      commission:    [/^merchant\s*earning$/i, /^merchant\s*commission/i, /^commission$/i],
+      freight:       [/^total\s*freight.*value$/i, /^estimated\s*shipping\s*amount$/i, /^actual\s*shipping\s*cost$/i, /^shipping\s*cost$/i, /^freight$/i],
+      courier:       [/^courier\s*name$/i, /^courier$/i, /^carrier$/i, /^shipper$/i],
+      origin:        [/^origin\s*center$/i, /^origin$/i, /^pickup\s*center$/i, /^source\s*center$/i, /^warehouse\s*name$/i],
+      address:       [/^shipping\s*address$/i, /^billing\s*address$/i, /^address$/i],
+      state:         [/^shipping\s*state$/i, /^billing\s*state$/i, /^state$/i],
+      city:          [/^shipping\s*city$/i, /^city$/i, /^town$/i],
+      pincode:       [/^pin\s*code$/i, /^pincode$/i, /^zip$/i, /^postal/i],
+      paymentMethod: [/^payment\s*method.*$/i, /^payment\s*type$/i, /^mode$/i],
+      paymentStatus: [/^financial\s*status$/i, /^payment.*status$/i],
+      orderStatus:   [/^order\s*status$/i, /^shipment\s*status$/i, /^shipping\s*status$/i, /^status$/i],
+      channel:       [/^channel\s*type$/i, /^channel$/i, /^source\s*channel$/i],
+      cancelReason:  [/^cancel.*reason$/i, /^order\s*cancellation\s*reason$/i],
+      ga4Source:     [/^session\s*source\s*\/\s*medium$/i, /^source\s*\/\s*medium$/i, /^source$/i],
+      ga4Sessions:   [/^sessions$/i],
+      ga4Engaged:    [/^engaged\s*sessions$/i],
+      ga4Events:     [/^event\s*count$/i]
+    },
 
     // ─── CONFIG ───────────────────────────────────────────
     CLIENT_ID: '',
@@ -630,8 +669,12 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
           try {
             const buf = await this.downloadFile(f.id);
             const parsed = this._readTable(buf);
-            perFile.push({ name: f.name, rows: parsed.rows, sheet: parsed.sheet, headerRow: parsed.headerRow, modifiedTime: f.modifiedTime });
-            for (const r of parsed.rows) merged.push(Object.assign({ _source: f.name }, r));
+            // Enrich every row with canonical aliases so downstream code
+            // can read `_c_date` / `_c_amount` / `_c_party` / etc. without
+            // caring which exporter wrote the file.
+            const canon = this._canonicalize(parsed.rows, f.name);
+            perFile.push({ name: f.name, rows: canon.rows, sheet: parsed.sheet, headerRow: parsed.headerRow, modifiedTime: f.modifiedTime, mapping: canon.mapping, confidence: canon.confidence });
+            for (const r of canon.rows) merged.push(Object.assign({ _source: f.name }, r));
             fresh++;
           } catch (e) {
             this.warn(`  ${name} parse failed for ${f.name}`, String(e));
@@ -844,6 +887,41 @@ Folders fetched: ${Object.keys(this.files).length}/${Object.keys(this.FOLDERS).l
       this.data.skuMaster = { rows: flat };
       const withCost = flat.filter(r => r.hasCost).length;
       this.log(`  flatten sku: ${flat.length} unique products, ${withCost} with cost (${flat.length - withCost} missing)`);
+    },
+
+    // ─── CANONICAL FIELD ENRICHMENT ─────────────────────
+    //
+    // For a batch of rows from a single file, detect which source column
+    // maps to each canonical field and copy the values onto `_c_<name>`
+    // keys on every row. Also computes a confidence score = fraction of
+    // canonical fields detected, and returns the mapping so the UI can
+    // show the user exactly what was interpreted.
+    _canonicalize(rows, filename) {
+      if (!rows || !rows.length) return { rows: rows || [], mapping: {}, confidence: 0 };
+      const cols = Object.keys(rows[0]).filter(k => k !== '_source' && k !== '_store');
+      const mapping = {};
+      for (const [canonical, patterns] of Object.entries(this.CANONICAL_PATTERNS)) {
+        for (const p of patterns) {
+          const m = cols.find(c => p.test(String(c).trim()));
+          if (m) { mapping[canonical] = m; break; }
+        }
+      }
+      const detected = Object.keys(mapping).length;
+      const totalCanon = Object.keys(this.CANONICAL_PATTERNS).length;
+      const confidence = Math.round((detected / totalCanon) * 100) / 100;
+      // Enrich rows (non-destructive — originals preserved)
+      const enriched = rows.map(r => {
+        const out = Object.assign({}, r);
+        for (const [canon, src] of Object.entries(mapping)) {
+          const v = r[src];
+          if (v != null && v !== '') out['_c_' + canon] = v;
+        }
+        return out;
+      });
+      // Stash the mapping in a registry for the UI to read
+      this._schemaRegistry = this._schemaRegistry || {};
+      this._schemaRegistry[filename] = { mapping, confidence, detectedFields: detected, totalColumns: cols.length, sampleCols: cols.slice(0, 10) };
+      return { rows: enriched, mapping, confidence };
     },
 
     _parseMoney(v) {

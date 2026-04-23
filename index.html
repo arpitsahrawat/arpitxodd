@@ -8355,6 +8355,80 @@ window.exportRowsAsCSV = function(rows, filename){
   const a = document.createElement('a'); a.href = url; a.download = filename || 'export.csv'; a.click();
 };
 
+// ── SCHEMA INSPECTOR ───────────────────────────────────────
+// Surfaces the canonical-field mapping detected for every parsed file
+// so the user can see exactly what was interpreted as "date", "amount",
+// "party" etc. Low-confidence files are flagged for review.
+function renderSchemaInspector(){
+  const host = document.getElementById('dq-panel') && document.getElementById('dq-panel').parentElement;
+  if(!host) return;
+  const L = window.NEXUS_LIVE;
+  const registry = (L && L._schemaRegistry) || {};
+  const files = Object.entries(registry);
+  let wrap = document.getElementById('nx-schema-inspector');
+  if(!wrap){
+    wrap = document.createElement('div');
+    wrap.className = 'card mb14';
+    wrap.id = 'nx-schema-inspector';
+    host.parentElement.insertBefore(wrap, host.nextSibling);
+  }
+  if(!files.length){
+    wrap.innerHTML = `<div class="card-hd"><div class="card-t">Schema Inspector</div><div class="card-sub">Per-file canonical field mapping — shows nothing yet, click Force resync to populate</div></div>`;
+    return;
+  }
+  // Group by folder (infer from filename patterns)
+  const getDataType = (fn) => {
+    if (/CDC\s*Online/i.test(fn)) return 'shopify-online';
+    if (/CDC\s+(DELHI|MUMBAI|HYDERABAD|BANGALORE)/i.test(fn)) return 'shopify-retail';
+    if (/sale\s*report|invoice/i.test(fn)) return 'invoices';
+    if (/waybill|shiprocket|I\d{10,}/i.test(fn)) return 'logistics';
+    if (/Traffic_acquisition|Session_source/i.test(fn)) return 'ga4';
+    if (/Ad\s*spends|working_file/i.test(fn)) return 'adspends';
+    if (/SKU|Inventory|Cost\s*Sheet/i.test(fn)) return 'sku';
+    if (/MIS/i.test(fn)) return 'mis';
+    return 'unknown';
+  };
+  const rows = files.map(([fn, meta]) => ({
+    filename: fn,
+    dataType: getDataType(fn),
+    ...meta
+  })).sort((a,b) => a.confidence - b.confidence); // lowest confidence first
+  const warnCount = rows.filter(r => r.detectedFields < 3 || r.dataType === 'unknown').length;
+
+  wrap.innerHTML = `<div class="card-hd"><div class="card-t">Schema Inspector</div><div class="card-sub">${files.length} files analysed · ${warnCount} flagged for review</div></div>
+    <div style="margin-top:10px">
+      ${rows.map(r => {
+        const tone = r.dataType === 'unknown' ? 'var(--red)' :
+                     r.detectedFields < 3 ? '#F59E0B' :
+                     r.detectedFields < 6 ? 'var(--cream)' : 'var(--grn)';
+        const mapEntries = Object.entries(r.mapping);
+        return `<div style="background:var(--bg1);border:1px solid var(--border);border-left:3px solid ${tone};padding:10px;margin-bottom:8px;border-radius:2px">
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px">
+            <div style="flex:1;min-width:0">
+              <div style="font-family:'DM Mono',monospace;color:var(--cream);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHTML(r.filename)}</div>
+              <div style="color:var(--dim);font-size:9px;margin-top:2px">Type: <b style="color:${tone}">${r.dataType}</b> · ${r.detectedFields}/${Object.keys((window.NEXUS_LIVE && window.NEXUS_LIVE.CANONICAL_PATTERNS) || {}).length} canonical fields · ${r.totalColumns} columns total</div>
+            </div>
+            <button onclick="document.getElementById('map-${r.filename.replace(/[^a-z0-9]/gi,'')}').classList.toggle('nx-open')" style="background:transparent;border:1px solid var(--border);color:var(--cream);padding:3px 8px;font-size:9px;cursor:pointer;font-family:'DM Mono',monospace">details</button>
+          </div>
+          <div id="map-${r.filename.replace(/[^a-z0-9]/gi,'')}" style="display:none;margin-top:10px;font-size:9.5px;color:var(--cream);font-family:'DM Mono',monospace;max-height:260px;overflow-y:auto">
+            ${mapEntries.length ? `<table class="tbl" style="font-size:9.5px"><thead><tr><th style="text-align:left">Canonical field</th><th style="text-align:left">→ Source column</th></tr></thead><tbody>
+              ${mapEntries.map(([k,v]) => `<tr><td style="text-align:left"><span style="color:var(--grn)">_c_${k}</span></td><td style="text-align:left">${escapeHTML(v)}</td></tr>`).join('')}
+            </tbody></table>` : '<div style="color:var(--red);padding:4px 0">No canonical fields detected — add patterns for this file\'s columns.</div>'}
+            <div style="color:var(--dim);margin-top:6px">Unmapped columns: ${escapeHTML(r.sampleCols.filter(c => !Object.values(r.mapping).includes(c)).slice(0,6).join(', '))}</div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    <style>.nx-open { display: block !important; }</style>`;
+}
+
+// Hook into renderNexus
+const __prevRenderNx11 = window.renderNexus;
+window.renderNexus = function(data){
+  __prevRenderNx11(data);
+  setTimeout(() => { try { renderSchemaInspector(); } catch(e){ console.error('schema', e); } }, 500);
+};
+
 // ── LIVE DATA EXPLORER ─────────────────────────────────────
 function renderExplorer(data){
   const host = document.getElementById('nx-explorer-host'); if(!host) return;
